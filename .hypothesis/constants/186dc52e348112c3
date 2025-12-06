@@ -1,0 +1,4 @@
+# file: /home/runner/workspace/src/domain/aggregates/policy_repository.py
+# hypothesis_version: 6.148.7
+
+['PolicyRepository', 'policy_content', 'policy_id', 'policy_name', 'requirement_type']
