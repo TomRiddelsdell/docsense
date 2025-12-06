@@ -1,0 +1,4 @@
+# file: /home/runner/workspace/src/domain/value_objects/document_status.py
+# hypothesis_version: 6.148.7
+
+['ANALYZED', 'ANALYZING', 'CONVERTED', 'DRAFT', 'EXPORTED', 'UPLOADED']

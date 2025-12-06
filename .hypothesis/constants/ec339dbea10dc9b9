@@ -1,0 +1,4 @@
+# file: /home/runner/workspace/src/domain/value_objects/requirement_type.py
+# hypothesis_version: 6.148.7
+
+['MAY', 'MUST', 'RequirementType', 'SHOULD']
