@@ -1,0 +1,78 @@
+{
+  "name": "SEC Index Publishing",
+  "description": "Regulatory requirements for index methodology documents submitted to the SEC for daily index publishing",
+  "policies": [
+    {
+      "name": "Methodology Description",
+      "description": "Document must contain a clear description of the index calculation methodology",
+      "requirement_type": "must",
+      "validation_rules": [
+        {
+          "rule_type": "section_required",
+          "pattern": "methodology|calculation method|index formula",
+          "error_message": "Document must include a methodology section"
+        }
+      ],
+      "ai_prompt_template": "Verify this document contains a clear, complete description of how the index is calculated. Check for: formula definitions, variable explanations, and step-by-step calculation procedures."
+    },
+    {
+      "name": "Component Selection Criteria",
+      "description": "Must define how index components (securities) are selected",
+      "requirement_type": "must",
+      "validation_rules": [
+        {
+          "rule_type": "section_required",
+          "pattern": "component selection|constituent selection|eligibility criteria",
+          "error_message": "Document must include component selection criteria"
+        }
+      ],
+      "ai_prompt_template": "Verify this document explains how securities are selected for inclusion in the index. Look for: eligibility criteria, screening process, and selection rules."
+    },
+    {
+      "name": "Rebalancing Rules",
+      "description": "Must specify when and how the index is rebalanced",
+      "requirement_type": "must",
+      "validation_rules": [
+        {
+          "rule_type": "section_required",
+          "pattern": "rebalanc|reconstitut|periodic review",
+          "error_message": "Document must include rebalancing rules"
+        }
+      ],
+      "ai_prompt_template": "Check that the document specifies: rebalancing frequency, trigger conditions for rebalancing, and the rebalancing procedure."
+    },
+    {
+      "name": "Corporate Action Handling",
+      "description": "Should describe how corporate actions affect the index",
+      "requirement_type": "should",
+      "validation_rules": [
+        {
+          "rule_type": "content_pattern",
+          "pattern": "corporate action|dividend|stock split|merger|acquisition",
+          "error_message": "Consider adding corporate action handling procedures"
+        }
+      ],
+      "ai_prompt_template": "Evaluate whether the document addresses handling of corporate actions such as dividends, stock splits, mergers, and acquisitions."
+    },
+    {
+      "name": "Data Sources",
+      "description": "Should identify data sources used for calculations",
+      "requirement_type": "should",
+      "validation_rules": [
+        {
+          "rule_type": "content_pattern",
+          "pattern": "data source|data provider|pricing source",
+          "error_message": "Consider specifying data sources"
+        }
+      ],
+      "ai_prompt_template": "Check if the document identifies the sources of pricing data, corporate action data, and other inputs used in index calculations."
+    },
+    {
+      "name": "Governance Structure",
+      "description": "May include information about index governance",
+      "requirement_type": "may",
+      "validation_rules": [],
+      "ai_prompt_template": "Note whether the document includes governance information such as oversight committee, review processes, or conflict of interest policies."
+    }
+  ]
+}
