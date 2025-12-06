@@ -1,0 +1,4 @@
+# file: /home/runner/workspace/src/domain/services/document_conversion_service.py
+# hypothesis_version: 6.148.7
+
+['application/pdf', 'text/markdown', 'text/plain', 'text/x-rst']

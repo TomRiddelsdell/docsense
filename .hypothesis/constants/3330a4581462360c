@@ -1,0 +1,4 @@
+# file: /home/runner/workspace/src/domain/commands/__init__.py
+# hypothesis_version: 6.148.7
+
+['AcceptChange', 'AddPolicy', 'CancelAnalysis', 'Command', 'DeleteDocument', 'ExportDocument', 'ModifyChange', 'RejectChange', 'StartAnalysis', 'UploadDocument']
