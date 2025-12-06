@@ -1,17 +1,20 @@
-import os
+"""
+Trading Algorithm Document Analyzer
 
-import google.generativeai as genai
+This application analyzes trading algorithm documentation and provides
+actionable feedback for improvement using AI.
 
-# Or use `os.getenv('GOOGLE_API_KEY')` to fetch an environment variable.
-GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY')
+Currently in documentation/planning phase.
+See /docs/ for architecture and design documentation.
+"""
 
-genai.configure(api_key=GOOGLE_API_KEY)
+def main():
+    print("Trading Algorithm Document Analyzer")
+    print("Status: Documentation phase - see /docs/ folder")
+    print("\nNext steps:")
+    print("1. Set up PostgreSQL database")
+    print("2. Implement FastAPI backend")
+    print("3. Integrate Google Agent Development Kit")
 
-for m in genai.list_models():
-  if 'generateContent' in m.supported_generation_methods:
-    print(m.name)
-
-model = genai.GenerativeModel(model_name="gemini-pro")
-
-response = model.generate_content("How do I bake a cake?")
-print(response.text)
+if __name__ == "__main__":
+    main()
