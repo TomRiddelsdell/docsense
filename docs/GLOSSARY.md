@@ -136,7 +136,7 @@ The data sent to and received from API endpoints.
 
 ### Agent
 
-The AI system powered by Google Agent Development Kit that analyzes documents and generates feedback.
+The AI system that analyzes documents and generates feedback. The system supports multiple AI providers (Google Gemini, OpenAI, Anthropic Claude) through a model abstraction layer, enabling provider selection based on task requirements and data sensitivity.
 
 ### Analysis Session
 
@@ -149,3 +149,68 @@ The instruction set given to the AI agent to guide its analysis.
 ### Confidence Score
 
 A measure (0-1) of how confident the agent is in a particular suggestion.
+
+### Model Provider
+
+An AI model service (Google Gemini, OpenAI, Anthropic Claude) that performs document analysis. The system supports multiple providers through an abstraction layer.
+
+## Policy and Compliance Terms
+
+### Policy Repository
+
+A named collection of policies that define regulatory, compliance, or organizational requirements for documents. Documents are assigned to a Policy Repository to determine which rules apply during analysis.
+
+Examples:
+- "SEC Index Publishing" - regulatory requirements for index methodology documents
+- "Internal Algo Standard" - organizational documentation standards
+
+### Policy
+
+A single rule or requirement within a Policy Repository. Policies specify what a document MUST, SHOULD, or MAY contain.
+
+### Requirement Type
+
+Classification of policy strictness:
+- **MUST**: Mandatory requirement; non-compliance is a violation
+- **SHOULD**: Recommended; non-compliance triggers a warning
+- **MAY**: Optional; presence is noted but absence is acceptable
+
+### Compliance Status
+
+The state of a document relative to its assigned Policy Repository:
+- **PENDING**: Not yet analyzed against policies
+- **COMPLIANT**: Meets all MUST requirements
+- **PARTIAL**: Meets some but not all MUST requirements
+- **NON_COMPLIANT**: Fails critical MUST requirements
+
+### Document Policy Assignment
+
+The association between a Document and a Policy Repository, enabling policy-aware analysis.
+
+### Validation Rule
+
+A specific check within a Policy that the AI performs during analysis. Rules can check for required sections, content patterns, formatting requirements, etc.
+
+## Document Processing Terms
+
+### Canonical Format
+
+The standardized internal format (Markdown with metadata) to which all uploaded documents are converted before AI analysis.
+
+### Document Converter
+
+A component that transforms input formats (Word, PDF, RST, Markdown) into the canonical format while preserving structure.
+
+### Page Limit
+
+The maximum document size supported for analysis. Currently 100 pages.
+
+## Integration Terms
+
+### API-First
+
+Design approach where all functionality is exposed through the REST API, with the web UI being one of many possible API consumers.
+
+### API Client
+
+Any external system that integrates with the document analyzer through the REST API.
