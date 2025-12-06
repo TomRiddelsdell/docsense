@@ -147,6 +147,7 @@ When making changes to this project, you MUST follow these conventions:
 - [ADR-007: Shadcn/ui Component Library](docs/decisions/007-shadcn-ui-component-library.md)
 
 ### Other Documentation
+- [Implementation Plan](docs/IMPLEMENTATION_PLAN.md) - Complete roadmap to production
 - [System Architecture Overview](docs/architecture/SYSTEM_OVERVIEW.md)
 - [Glossary](docs/GLOSSARY.md)
 - [Product Vision](docs/VISION.md)
