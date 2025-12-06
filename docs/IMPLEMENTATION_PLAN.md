@@ -641,15 +641,15 @@ src/application/queries/
 
 Cross-cutting application concerns.
 
-**Files to Create**:
+**Files Created**:
 ```
 src/application/services/
 ├── __init__.py
-├── unit_of_work.py             # Transaction management
-├── event_publisher.py          # Publishes events to projections
-├── document_service.py         # High-level document operations
-└── analysis_service.py         # Orchestrates AI analysis
+├── unit_of_work.py             # Transaction management (UnitOfWork, PostgresUnitOfWork, InMemoryUnitOfWork)
+└── event_publisher.py          # Publishes events to projections (EventPublisher, InMemoryEventPublisher)
 ```
+
+Note: High-level document and analysis orchestration is handled by command handlers rather than separate service classes. This keeps the application layer focused on CQRS patterns where commands coordinate domain operations.
 
 ---
 
