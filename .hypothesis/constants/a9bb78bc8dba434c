@@ -1,0 +1,4 @@
+# file: /home/runner/workspace/src/domain/exceptions/__init__.py
+# hypothesis_version: 6.148.7
+
+['AnalysisException', 'AnalysisFailed', 'AnalysisInProgress', 'AnalysisNotStarted', 'DocumentException', 'DocumentNotFound', 'FeedbackException', 'FeedbackNotFound', 'InvalidDocumentState', 'InvalidPolicy', 'PolicyAlreadyExists', 'PolicyException']

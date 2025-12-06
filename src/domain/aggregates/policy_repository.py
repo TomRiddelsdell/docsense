@@ -1,4 +1,4 @@
-from typing import List, Dict, Any, Set
+from typing import List, Dict, Any, Set, Optional
 from uuid import UUID
 
 from .base import Aggregate
@@ -8,6 +8,8 @@ from src.domain.events.policy_events import (
     PolicyAdded,
     DocumentAssignedToPolicy,
 )
+from src.domain.exceptions.policy_exceptions import PolicyAlreadyExists, PolicyIdAlreadyExists
+from src.domain.exceptions.document_exceptions import DocumentAlreadyAssigned
 
 
 class PolicyRepository(Aggregate):
@@ -33,6 +35,18 @@ class PolicyRepository(Aggregate):
     @property
     def assigned_documents(self) -> Set[UUID]:
         return self._assigned_documents.copy()
+
+    def _find_policy_by_id(self, policy_id: UUID) -> Optional[Dict[str, Any]]:
+        for policy in self._policies:
+            if policy["policy_id"] == policy_id:
+                return policy
+        return None
+
+    def _find_policy_by_name(self, policy_name: str) -> Optional[Dict[str, Any]]:
+        for policy in self._policies:
+            if policy["policy_name"] == policy_name:
+                return policy
+        return None
 
     @classmethod
     def create(
@@ -61,6 +75,10 @@ class PolicyRepository(Aggregate):
         requirement_type: str,
         added_by: str,
     ) -> None:
+        if self._find_policy_by_id(policy_id) is not None:
+            raise PolicyIdAlreadyExists(policy_id=policy_id)
+        if self._find_policy_by_name(policy_name) is not None:
+            raise PolicyAlreadyExists(policy_name=policy_name)
         self._apply_event(
             PolicyAdded(
                 aggregate_id=self._id,
@@ -77,6 +95,11 @@ class PolicyRepository(Aggregate):
         document_id: UUID,
         assigned_by: str,
     ) -> None:
+        if document_id in self._assigned_documents:
+            raise DocumentAlreadyAssigned(
+                document_id=document_id,
+                repository_id=self._id
+            )
         self._apply_event(
             DocumentAssignedToPolicy(
                 aggregate_id=self._id,

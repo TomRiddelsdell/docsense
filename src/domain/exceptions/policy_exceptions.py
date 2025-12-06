@@ -21,4 +21,10 @@ class InvalidPolicy(PolicyException):
 class PolicyAlreadyExists(PolicyException):
     def __init__(self, policy_name: str):
         self.policy_name = policy_name
-        super().__init__(f"Policy already exists: {policy_name}")
+        super().__init__(f"Policy already exists with name: {policy_name}")
+
+
+class PolicyIdAlreadyExists(PolicyException):
+    def __init__(self, policy_id):
+        self.policy_id = policy_id
+        super().__init__(f"Policy already exists with ID: {policy_id}")

@@ -14,6 +14,8 @@ from src.domain.events.analysis_events import (
     AnalysisFailed,
 )
 from src.domain.value_objects import DocumentStatus, VersionNumber
+from src.domain.exceptions.document_exceptions import InvalidDocumentState
+from src.domain.exceptions.analysis_exceptions import AnalysisInProgress, AnalysisNotStarted
 
 
 class Document(Aggregate):
@@ -86,6 +88,13 @@ class Document(Aggregate):
         metadata: Dict[str, Any],
         conversion_warnings: List[str] = None,
     ) -> None:
+        if self._status != DocumentStatus.UPLOADED:
+            raise InvalidDocumentState(
+                document_id=self._id,
+                current_status=self._status.value,
+                required_status=DocumentStatus.UPLOADED.value,
+                operation="convert"
+            )
         self._apply_event(
             DocumentConverted(
                 aggregate_id=self._id,
@@ -102,6 +111,15 @@ class Document(Aggregate):
         ai_model: str,
         initiated_by: str,
     ) -> None:
+        if self._status == DocumentStatus.ANALYZING:
+            raise AnalysisInProgress(document_id=self._id)
+        if self._status not in (DocumentStatus.CONVERTED, DocumentStatus.ANALYZED, DocumentStatus.EXPORTED):
+            raise InvalidDocumentState(
+                document_id=self._id,
+                current_status=self._status.value,
+                required_status=f"{DocumentStatus.CONVERTED.value}, {DocumentStatus.ANALYZED.value}, or {DocumentStatus.EXPORTED.value}",
+                operation="start_analysis"
+            )
         self._apply_event(
             AnalysisStarted(
                 aggregate_id=self._id,
@@ -118,6 +136,8 @@ class Document(Aggregate):
         findings: List[Dict[str, Any]],
         processing_time_ms: int,
     ) -> None:
+        if self._status != DocumentStatus.ANALYZING:
+            raise AnalysisNotStarted(document_id=self._id)
         self._apply_event(
             AnalysisCompleted(
                 aggregate_id=self._id,
@@ -133,6 +153,13 @@ class Document(Aggregate):
         export_format: str,
         exported_by: str,
     ) -> None:
+        if self._status not in (DocumentStatus.ANALYZED, DocumentStatus.EXPORTED):
+            raise InvalidDocumentState(
+                document_id=self._id,
+                current_status=self._status.value,
+                required_status=f"{DocumentStatus.ANALYZED.value} or {DocumentStatus.EXPORTED.value}",
+                operation="export"
+            )
         self._apply_event(
             DocumentExported(
                 aggregate_id=self._id,

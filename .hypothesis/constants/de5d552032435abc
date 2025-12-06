@@ -1,0 +1,4 @@
+# file: /home/runner/workspace/src/domain/services/compliance_checker.py
+# hypothesis_version: 6.148.7
+
+[0.3, 0.5, 0.8, 1.0, 'HIGH', 'LOW', 'MEDIUM', 'a', 'an', 'confidence', 'contain', 'explanation', 'have', 'include', 'may', 'must', 'requirement_type', 'rule', 'severity', 'should', 'the', 'type']
