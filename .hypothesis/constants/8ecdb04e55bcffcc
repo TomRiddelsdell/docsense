@@ -1,0 +1,4 @@
+# file: /home/runner/workspace/src/domain/value_objects/__init__.py
+# hypothesis_version: 6.148.7
+
+['ComplianceStatus', 'ConfidenceScore', 'DocumentId', 'DocumentStatus', 'FeedbackStatus', 'RequirementType', 'Section', 'VersionNumber']
