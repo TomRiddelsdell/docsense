@@ -31,21 +31,31 @@ We will use **React** as the frontend framework with the following approach:
 ## Architecture
 
 ```
-frontend/
+client/
 ├── src/
-│   ├── components/          # Reusable UI components
-│   │   ├── documents/       # Document upload, list, viewer
-│   │   ├── analysis/        # AI feedback display, accept/reject
-│   │   ├── policies/        # Policy repository management
-│   │   └── common/          # Buttons, modals, forms
-│   ├── pages/               # Route-level components
-│   ├── hooks/               # Custom React hooks
-│   ├── api/                 # API client and types
-│   ├── stores/              # State management
-│   └── utils/               # Helper functions
+│   ├── assets/              # Static assets (images, icons)
+│   ├── components/
+│   │   └── ui/              # Shadcn/ui components (Button, Card, etc.)
+│   ├── context/             # React context providers (to be implemented)
+│   ├── hooks/               # Custom React hooks (to be implemented)
+│   ├── lib/
+│   │   └── utils.ts         # Utility functions (cn helper for Tailwind)
+│   ├── pages/               # Route-level components (to be implemented)
+│   ├── services/            # API client services (to be implemented)
+│   ├── types/               # TypeScript type definitions (to be implemented)
+│   ├── App.tsx              # Main application component
+│   ├── main.tsx             # Application entry point
+│   └── index.css            # Global styles with Tailwind imports
 ├── public/
+├── index.html               # HTML entry point
+├── vite.config.ts           # Vite configuration (port 5000, allowedHosts: true)
+├── tsconfig.json            # TypeScript configuration
+├── tsconfig.app.json        # App-specific TypeScript config
+├── eslint.config.js         # ESLint configuration
 └── package.json
 ```
+
+Note: Directories marked "(to be implemented)" exist as empty placeholders for Phase 6 (Frontend Implementation). Currently implemented with content: components/ui/ (Shadcn/ui Button, Card), lib/utils.ts (cn helper), assets/ (react.svg), App.tsx, main.tsx, index.css.
 
 ## Consequences
 

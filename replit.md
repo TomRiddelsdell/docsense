@@ -138,6 +138,7 @@ When making changes to this project, you MUST follow these conventions:
 
 | Date | Description | Change Log |
 |------|-------------|------------|
+| 2025-12-06 | ADR and Implementation Plan documentation alignment | [Link](docs/changes/2025-12-06-adr-documentation-alignment.md) |
 | 2025-12-06 | Phase 3 Application Layer complete | [Link](docs/changes/2025-12-06-phase3-application-layer-complete.md) |
 | 2025-12-06 | Phase 2 Infrastructure Layer complete | [Link](docs/changes/2025-12-06-phase2-infrastructure-complete.md) |
 | 2025-12-06 | Implementation foundation complete | [Link](docs/changes/2025-12-06-implementation-foundation.md) |

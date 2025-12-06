@@ -30,10 +30,20 @@ We will implement the application using:
 
 ### Key Architectural Components
 
-- **Aggregates**: Document, FeedbackSession, AuditTrail
-- **Commands**: UploadDocument, AnalyzeDocument, AcceptChange, RejectChange, ExportDocument
-- **Events**: DocumentUploaded, DocumentConverted, DocumentAnalyzed, FeedbackGenerated, ChangeAccepted, ChangeRejected, DocumentExported
-- **Projections**: DocumentView, FeedbackView, AuditLogView, VersionHistoryView
+- **Aggregates**: Document, FeedbackSession, PolicyRepository
+- **Commands**:
+  - Document: UploadDocument, ExportDocument, DeleteDocument
+  - Analysis: StartAnalysis, CancelAnalysis
+  - Feedback: AcceptChange, RejectChange, ModifyChange
+  - Policy: CreatePolicyRepository, AddPolicy, AssignDocumentToPolicy
+- **Events**:
+  - Document: DocumentUploaded, DocumentConverted, DocumentExported
+  - Analysis: AnalysisStarted, AnalysisCompleted, AnalysisFailed
+  - Feedback: FeedbackSessionCreated, FeedbackGenerated, ChangeAccepted, ChangeRejected, ChangeModified
+  - Policy: PolicyRepositoryCreated, PolicyAdded, DocumentAssignedToPolicy
+- **Projections**: DocumentProjection, FeedbackProjection, AuditProjection, PolicyProjection
+
+Note: Audit functionality is implemented via AuditProjection which builds an audit log read model from all domain events, rather than as a separate aggregate. This approach leverages the inherent audit capabilities of event sourcing.
 
 ## Consequences
 
