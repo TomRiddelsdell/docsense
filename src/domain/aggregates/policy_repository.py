@@ -36,6 +36,12 @@ class PolicyRepository(Aggregate):
     def assigned_documents(self) -> Set[UUID]:
         return self._assigned_documents.copy()
 
+    def _init_state(self) -> None:
+        self._name = ""
+        self._description = ""
+        self._policies = []
+        self._assigned_documents = set()
+
     def _find_policy_by_id(self, policy_id: UUID) -> Optional[Dict[str, Any]]:
         for policy in self._policies:
             if policy["policy_id"] == policy_id:

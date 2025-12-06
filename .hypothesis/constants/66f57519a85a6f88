@@ -1,0 +1,4 @@
+# file: /home/runner/workspace/src/infrastructure/projections/__init__.py
+# hypothesis_version: 6.148.7
+
+['AuditProjection', 'DocumentProjection', 'FeedbackProjection', 'PolicyProjection', 'Projection', 'ProjectionManager']

@@ -1,0 +1,4 @@
+# file: /home/runner/workspace/src/infrastructure/repositories/document_repository.py
+# hypothesis_version: 6.148.7
+
+['Document', 'compliance_score', 'current_version', 'filename', 'id', 'major', 'markdown_content', 'minor', 'original_format', 'patch', 'sections', 'status', 'version']

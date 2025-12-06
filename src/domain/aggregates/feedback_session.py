@@ -4,6 +4,7 @@ from uuid import UUID
 from .base import Aggregate
 from src.domain.events.base import DomainEvent
 from src.domain.events.feedback_events import (
+    FeedbackSessionCreated,
     FeedbackGenerated,
     ChangeAccepted,
     ChangeRejected,
@@ -29,6 +30,10 @@ class FeedbackSession(Aggregate):
     def feedback_items(self) -> List[Dict[str, Any]]:
         return self._feedback_items.copy()
 
+    def _init_state(self) -> None:
+        self._document_id = None
+        self._feedback_items = []
+
     @classmethod
     def create_for_document(
         cls,
@@ -36,7 +41,12 @@ class FeedbackSession(Aggregate):
         document_id: UUID,
     ) -> "FeedbackSession":
         session = cls(session_id)
-        session._document_id = document_id
+        session._apply_event(
+            FeedbackSessionCreated(
+                aggregate_id=session_id,
+                document_id=document_id,
+            )
+        )
         return session
 
     def _find_feedback(self, feedback_id: UUID) -> Optional[Dict[str, Any]]:
@@ -133,7 +143,9 @@ class FeedbackSession(Aggregate):
         )
 
     def _when(self, event: DomainEvent) -> None:
-        if isinstance(event, FeedbackGenerated):
+        if isinstance(event, FeedbackSessionCreated):
+            self._document_id = event.document_id
+        elif isinstance(event, FeedbackGenerated):
             self._feedback_items.append({
                 "feedback_id": event.feedback_id,
                 "issue_description": event.issue_description,

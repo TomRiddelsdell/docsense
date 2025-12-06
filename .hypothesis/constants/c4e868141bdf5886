@@ -1,0 +1,4 @@
+# file: /home/runner/workspace/src/infrastructure/persistence/snapshot_store.py
+# hypothesis_version: 6.148.7
+
+['aggregate_id', 'aggregate_type', 'state', 'version']

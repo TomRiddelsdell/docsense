@@ -10,6 +10,7 @@ from .analysis_events import (
     AnalysisFailed,
 )
 from .feedback_events import (
+    FeedbackSessionCreated,
     FeedbackGenerated,
     ChangeAccepted,
     ChangeRejected,
@@ -29,6 +30,7 @@ __all__ = [
     "AnalysisStarted",
     "AnalysisCompleted",
     "AnalysisFailed",
+    "FeedbackSessionCreated",
     "FeedbackGenerated",
     "ChangeAccepted",
     "ChangeRejected",

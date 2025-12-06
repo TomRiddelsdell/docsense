@@ -1,0 +1,4 @@
+# file: /home/runner/workspace/src/infrastructure/projections/projection_manager.py
+# hypothesis_version: 6.148.7
+
+[100, 'all', 'last_event_id']

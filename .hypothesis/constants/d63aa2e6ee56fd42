@@ -1,0 +1,4 @@
+# file: /home/runner/workspace/src/infrastructure/repositories/policy_repository.py
+# hypothesis_version: 6.148.7
+
+['PolicyRepository', 'assigned_documents', 'description', 'id', 'name', 'policies', 'policy_id', 'requirement_type', 'version']

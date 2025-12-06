@@ -1,0 +1,4 @@
+# file: /home/runner/workspace/src/domain/aggregates/feedback_session.py
+# hypothesis_version: 6.148.7
+
+['ACCEPTED', 'FeedbackSession', 'MODIFIED', 'PENDING', 'REJECTED', 'applied_change', 'confidence_score', 'feedback_id', 'issue_description', 'modified_change', 'policy_reference', 'rejection_reason', 'section_reference', 'status', 'suggested_change']

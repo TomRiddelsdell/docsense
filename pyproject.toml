@@ -16,6 +16,8 @@ docutils = "^0.22.3"
 pytest-asyncio = "^1.3.0"
 hypothesis = "^6.148.7"
 pytest = "^9.0.1"
+asyncpg = "^0.31.0"
+psycopg2-binary = "^2.9.11"
 
 [tool.pyright]
 # https://github.com/microsoft/pyright/blob/main/docs/configuration.md

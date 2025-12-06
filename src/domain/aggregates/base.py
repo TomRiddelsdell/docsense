@@ -40,6 +40,10 @@ class Aggregate(ABC):
     def _when(self, event: DomainEvent) -> None:
         pass
 
+    def _init_state(self) -> None:
+        """Initialize aggregate-specific state. Override in subclasses."""
+        pass
+
     @classmethod
     def reconstitute(cls: type[T], events: List[DomainEvent]) -> T:
         if not events:
@@ -49,6 +53,7 @@ class Aggregate(ABC):
         aggregate._id = events[0].aggregate_id
         aggregate._version = 0
         aggregate._pending_events = []
+        aggregate._init_state()
 
         for event in events:
             aggregate._apply_event(event, is_new=False)
