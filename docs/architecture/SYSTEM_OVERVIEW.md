@@ -238,7 +238,7 @@ Manages regulatory and compliance requirements:
 
 | Layer | Technology |
 |-------|------------|
-| Frontend | React with TypeScript |
+| Frontend | React with TypeScript, Shadcn/ui, Tailwind CSS |
 | API | Python FastAPI (API-First Design) |
 | Event Store | PostgreSQL with event sourcing schema |
 | Read Models | PostgreSQL |
@@ -257,6 +257,7 @@ Manages regulatory and compliance requirements:
 | [ADR-004](../decisions/004-document-format-conversion.md) | Document format conversion to Markdown |
 | [ADR-005](../decisions/005-policy-repository-system.md) | Policy repository for compliance |
 | [ADR-006](../decisions/006-api-first-design.md) | API-first design for integration |
+| [ADR-007](../decisions/007-shadcn-ui-component-library.md) | Shadcn/ui component library |
 
 ## Scalability Considerations
 
