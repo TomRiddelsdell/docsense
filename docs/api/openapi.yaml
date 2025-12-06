@@ -1,0 +1,1291 @@
+openapi: 3.0.3
+info:
+  title: Trading Algorithm Document Analyzer API
+  description: |
+    API for analyzing trading algorithm documentation with AI-powered feedback.
+    Follows CQRS pattern with separate command (POST/PUT/DELETE) and query (GET) endpoints.
+  version: 1.0.0
+  contact:
+    name: API Support
+
+servers:
+  - url: /api/v1
+    description: API v1
+
+tags:
+  - name: Documents
+    description: Document upload, management, and export
+  - name: Analysis
+    description: AI-powered document analysis
+  - name: Feedback
+    description: Review and respond to AI suggestions
+  - name: Versions
+    description: Document version history
+  - name: Policies
+    description: Policy repository management
+  - name: Audit
+    description: Audit trail access
+
+paths:
+  /documents:
+    post:
+      tags: [Documents]
+      summary: Upload a new document
+      operationId: uploadDocument
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file, title]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Document file (PDF, DOCX, MD, RST)
+                title:
+                  type: string
+                  maxLength: 255
+                description:
+                  type: string
+                  maxLength: 1000
+                tags:
+                  type: array
+                  items:
+                    type: string
+                policy_repository_id:
+                  type: string
+                  format: uuid
+                  description: Optional policy repository to assign
+      responses:
+        '201':
+          description: Document uploaded successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '413':
+          description: File too large (max 10MB)
+
+    get:
+      tags: [Documents]
+      summary: List all documents
+      operationId: listDocuments
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, analyzed, exported]
+        - name: policy_repository_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: List of documents
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentListResponse'
+
+  /documents/{document_id}:
+    parameters:
+      - $ref: '#/components/parameters/DocumentId'
+
+    get:
+      tags: [Documents]
+      summary: Get document details
+      operationId: getDocument
+      responses:
+        '200':
+          description: Document details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      tags: [Documents]
+      summary: Update document metadata
+      operationId: updateDocument
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  maxLength: 255
+                description:
+                  type: string
+                  maxLength: 1000
+                tags:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: Document updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [Documents]
+      summary: Delete a document
+      operationId: deleteDocument
+      responses:
+        '204':
+          description: Document deleted
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /documents/{document_id}/content:
+    parameters:
+      - $ref: '#/components/parameters/DocumentId'
+
+    get:
+      tags: [Documents]
+      summary: Get document content
+      operationId: getDocumentContent
+      parameters:
+        - name: format
+          in: query
+          schema:
+            type: string
+            enum: [markdown, original]
+            default: markdown
+      responses:
+        '200':
+          description: Document content
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentContentResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /documents/{document_id}/export:
+    parameters:
+      - $ref: '#/components/parameters/DocumentId'
+
+    post:
+      tags: [Documents]
+      summary: Export document in specified format
+      operationId: exportDocument
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [format]
+              properties:
+                format:
+                  type: string
+                  enum: [pdf, docx, md]
+                include_feedback_history:
+                  type: boolean
+                  default: false
+      responses:
+        '200':
+          description: Exported document
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+            application/vnd.openxmlformats-officedocument.wordprocessingml.document:
+              schema:
+                type: string
+                format: binary
+            text/markdown:
+              schema:
+                type: string
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /documents/{document_id}/policy-repository:
+    parameters:
+      - $ref: '#/components/parameters/DocumentId'
+
+    put:
+      tags: [Documents, Policies]
+      summary: Assign document to a policy repository
+      operationId: assignPolicyRepository
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [policy_repository_id]
+              properties:
+                policy_repository_id:
+                  type: string
+                  format: uuid
+      responses:
+        '200':
+          description: Policy repository assigned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [Documents, Policies]
+      summary: Remove document from policy repository
+      operationId: removePolicyRepository
+      responses:
+        '204':
+          description: Policy repository removed
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /documents/{document_id}/analyze:
+    parameters:
+      - $ref: '#/components/parameters/DocumentId'
+
+    post:
+      tags: [Analysis]
+      summary: Start document analysis
+      operationId: analyzeDocument
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                model_provider:
+                  type: string
+                  enum: [gemini, openai, anthropic]
+                  description: AI model provider to use
+                focus_areas:
+                  type: array
+                  items:
+                    type: string
+                  description: Specific areas to focus analysis on
+      responses:
+        '202':
+          description: Analysis started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalysisSessionResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Analysis already in progress
+
+  /documents/{document_id}/analysis:
+    parameters:
+      - $ref: '#/components/parameters/DocumentId'
+
+    get:
+      tags: [Analysis]
+      summary: Get analysis status and results
+      operationId: getAnalysisStatus
+      responses:
+        '200':
+          description: Analysis status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalysisSessionResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /documents/{document_id}/feedback:
+    parameters:
+      - $ref: '#/components/parameters/DocumentId'
+
+    get:
+      tags: [Feedback]
+      summary: Get all feedback for a document
+      operationId: getDocumentFeedback
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, accepted, rejected]
+      responses:
+        '200':
+          description: List of feedback items
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FeedbackListResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /documents/{document_id}/feedback/{feedback_id}:
+    parameters:
+      - $ref: '#/components/parameters/DocumentId'
+      - $ref: '#/components/parameters/FeedbackId'
+
+    get:
+      tags: [Feedback]
+      summary: Get specific feedback item
+      operationId: getFeedbackItem
+      responses:
+        '200':
+          description: Feedback item details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FeedbackItemResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /documents/{document_id}/feedback/{feedback_id}/accept:
+    parameters:
+      - $ref: '#/components/parameters/DocumentId'
+      - $ref: '#/components/parameters/FeedbackId'
+
+    post:
+      tags: [Feedback]
+      summary: Accept a feedback suggestion
+      operationId: acceptFeedback
+      responses:
+        '200':
+          description: Feedback accepted and change applied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FeedbackItemResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Feedback already processed
+
+  /documents/{document_id}/feedback/{feedback_id}/reject:
+    parameters:
+      - $ref: '#/components/parameters/DocumentId'
+      - $ref: '#/components/parameters/FeedbackId'
+
+    post:
+      tags: [Feedback]
+      summary: Reject a feedback suggestion
+      operationId: rejectFeedback
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                  description: Optional reason for rejection
+      responses:
+        '200':
+          description: Feedback rejected
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FeedbackItemResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Feedback already processed
+
+  /documents/{document_id}/versions:
+    parameters:
+      - $ref: '#/components/parameters/DocumentId'
+
+    get:
+      tags: [Versions]
+      summary: Get document version history
+      operationId: getVersionHistory
+      responses:
+        '200':
+          description: List of versions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VersionListResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /documents/{document_id}/versions/{version_number}:
+    parameters:
+      - $ref: '#/components/parameters/DocumentId'
+      - name: version_number
+        in: path
+        required: true
+        schema:
+          type: integer
+
+    get:
+      tags: [Versions]
+      summary: Get specific version
+      operationId: getVersion
+      responses:
+        '200':
+          description: Version details and content
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VersionResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /documents/{document_id}/versions/{version_number}/restore:
+    parameters:
+      - $ref: '#/components/parameters/DocumentId'
+      - name: version_number
+        in: path
+        required: true
+        schema:
+          type: integer
+
+    post:
+      tags: [Versions]
+      summary: Restore document to a specific version
+      operationId: restoreVersion
+      responses:
+        '200':
+          description: Document restored
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /documents/{document_id}/audit:
+    parameters:
+      - $ref: '#/components/parameters/DocumentId'
+
+    get:
+      tags: [Audit]
+      summary: Get document audit trail
+      operationId: getDocumentAuditTrail
+      parameters:
+        - name: from_date
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: to_date
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: event_type
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Audit trail entries
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditTrailResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /documents/{document_id}/compliance:
+    parameters:
+      - $ref: '#/components/parameters/DocumentId'
+
+    get:
+      tags: [Policies]
+      summary: Get document compliance status
+      operationId: getComplianceStatus
+      responses:
+        '200':
+          description: Compliance status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ComplianceStatusResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /policy-repositories:
+    post:
+      tags: [Policies]
+      summary: Create a new policy repository
+      operationId: createPolicyRepository
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PolicyRepositoryCreate'
+      responses:
+        '201':
+          description: Policy repository created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PolicyRepositoryResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+    get:
+      tags: [Policies]
+      summary: List all policy repositories
+      operationId: listPolicyRepositories
+      responses:
+        '200':
+          description: List of policy repositories
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PolicyRepositoryListResponse'
+
+  /policy-repositories/{repository_id}:
+    parameters:
+      - $ref: '#/components/parameters/RepositoryId'
+
+    get:
+      tags: [Policies]
+      summary: Get policy repository details
+      operationId: getPolicyRepository
+      responses:
+        '200':
+          description: Policy repository details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PolicyRepositoryResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      tags: [Policies]
+      summary: Update policy repository
+      operationId: updatePolicyRepository
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PolicyRepositoryUpdate'
+      responses:
+        '200':
+          description: Policy repository updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PolicyRepositoryResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [Policies]
+      summary: Delete policy repository
+      operationId: deletePolicyRepository
+      responses:
+        '204':
+          description: Policy repository deleted
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Policy repository has assigned documents
+
+  /policy-repositories/{repository_id}/policies:
+    parameters:
+      - $ref: '#/components/parameters/RepositoryId'
+
+    post:
+      tags: [Policies]
+      summary: Add a policy to repository
+      operationId: addPolicy
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PolicyCreate'
+      responses:
+        '201':
+          description: Policy added
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PolicyResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    get:
+      tags: [Policies]
+      summary: List policies in repository
+      operationId: listPolicies
+      responses:
+        '200':
+          description: List of policies
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PolicyListResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /policy-repositories/{repository_id}/policies/{policy_id}:
+    parameters:
+      - $ref: '#/components/parameters/RepositoryId'
+      - $ref: '#/components/parameters/PolicyId'
+
+    get:
+      tags: [Policies]
+      summary: Get policy details
+      operationId: getPolicy
+      responses:
+        '200':
+          description: Policy details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PolicyResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      tags: [Policies]
+      summary: Update policy
+      operationId: updatePolicy
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PolicyUpdate'
+      responses:
+        '200':
+          description: Policy updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PolicyResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [Policies]
+      summary: Remove policy from repository
+      operationId: removePolicy
+      responses:
+        '204':
+          description: Policy removed
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /audit:
+    get:
+      tags: [Audit]
+      summary: Get global audit trail
+      operationId: getGlobalAuditTrail
+      parameters:
+        - name: from_date
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: to_date
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: event_type
+          in: query
+          schema:
+            type: string
+        - name: document_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: Audit trail entries
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditTrailResponse'
+
+components:
+  parameters:
+    DocumentId:
+      name: document_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+    FeedbackId:
+      name: feedback_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+    RepositoryId:
+      name: repository_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+    PolicyId:
+      name: policy_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  responses:
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  schemas:
+    ErrorResponse:
+      type: object
+      required: [error, message]
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+
+    DocumentResponse:
+      type: object
+      required: [id, title, status, version, created_at, updated_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        status:
+          type: string
+          enum: [pending, analyzing, analyzed, exported]
+        version:
+          type: integer
+        original_format:
+          type: string
+          enum: [pdf, docx, md, rst]
+        page_count:
+          type: integer
+        policy_repository:
+          $ref: '#/components/schemas/PolicyRepositorySummary'
+        compliance_status:
+          type: string
+          enum: [pending, compliant, partial, non_compliant]
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    DocumentListResponse:
+      type: object
+      required: [documents, total, page, per_page]
+      properties:
+        documents:
+          type: array
+          items:
+            $ref: '#/components/schemas/DocumentResponse'
+        total:
+          type: integer
+        page:
+          type: integer
+        per_page:
+          type: integer
+
+    DocumentContentResponse:
+      type: object
+      required: [document_id, content, format]
+      properties:
+        document_id:
+          type: string
+          format: uuid
+        content:
+          type: string
+        format:
+          type: string
+          enum: [markdown, original]
+        sections:
+          type: array
+          items:
+            $ref: '#/components/schemas/DocumentSection'
+
+    DocumentSection:
+      type: object
+      required: [id, title, content, level]
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        content:
+          type: string
+        level:
+          type: integer
+        start_line:
+          type: integer
+        end_line:
+          type: integer
+
+    AnalysisSessionResponse:
+      type: object
+      required: [id, document_id, status, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        document_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [queued, in_progress, completed, failed]
+        model_provider:
+          type: string
+          enum: [gemini, openai, anthropic]
+        progress_percent:
+          type: integer
+          minimum: 0
+          maximum: 100
+        feedback_count:
+          type: integer
+        error_message:
+          type: string
+        started_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+
+    FeedbackItemResponse:
+      type: object
+      required: [id, document_id, status, suggestion, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        document_id:
+          type: string
+          format: uuid
+        section_id:
+          type: string
+        status:
+          type: string
+          enum: [pending, accepted, rejected]
+        category:
+          type: string
+          enum: [clarity, completeness, accuracy, compliance, style]
+        severity:
+          type: string
+          enum: [info, warning, error]
+        original_text:
+          type: string
+        suggestion:
+          type: string
+        explanation:
+          type: string
+        confidence_score:
+          type: number
+          minimum: 0
+          maximum: 1
+        policy_reference:
+          type: string
+          description: Reference to policy if compliance-related
+        rejection_reason:
+          type: string
+        processed_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+
+    FeedbackListResponse:
+      type: object
+      required: [feedback, total]
+      properties:
+        feedback:
+          type: array
+          items:
+            $ref: '#/components/schemas/FeedbackItemResponse'
+        total:
+          type: integer
+        pending_count:
+          type: integer
+        accepted_count:
+          type: integer
+        rejected_count:
+          type: integer
+
+    VersionResponse:
+      type: object
+      required: [version_number, document_id, created_at]
+      properties:
+        version_number:
+          type: integer
+        document_id:
+          type: string
+          format: uuid
+        content:
+          type: string
+        content_hash:
+          type: string
+        changes_from_previous:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        created_by:
+          type: string
+          enum: [upload, analysis, manual, restore]
+
+    VersionListResponse:
+      type: object
+      required: [versions, total]
+      properties:
+        versions:
+          type: array
+          items:
+            $ref: '#/components/schemas/VersionResponse'
+        total:
+          type: integer
+
+    PolicyRepositorySummary:
+      type: object
+      required: [id, name]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+
+    PolicyRepositoryResponse:
+      type: object
+      required: [id, name, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        policy_count:
+          type: integer
+        document_count:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    PolicyRepositoryListResponse:
+      type: object
+      required: [repositories, total]
+      properties:
+        repositories:
+          type: array
+          items:
+            $ref: '#/components/schemas/PolicyRepositoryResponse'
+        total:
+          type: integer
+
+    PolicyRepositoryCreate:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+          maxLength: 1000
+
+    PolicyRepositoryUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+          maxLength: 1000
+
+    PolicyResponse:
+      type: object
+      required: [id, repository_id, name, requirement_type, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        repository_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        requirement_type:
+          type: string
+          enum: [must, should, may]
+        validation_rules:
+          type: array
+          items:
+            $ref: '#/components/schemas/ValidationRule'
+        ai_prompt_template:
+          type: string
+          description: Template for AI analysis prompt
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    PolicyListResponse:
+      type: object
+      required: [policies, total]
+      properties:
+        policies:
+          type: array
+          items:
+            $ref: '#/components/schemas/PolicyResponse'
+        total:
+          type: integer
+
+    PolicyCreate:
+      type: object
+      required: [name, requirement_type]
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+          maxLength: 2000
+        requirement_type:
+          type: string
+          enum: [must, should, may]
+        validation_rules:
+          type: array
+          items:
+            $ref: '#/components/schemas/ValidationRuleCreate'
+        ai_prompt_template:
+          type: string
+
+    PolicyUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+          maxLength: 2000
+        requirement_type:
+          type: string
+          enum: [must, should, may]
+        validation_rules:
+          type: array
+          items:
+            $ref: '#/components/schemas/ValidationRuleCreate'
+        ai_prompt_template:
+          type: string
+
+    ValidationRule:
+      type: object
+      required: [id, rule_type, pattern]
+      properties:
+        id:
+          type: string
+          format: uuid
+        rule_type:
+          type: string
+          enum: [section_required, content_pattern, format_check, ai_evaluation]
+        pattern:
+          type: string
+        error_message:
+          type: string
+
+    ValidationRuleCreate:
+      type: object
+      required: [rule_type, pattern]
+      properties:
+        rule_type:
+          type: string
+          enum: [section_required, content_pattern, format_check, ai_evaluation]
+        pattern:
+          type: string
+        error_message:
+          type: string
+
+    ComplianceStatusResponse:
+      type: object
+      required: [document_id, status, checked_at]
+      properties:
+        document_id:
+          type: string
+          format: uuid
+        policy_repository:
+          $ref: '#/components/schemas/PolicyRepositorySummary'
+        status:
+          type: string
+          enum: [pending, compliant, partial, non_compliant]
+        must_requirements:
+          type: object
+          properties:
+            total:
+              type: integer
+            passed:
+              type: integer
+            failed:
+              type: integer
+        should_requirements:
+          type: object
+          properties:
+            total:
+              type: integer
+            passed:
+              type: integer
+            failed:
+              type: integer
+        violations:
+          type: array
+          items:
+            $ref: '#/components/schemas/ComplianceViolation'
+        checked_at:
+          type: string
+          format: date-time
+
+    ComplianceViolation:
+      type: object
+      required: [policy_id, policy_name, requirement_type, message]
+      properties:
+        policy_id:
+          type: string
+          format: uuid
+        policy_name:
+          type: string
+        requirement_type:
+          type: string
+          enum: [must, should, may]
+        message:
+          type: string
+        section_reference:
+          type: string
+
+    AuditTrailResponse:
+      type: object
+      required: [entries, total]
+      properties:
+        entries:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuditEntry'
+        total:
+          type: integer
+        page:
+          type: integer
+        per_page:
+          type: integer
+
+    AuditEntry:
+      type: object
+      required: [id, event_type, timestamp]
+      properties:
+        id:
+          type: string
+          format: uuid
+        event_type:
+          type: string
+          enum:
+            - DocumentUploaded
+            - DocumentConverted
+            - DocumentAnalyzed
+            - FeedbackGenerated
+            - ChangeAccepted
+            - ChangeRejected
+            - DocumentExported
+            - VersionRestored
+            - PolicyRepositoryCreated
+            - PolicyAdded
+            - PolicyRepositoryAssigned
+        document_id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+        details:
+          type: object
+        timestamp:
+          type: string
+          format: date-time

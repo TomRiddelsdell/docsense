@@ -1,0 +1,98 @@
+{
+  "name": "Internal Algorithm Standard",
+  "description": "Internal documentation standards for quantitative trading algorithm specifications",
+  "policies": [
+    {
+      "name": "Algorithm Overview",
+      "description": "Document must include a high-level overview of the trading algorithm",
+      "requirement_type": "must",
+      "validation_rules": [
+        {
+          "rule_type": "section_required",
+          "pattern": "overview|introduction|summary|abstract",
+          "error_message": "Document must include an overview section"
+        }
+      ],
+      "ai_prompt_template": "Verify the document contains a clear high-level overview explaining: what the algorithm does, its purpose, and its general approach to trading."
+    },
+    {
+      "name": "Signal Generation",
+      "description": "Must describe how trading signals are generated",
+      "requirement_type": "must",
+      "validation_rules": [
+        {
+          "rule_type": "section_required",
+          "pattern": "signal|indicator|trigger|entry|exit",
+          "error_message": "Document must describe signal generation logic"
+        }
+      ],
+      "ai_prompt_template": "Check that the document explains how trading signals are generated. Look for: entry conditions, exit conditions, signal thresholds, and the data/indicators used."
+    },
+    {
+      "name": "Risk Management",
+      "description": "Must include risk management and position sizing rules",
+      "requirement_type": "must",
+      "validation_rules": [
+        {
+          "rule_type": "section_required",
+          "pattern": "risk|position size|stop.?loss|drawdown|exposure",
+          "error_message": "Document must include risk management section"
+        }
+      ],
+      "ai_prompt_template": "Verify the document includes risk management rules such as: position sizing, stop-loss rules, maximum drawdown limits, and exposure limits."
+    },
+    {
+      "name": "Execution Logic",
+      "description": "Should describe order execution methodology",
+      "requirement_type": "should",
+      "validation_rules": [
+        {
+          "rule_type": "content_pattern",
+          "pattern": "execution|order type|fill|slippage|market impact",
+          "error_message": "Consider adding execution logic details"
+        }
+      ],
+      "ai_prompt_template": "Evaluate whether the document describes how orders are executed, including: order types, execution timing, slippage considerations, and market impact management."
+    },
+    {
+      "name": "Backtesting Results",
+      "description": "Should include historical performance analysis",
+      "requirement_type": "should",
+      "validation_rules": [
+        {
+          "rule_type": "content_pattern",
+          "pattern": "backtest|historical|performance|sharpe|return",
+          "error_message": "Consider including backtesting results"
+        }
+      ],
+      "ai_prompt_template": "Check if the document includes backtesting results with key metrics such as: returns, Sharpe ratio, maximum drawdown, win rate, and profit factor."
+    },
+    {
+      "name": "Data Requirements",
+      "description": "Should specify data inputs and requirements",
+      "requirement_type": "should",
+      "validation_rules": [
+        {
+          "rule_type": "content_pattern",
+          "pattern": "data|input|feed|source|frequency",
+          "error_message": "Consider specifying data requirements"
+        }
+      ],
+      "ai_prompt_template": "Verify the document specifies data requirements including: data sources, update frequency, required fields, and data quality requirements."
+    },
+    {
+      "name": "Dependencies and Infrastructure",
+      "description": "May include technical infrastructure requirements",
+      "requirement_type": "may",
+      "validation_rules": [],
+      "ai_prompt_template": "Note whether the document includes infrastructure requirements such as: computing resources, latency requirements, third-party dependencies, and deployment considerations."
+    },
+    {
+      "name": "Version History",
+      "description": "May include algorithm version history and changelog",
+      "requirement_type": "may",
+      "validation_rules": [],
+      "ai_prompt_template": "Check if the document includes version history or changelog documenting algorithm modifications over time."
+    }
+  ]
+}
