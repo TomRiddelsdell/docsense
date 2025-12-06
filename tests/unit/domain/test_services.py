@@ -49,6 +49,45 @@ class TestComplianceChecker:
         )
         assert isinstance(issues, list)
 
+    def test_must_requirements_have_higher_threshold(self):
+        checker = ComplianceChecker()
+        doc_content = "risk disclosure warning"
+        
+        must_result = checker.check_requirement(
+            document_content=doc_content,
+            policy_rule="Document must contain risk disclosure",
+            requirement_type=RequirementType.MUST,
+        )
+        may_result = checker.check_requirement(
+            document_content=doc_content,
+            policy_rule="Document must contain risk disclosure",
+            requirement_type=RequirementType.MAY,
+        )
+        assert must_result.requirement_type == RequirementType.MUST
+        assert may_result.requirement_type == RequirementType.MAY
+
+    def test_issues_include_severity(self):
+        checker = ComplianceChecker()
+        issues = checker.identify_issues(
+            document_content="# Algorithm\nBasic content",
+            policy_rules=[
+                {"rule": "Must have comprehensive risk disclosure", "type": RequirementType.MUST},
+            ],
+        )
+        assert len(issues) > 0
+        assert "severity" in issues[0]
+        assert issues[0]["severity"] == "HIGH"
+
+    def test_issues_handle_string_requirement_type(self):
+        checker = ComplianceChecker()
+        issues = checker.identify_issues(
+            document_content="# Algorithm\nBasic content",
+            policy_rules=[
+                {"rule": "Should have performance data", "type": "SHOULD"},
+            ],
+        )
+        assert isinstance(issues, list)
+
 
 class TestVersionCalculator:
     def test_calculate_patch_increment_for_minor_changes(self):

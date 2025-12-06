@@ -27,6 +27,16 @@ from src.domain.events.policy_events import (
     DocumentAssignedToPolicy,
 )
 from src.domain.value_objects import DocumentStatus
+from src.domain.exceptions import (
+    InvalidDocumentState,
+    AnalysisInProgress,
+    AnalysisNotStarted,
+    FeedbackNotFound,
+    ChangeAlreadyProcessed,
+    PolicyAlreadyExists,
+    PolicyIdAlreadyExists,
+    DocumentAlreadyAssigned,
+)
 
 
 class TestAggregate:
@@ -199,6 +209,83 @@ class TestDocument:
         assert doc.version == 2
         assert doc.pending_events == []
 
+    def test_convert_fails_if_not_uploaded(self):
+        doc = Document(uuid4())
+        with pytest.raises(InvalidDocumentState) as exc_info:
+            doc.convert("# Test", [], {})
+        assert "convert" in str(exc_info.value)
+
+    def test_start_analysis_fails_if_not_converted(self):
+        doc = Document.upload(
+            document_id=uuid4(),
+            filename="test.docx",
+            content=b"content",
+            original_format="docx",
+            uploaded_by="user@example.com",
+        )
+        with pytest.raises(InvalidDocumentState) as exc_info:
+            doc.start_analysis(uuid4(), "gemini-pro", "user@example.com")
+        assert "start_analysis" in str(exc_info.value)
+
+    def test_start_analysis_fails_if_already_analyzing(self):
+        doc = Document.upload(
+            document_id=uuid4(),
+            filename="test.docx",
+            content=b"content",
+            original_format="docx",
+            uploaded_by="user@example.com",
+        )
+        doc.convert("# Test", [], {})
+        doc.start_analysis(uuid4(), "gemini-pro", "user@example.com")
+        
+        with pytest.raises(AnalysisInProgress):
+            doc.start_analysis(uuid4(), "gemini-pro", "user@example.com")
+
+    def test_complete_analysis_fails_if_not_analyzing(self):
+        doc = Document.upload(
+            document_id=uuid4(),
+            filename="test.docx",
+            content=b"content",
+            original_format="docx",
+            uploaded_by="user@example.com",
+        )
+        doc.convert("# Test", [], {})
+        
+        with pytest.raises(AnalysisNotStarted):
+            doc.complete_analysis(0, 0.9, [], 1000)
+
+    def test_export_fails_if_not_analyzed(self):
+        doc = Document.upload(
+            document_id=uuid4(),
+            filename="test.docx",
+            content=b"content",
+            original_format="docx",
+            uploaded_by="user@example.com",
+        )
+        doc.convert("# Test", [], {})
+        
+        with pytest.raises(InvalidDocumentState) as exc_info:
+            doc.export("docx", "user@example.com")
+        assert "export" in str(exc_info.value)
+
+    def test_can_reanalyze_after_export(self):
+        doc = Document.upload(
+            document_id=uuid4(),
+            filename="test.docx",
+            content=b"content",
+            original_format="docx",
+            uploaded_by="user@example.com",
+        )
+        doc.convert("# Test", [], {})
+        doc.start_analysis(uuid4(), "gemini-pro", "user@example.com")
+        doc.complete_analysis(2, 0.85, [], 1500)
+        doc.export("docx", "user@example.com")
+        
+        assert doc.status == DocumentStatus.EXPORTED
+        
+        doc.start_analysis(uuid4(), "gemini-pro", "user@example.com")
+        assert doc.status == DocumentStatus.ANALYZING
+
 
 class TestFeedbackSession:
     def test_create_session_for_document(self):
@@ -279,6 +366,53 @@ class TestFeedbackSession:
         
         assert session.feedback_items[0]["status"] == "REJECTED"
 
+    def test_accept_change_fails_if_already_processed(self):
+        session = FeedbackSession.create_for_document(
+            session_id=uuid4(),
+            document_id=uuid4(),
+        )
+        feedback_id = uuid4()
+        session.add_feedback(
+            feedback_id=feedback_id,
+            issue_description="Test",
+            suggested_change="Change",
+            confidence_score=0.8,
+            policy_reference="Policy",
+            section_reference="Section",
+        )
+        session.accept_change(feedback_id, "user@example.com", "Applied")
+        
+        with pytest.raises(ChangeAlreadyProcessed):
+            session.accept_change(feedback_id, "user@example.com", "Applied again")
+
+    def test_reject_change_fails_if_already_processed(self):
+        session = FeedbackSession.create_for_document(
+            session_id=uuid4(),
+            document_id=uuid4(),
+        )
+        feedback_id = uuid4()
+        session.add_feedback(
+            feedback_id=feedback_id,
+            issue_description="Test",
+            suggested_change="Change",
+            confidence_score=0.8,
+            policy_reference="Policy",
+            section_reference="Section",
+        )
+        session.reject_change(feedback_id, "user@example.com", "Reason")
+        
+        with pytest.raises(ChangeAlreadyProcessed):
+            session.reject_change(feedback_id, "user@example.com", "Reason again")
+
+    def test_accept_change_fails_if_feedback_not_found(self):
+        session = FeedbackSession.create_for_document(
+            session_id=uuid4(),
+            document_id=uuid4(),
+        )
+        
+        with pytest.raises(FeedbackNotFound):
+            session.accept_change(uuid4(), "user@example.com", "Applied")
+
 
 class TestPolicyRepository:
     def test_create_policy_repository(self):
@@ -329,3 +463,65 @@ class TestPolicyRepository:
         )
         
         assert document_id in repo.assigned_documents
+
+    def test_add_duplicate_policy_by_id_fails(self):
+        repo = PolicyRepository.create(
+            repository_id=uuid4(),
+            name="Test Policies",
+            description="Test",
+            created_by="admin@example.com",
+        )
+        policy_id = uuid4()
+        repo.add_policy(
+            policy_id=policy_id,
+            policy_name="Policy 1",
+            policy_content="Content",
+            requirement_type="MUST",
+            added_by="admin@example.com",
+        )
+        
+        with pytest.raises(PolicyIdAlreadyExists):
+            repo.add_policy(
+                policy_id=policy_id,
+                policy_name="Policy 2",
+                policy_content="Content",
+                requirement_type="MUST",
+                added_by="admin@example.com",
+            )
+
+    def test_add_duplicate_policy_by_name_fails(self):
+        repo = PolicyRepository.create(
+            repository_id=uuid4(),
+            name="Test Policies",
+            description="Test",
+            created_by="admin@example.com",
+        )
+        repo.add_policy(
+            policy_id=uuid4(),
+            policy_name="Risk Disclosure",
+            policy_content="Content",
+            requirement_type="MUST",
+            added_by="admin@example.com",
+        )
+        
+        with pytest.raises(PolicyAlreadyExists):
+            repo.add_policy(
+                policy_id=uuid4(),
+                policy_name="Risk Disclosure",
+                policy_content="Other content",
+                requirement_type="SHOULD",
+                added_by="admin@example.com",
+            )
+
+    def test_assign_duplicate_document_fails(self):
+        repo = PolicyRepository.create(
+            repository_id=uuid4(),
+            name="Test Policies",
+            description="Test",
+            created_by="admin@example.com",
+        )
+        document_id = uuid4()
+        repo.assign_document(document_id, "user@example.com")
+        
+        with pytest.raises(DocumentAlreadyAssigned):
+            repo.assign_document(document_id, "user@example.com")

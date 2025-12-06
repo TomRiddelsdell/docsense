@@ -84,10 +84,10 @@ Location: `tests/unit/domain/`
 | `test_value_objects.py` | 41 tests |
 | `test_events.py` | 24 tests |
 | `test_commands.py` | 17 tests |
-| `test_aggregates.py` | 17 tests |
-| `test_services.py` | 7 tests |
+| `test_aggregates.py` | 29 tests |
+| `test_services.py` | 11 tests |
 | `test_exceptions.py` | 12 tests |
-| **Total** | **118 tests** |
+| **Total** | **133 tests** |
 
 ## Files Created/Modified
 
@@ -131,6 +131,9 @@ Following the IMPLEMENTATION_PLAN.md Phase 1 requirements and ADR-001 (DDD with 
 2. **Event Sourcing** - Aggregates track pending events and can be reconstituted from event history
 3. **CQRS** - Commands are separate from events, enabling clear separation of write intentions from state changes
 4. **Test-Driven Development** - All components implemented with tests first
+5. **State Transition Guards** - Aggregates enforce valid lifecycle transitions (upload → convert → analyze → export → re-analyze)
+6. **Invariant Protection** - Aggregates validate uniqueness constraints and prevent duplicate processing
+7. **RequirementType-Aware Compliance** - ComplianceChecker uses different thresholds for MUST/SHOULD/MAY requirements
 
 ## Related ADRs
 - ADR-001: DDD with Event Sourcing and CQRS

@@ -3,6 +3,8 @@ from .document_exceptions import (
     DocumentNotFound,
     InvalidDocumentFormat,
     DocumentAlreadyExists,
+    InvalidDocumentState,
+    DocumentAlreadyAssigned,
 )
 from .analysis_exceptions import (
     AnalysisException,
@@ -20,6 +22,7 @@ from .policy_exceptions import (
     PolicyRepositoryNotFound,
     InvalidPolicy,
     PolicyAlreadyExists,
+    PolicyIdAlreadyExists,
 )
 
 __all__ = [
@@ -27,6 +30,8 @@ __all__ = [
     "DocumentNotFound",
     "InvalidDocumentFormat",
     "DocumentAlreadyExists",
+    "InvalidDocumentState",
+    "DocumentAlreadyAssigned",
     "AnalysisException",
     "AnalysisInProgress",
     "AnalysisFailed",
@@ -38,4 +43,5 @@ __all__ = [
     "PolicyRepositoryNotFound",
     "InvalidPolicy",
     "PolicyAlreadyExists",
+    "PolicyIdAlreadyExists",
 ]

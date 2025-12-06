@@ -9,6 +9,10 @@ from src.domain.events.feedback_events import (
     ChangeRejected,
     ChangeModified,
 )
+from src.domain.exceptions.feedback_exceptions import (
+    FeedbackNotFound,
+    ChangeAlreadyProcessed,
+)
 
 
 class FeedbackSession(Aggregate):
@@ -23,7 +27,7 @@ class FeedbackSession(Aggregate):
 
     @property
     def feedback_items(self) -> List[Dict[str, Any]]:
-        return self._feedback_items
+        return self._feedback_items.copy()
 
     @classmethod
     def create_for_document(
@@ -34,6 +38,28 @@ class FeedbackSession(Aggregate):
         session = cls(session_id)
         session._document_id = document_id
         return session
+
+    def _find_feedback(self, feedback_id: UUID) -> Optional[Dict[str, Any]]:
+        for item in self._feedback_items:
+            if item["feedback_id"] == feedback_id:
+                return item
+        return None
+
+    def _find_feedback_index(self, feedback_id: UUID) -> int:
+        for i, item in enumerate(self._feedback_items):
+            if item["feedback_id"] == feedback_id:
+                return i
+        return -1
+
+    def _validate_feedback_pending(self, feedback_id: UUID) -> None:
+        feedback = self._find_feedback(feedback_id)
+        if feedback is None:
+            raise FeedbackNotFound(feedback_id=feedback_id)
+        if feedback["status"] != "PENDING":
+            raise ChangeAlreadyProcessed(
+                feedback_id=feedback_id,
+                current_status=feedback["status"]
+            )
 
     def add_feedback(
         self,
@@ -62,6 +88,7 @@ class FeedbackSession(Aggregate):
         accepted_by: str,
         applied_change: str,
     ) -> None:
+        self._validate_feedback_pending(feedback_id)
         self._apply_event(
             ChangeAccepted(
                 aggregate_id=self._id,
@@ -77,6 +104,7 @@ class FeedbackSession(Aggregate):
         rejected_by: str,
         rejection_reason: str,
     ) -> None:
+        self._validate_feedback_pending(feedback_id)
         self._apply_event(
             ChangeRejected(
                 aggregate_id=self._id,
@@ -86,11 +114,23 @@ class FeedbackSession(Aggregate):
             )
         )
 
-    def _find_feedback_index(self, feedback_id: UUID) -> int:
-        for i, item in enumerate(self._feedback_items):
-            if item["feedback_id"] == feedback_id:
-                return i
-        return -1
+    def modify_change(
+        self,
+        feedback_id: UUID,
+        modified_by: str,
+        modified_change: str,
+        modification_reason: str,
+    ) -> None:
+        self._validate_feedback_pending(feedback_id)
+        self._apply_event(
+            ChangeModified(
+                aggregate_id=self._id,
+                feedback_id=feedback_id,
+                modified_by=modified_by,
+                modified_change=modified_change,
+                modification_reason=modification_reason,
+            )
+        )
 
     def _when(self, event: DomainEvent) -> None:
         if isinstance(event, FeedbackGenerated):

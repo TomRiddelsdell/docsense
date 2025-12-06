@@ -1,0 +1,4 @@
+# file: /home/runner/workspace/src/domain/aggregates/document.py
+# hypothesis_version: 6.148.7
+
+['Document', 'convert', 'export', 'start_analysis']
