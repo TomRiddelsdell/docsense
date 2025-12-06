@@ -12,8 +12,8 @@ An AI-powered application that analyzes trading algorithm documentation and prov
 - **Frontend**: React with TypeScript, Shadcn/ui, Tailwind CSS
 
 ### Current State
-- **Phase**: Phase 2 Infrastructure Layer Complete
-- **Status**: Domain layer, infrastructure layer (event store, repositories, projections, queries) fully implemented with 188 passing tests
+- **Phase**: Phase 3 Application Layer Complete
+- **Status**: Domain layer, infrastructure layer, and application layer (command handlers, query handlers, services) fully implemented with 253 passing tests
 
 ---
 
@@ -55,11 +55,15 @@ An AI-powered application that analyzes trading algorithm documentation and prov
 │   │   ├── repositories/           # Aggregate repositories
 │   │   ├── projections/            # Read model projectors
 │   │   └── queries/                # Read model query handlers
-│   ├── application/                # Application layer (to be implemented)
+│   ├── application/                # Application layer (COMPLETE)
+│   │   ├── commands/               # Command handlers (document, analysis, feedback, policy)
+│   │   ├── queries/                # Query handlers (document, feedback, policy, audit)
+│   │   └── services/               # Unit of work, event publisher
 │   └── api/                        # API layer (to be implemented)
-├── tests/                          # Test suite (188 passing tests)
+├── tests/                          # Test suite (253 passing tests)
 │   ├── domain/                     # Domain layer tests (133 tests)
-│   └── infrastructure/             # Infrastructure layer tests (55 tests)
+│   ├── infrastructure/             # Infrastructure layer tests (55 tests)
+│   └── unit/application/           # Application layer tests (65 tests)
 ├── main.py                         # Application entry point
 └── replit.md                       # This file
 ```
@@ -134,6 +138,7 @@ When making changes to this project, you MUST follow these conventions:
 
 | Date | Description | Change Log |
 |------|-------------|------------|
+| 2025-12-06 | Phase 3 Application Layer complete | [Link](docs/changes/2025-12-06-phase3-application-layer-complete.md) |
 | 2025-12-06 | Phase 2 Infrastructure Layer complete | [Link](docs/changes/2025-12-06-phase2-infrastructure-complete.md) |
 | 2025-12-06 | Implementation foundation complete | [Link](docs/changes/2025-12-06-implementation-foundation.md) |
 | 2025-12-06 | Shadcn/ui component library selected | [Link](docs/changes/2025-12-06-shadcn-ui-selection.md) |

@@ -129,7 +129,7 @@ class FeedbackSession(Aggregate):
         feedback_id: UUID,
         modified_by: str,
         modified_change: str,
-        modification_reason: str,
+        original_change: str = "",
     ) -> None:
         self._validate_feedback_pending(feedback_id)
         self._apply_event(
@@ -137,8 +137,8 @@ class FeedbackSession(Aggregate):
                 aggregate_id=self._id,
                 feedback_id=feedback_id,
                 modified_by=modified_by,
+                original_change=original_change,
                 modified_change=modified_change,
-                modification_reason=modification_reason,
             )
         )
 

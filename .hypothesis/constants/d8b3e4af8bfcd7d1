@@ -1,0 +1,4 @@
+# file: /home/runner/workspace/src/infrastructure/queries/document_queries.py
+# hypothesis_version: 6.148.7
+
+['compliance_status', 'created_at', 'description', 'id', 'markdown_content', 'metadata', 'original_filename', 'original_format', 'policy_repository_id', 'sections', 'status', 'title', 'updated_at', 'version']

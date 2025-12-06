@@ -1,0 +1,4 @@
+# file: /home/runner/workspace/src/infrastructure/queries/audit_queries.py
+# hypothesis_version: 6.148.7
+
+[100, 'aggregate_id', 'aggregate_type', 'details', 'document_id', 'event_type', 'id', 'timestamp', 'user_id']
