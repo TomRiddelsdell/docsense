@@ -1,0 +1,4 @@
+# file: /home/runner/workspace/src/infrastructure/ai/analysis/feedback_generator.py
+# hypothesis_version: 6.148.7
+
+[500, 1000, '...', 'SHOULD', 'created_at', 'critical', 'errors', 'feedback_items', 'general', 'high', 'id', 'info', 'issue', 'low', 'medium', 'name', 'policy_rule', 'priority', 'processing_time_ms', 'requirement_type', 'success', 'suggestion', 'summary']

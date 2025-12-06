@@ -1,0 +1,4 @@
+# file: /home/runner/workspace/src/infrastructure/ai/analysis/progress_tracker.py
+# hypothesis_version: 6.148.7
+
+[100, 'Analysis cancelled', 'Analysis complete', 'Analysis failed', 'Initializing', 'aggregating_results', 'analysis_id', 'analyzing', 'cancelled', 'completed', 'completed_steps', 'current_step', 'document_id', 'errors', 'estimated_completion', 'evaluating_policies', 'failed', 'generating_feedback', 'initialized', 'preprocessing', 'progress_percent', 'stage', 'started_at', 'total_steps', 'updated_at', 'warnings']
