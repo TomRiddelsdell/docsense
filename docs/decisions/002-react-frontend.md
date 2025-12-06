@@ -24,7 +24,7 @@ We will use **React** as the frontend framework with the following approach:
 
 1. **React with TypeScript** for type safety and maintainability at scale
 2. **Deferred real-time features** - initial implementation uses polling; WebSocket support added later if needed
-3. **Component library**: To be determined (options: Radix UI, Shadcn/ui, or Material UI)
+3. **Component library**: To be determined (Shadcn/ui)
 4. **State management**: React Query for server state, React Context for UI state
 5. **Authentication-ready**: Design components with auth hooks even before implementing login
 
