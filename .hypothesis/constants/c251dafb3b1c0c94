@@ -1,0 +1,4 @@
+# file: /home/runner/workspace/src/infrastructure/queries/feedback_queries.py
+# hypothesis_version: 6.148.7
+
+[' AND status = $2', 'category', 'confidence_score', 'created_at', 'document_id', 'explanation', 'id', 'original_text', 'pending', 'policy_reference', 'processed_at', 'rejection_reason', 'section_id', 'severity', 'status', 'suggestion']

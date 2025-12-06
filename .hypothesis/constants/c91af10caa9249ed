@@ -1,0 +1,4 @@
+# file: /home/runner/workspace/src/infrastructure/converters/markdown_converter.py
+# hypothesis_version: 6.148.7
+
+[3000, '# ', 'latin-1', 'markdown', 'md', 'mdown', 'mkd', 'r', 'utf-8']

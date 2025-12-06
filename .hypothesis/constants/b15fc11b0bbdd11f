@@ -1,0 +1,4 @@
+# file: /home/runner/workspace/src/infrastructure/converters/converter_factory.py
+# hypothesis_version: 6.148.7
+
+['.', 'Markdown', 'PDF Documents', 'Word Documents', 'doc', 'docx', 'markdown', 'md', 'mdown', 'mkd', 'pdf', 'reStructuredText', 'rest', 'rst']

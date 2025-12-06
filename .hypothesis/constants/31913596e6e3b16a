@@ -1,0 +1,4 @@
+# file: /home/runner/workspace/src/application/commands/document_handlers.py
+# hypothesis_version: 6.148.7
+
+['__dict__', 'doc', 'docx', 'markdown', 'md', 'pdf', 'rst', 'warnings']

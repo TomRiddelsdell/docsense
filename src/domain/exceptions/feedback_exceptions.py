@@ -19,3 +19,9 @@ class ChangeAlreadyProcessed(FeedbackException):
             f"Change already processed for feedback {feedback_id}. "
             f"Current status: {current_status}"
         )
+
+
+class FeedbackSessionNotFound(FeedbackException):
+    def __init__(self, session_id: UUID):
+        self.session_id = session_id
+        super().__init__(f"Feedback session not found: {session_id}")
