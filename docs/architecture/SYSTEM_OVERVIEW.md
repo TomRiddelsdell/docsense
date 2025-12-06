@@ -44,15 +44,26 @@
 └──────────────────────────────┘    └──────────────────────────────┘
                 │
                 ▼
-┌──────────────────────────────┐
-│        AI AGENT              │
-│  ┌────────────────────────┐  │
-│  │  Google Agent Dev Kit  │  │
-│  │  - Document Parser     │  │
-│  │  - Analysis Engine     │  │
-│  │  - Feedback Generator  │  │
-│  └────────────────────────┘  │
-└──────────────────────────────┘
+┌──────────────────────────────────────────────────────────┐
+│                   AI AGENT LAYER                          │
+│  ┌────────────────────────────────────────────────────┐  │
+│  │              Model Abstraction Layer               │  │
+│  │  ┌──────────┐  ┌──────────┐  ┌──────────────────┐ │  │
+│  │  │  Gemini  │  │  OpenAI  │  │  Anthropic Claude│ │  │
+│  │  └──────────┘  └──────────┘  └──────────────────┘ │  │
+│  └────────────────────────────────────────────────────┘  │
+│  ┌────────────────────────────────────────────────────┐  │
+│  │  Document Converter │ Analysis Engine │ Feedback   │  │
+│  └────────────────────────────────────────────────────┘  │
+└──────────────────────────────────────────────────────────┘
+                │
+                ▼
+┌──────────────────────────────────────────────────────────┐
+│                  POLICY REPOSITORY                        │
+│  ┌────────────────────────────────────────────────────┐  │
+│  │  Policy Management │ Compliance Rules │ Validation │  │
+│  └────────────────────────────────────────────────────┘  │
+└──────────────────────────────────────────────────────────┘
 ```
 
 ## Components
@@ -85,6 +96,7 @@ Handles all state-changing operations:
 **Domain Aggregates**
 - `Document`: Manages document lifecycle and versions
 - `FeedbackSession`: Manages analysis sessions and suggestions
+- `PolicyRepository`: Manages compliance rules and requirements
 - `AuditTrail`: Records all auditable actions
 
 **Event Store**
@@ -104,27 +116,49 @@ Handles all read operations:
 **Read Models**
 - `DocumentView`: Current document state for display
 - `FeedbackView`: Pending and resolved feedback items
+- `PolicyView`: Policy repositories and their rules
+- `ComplianceView`: Document compliance status
 - `AuditLogView`: Chronological audit entries
 - `VersionHistoryView`: Document version timeline
 
-### AI Agent
+### AI Agent Layer
 
-Document analysis powered by Google Agent Development Kit:
+Multi-model document analysis with policy-aware evaluation:
 
-**Document Parser**
-- Extracts text from PDF, Word, Markdown
-- Identifies structure (sections, code blocks, formulas)
-- Preserves formatting metadata
+**Model Abstraction**
+- Supports multiple AI providers (Google Gemini, OpenAI, Anthropic)
+- Provider selection based on task and data sensitivity
+- Consistent interface across all models
+
+**Document Converter**
+- Converts Word, PDF, RST, Markdown to canonical format
+- Preserves structure (sections, code blocks, formulas, tables)
+- Extracts metadata for context
 
 **Analysis Engine**
-- Evaluates document against quality criteria
-- Identifies issues and improvement opportunities
-- Generates confidence scores
+- Evaluates document against assigned Policy Repository
+- Identifies compliance issues and improvement opportunities
+- Long-running analysis (up to 3 min/page, 100 page max)
+- Progress tracking with partial results
 
 **Feedback Generator**
-- Creates actionable suggestions
-- Provides explanations and examples
-- Formats before/after comparisons
+- Creates actionable suggestions requiring user acceptance
+- Provides explanations with before/after comparisons
+- Links findings to specific policy requirements
+
+### Policy Repository
+
+Manages regulatory and compliance requirements:
+
+**Policy Management**
+- Define Policy Repositories for different regulatory contexts
+- Configure policies with MUST/SHOULD/MAY requirements
+- Create validation rules with AI prompt templates
+
+**Document Assignment**
+- Assign documents to Policy Repositories
+- Track compliance status per document
+- Generate compliance reports
 
 ## Data Flow
 
@@ -204,17 +238,25 @@ Document analysis powered by Google Agent Development Kit:
 
 | Layer | Technology |
 |-------|------------|
-| Frontend | React/Vue (TBD) |
-| API | Python FastAPI |
+| Frontend | React with TypeScript |
+| API | Python FastAPI (API-First Design) |
 | Event Store | PostgreSQL with event sourcing schema |
 | Read Models | PostgreSQL |
-| AI Agent | Google Agent Development Kit |
+| AI Models | Multi-provider: Google Gemini, OpenAI, Anthropic Claude |
+| Document Conversion | python-docx, pdfplumber, docutils |
 | File Storage | Local filesystem / Object storage |
-| Authentication | JWT tokens |
+| Authentication | JWT tokens (deferred; open access initially) |
 
 ## Key Design Decisions
 
-See [ADR-001: Use DDD with Event Sourcing and CQRS](../decisions/001-use-ddd-event-sourcing-cqrs.md) for the architectural rationale.
+| ADR | Decision |
+|-----|----------|
+| [ADR-001](../decisions/001-use-ddd-event-sourcing-cqrs.md) | DDD with Event Sourcing and CQRS |
+| [ADR-002](../decisions/002-react-frontend.md) | React frontend with deferred real-time |
+| [ADR-003](../decisions/003-multi-model-ai-support.md) | Multi-model AI with user acceptance workflow |
+| [ADR-004](../decisions/004-document-format-conversion.md) | Document format conversion to Markdown |
+| [ADR-005](../decisions/005-policy-repository-system.md) | Policy repository for compliance |
+| [ADR-006](../decisions/006-api-first-design.md) | API-first design for integration |
 
 ## Scalability Considerations
 
@@ -225,8 +267,22 @@ See [ADR-001: Use DDD with Event Sourcing and CQRS](../decisions/001-use-ddd-eve
 
 ## Security Considerations
 
+### Production Security (Target State)
 - All API endpoints require authentication
 - Document access is scoped to owner
 - Audit trail is immutable
 - Sensitive data encryption at rest
 - HTTPS for all communications
+- Model selection constraints for sensitive documents
+
+### Interim Access Controls (Open Access Phase)
+
+During initial development with deferred authentication:
+
+1. **Network Isolation**: Deploy in private network, not publicly accessible
+2. **No Sensitive Documents**: Do not upload real trading strategy documents until auth is implemented
+3. **Test Data Only**: Use synthetic/test documents for development
+4. **Audit Logging**: All actions logged even without user identity
+5. **Priority**: Authentication should be implemented before handling sensitive content
+
+**Risk Mitigation**: The open access phase is intended for internal development and testing only. Production deployment with sensitive documents requires full authentication implementation.
