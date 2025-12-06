@@ -9,7 +9,7 @@ An AI-powered application that analyzes trading algorithm documentation and prov
 - **Architecture**: Domain-Driven Design (DDD) with Event Sourcing and CQRS
 - **AI Agent**: Google Agent Development Kit
 - **Database**: PostgreSQL (for event store and read models)
-- **Frontend**: TBD (React or Vue)
+- **Frontend**: React with TypeScript, Shadcn/ui, Tailwind CSS
 
 ### Current State
 - **Phase**: Documentation and Architecture Design
@@ -115,6 +115,7 @@ When making changes to this project, you MUST follow these conventions:
 
 | Date | Description | Change Log |
 |------|-------------|------------|
+| 2025-12-06 | Shadcn/ui component library selected | [Link](docs/changes/2025-12-06-shadcn-ui-selection.md) |
 | 2025-12-06 | Architectural decisions documented | [Link](docs/changes/2025-12-06-architectural-decisions.md) |
 | 2025-12-06 | Initial documentation structure | [Link](docs/changes/2025-12-06-initial-documentation-structure.md) |
 
@@ -129,6 +130,7 @@ When making changes to this project, you MUST follow these conventions:
 - [ADR-004: Document Format Conversion](docs/decisions/004-document-format-conversion.md)
 - [ADR-005: Policy Repository System](docs/decisions/005-policy-repository-system.md)
 - [ADR-006: API-First Design](docs/decisions/006-api-first-design.md)
+- [ADR-007: Shadcn/ui Component Library](docs/decisions/007-shadcn-ui-component-library.md)
 
 ### Other Documentation
 - [System Architecture Overview](docs/architecture/SYSTEM_OVERVIEW.md)
