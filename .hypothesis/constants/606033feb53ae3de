@@ -1,0 +1,4 @@
+# file: /home/runner/workspace/src/infrastructure/projections/audit_projector.py
+# hypothesis_version: 6.148.7
+
+['Document', 'accepted_by', 'aggregate_type', 'assigned_by', 'created_by', 'event_type', 'exported_by', 'initiated_by', 'modified_by', 'rejected_by', 'uploaded_by']

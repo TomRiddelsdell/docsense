@@ -1,0 +1,4 @@
+# file: /home/runner/workspace/src/infrastructure/repositories/feedback_repository.py
+# hypothesis_version: 6.148.7
+
+['FeedbackSession', 'confidence', 'document_id', 'feedback_id', 'feedback_items', 'id', 'issue', 'original_text', 'policy_reference', 'section', 'status', 'suggested_text', 'suggestion', 'version']

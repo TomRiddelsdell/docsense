@@ -1,0 +1,4 @@
+# file: /home/runner/workspace/src/infrastructure/persistence/event_store.py
+# hypothesis_version: 6.148.7
+
+[100, 'event_type', 'payload']

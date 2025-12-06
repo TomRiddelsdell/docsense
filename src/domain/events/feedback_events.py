@@ -5,6 +5,12 @@ from .base import DomainEvent
 
 
 @dataclass(frozen=True)
+class FeedbackSessionCreated(DomainEvent):
+    document_id: UUID = field(default=None)
+    aggregate_type: str = field(default="FeedbackSession")
+
+
+@dataclass(frozen=True)
 class FeedbackGenerated(DomainEvent):
     feedback_id: UUID = field(default=None)
     issue_description: str = ""

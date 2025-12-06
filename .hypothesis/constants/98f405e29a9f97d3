@@ -1,0 +1,4 @@
+# file: /home/runner/workspace/src/infrastructure/persistence/event_serializer.py
+# hypothesis_version: 6.148.7
+
+['AnalysisCompleted', 'AnalysisFailed', 'AnalysisStarted', 'ChangeAccepted', 'ChangeModified', 'ChangeRejected', 'DocumentConverted', 'DocumentExported', 'DocumentUploaded', 'FeedbackGenerated', 'PolicyAdded', 'UUID', 'datetime']

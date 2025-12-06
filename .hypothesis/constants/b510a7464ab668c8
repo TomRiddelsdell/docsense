@@ -1,0 +1,4 @@
+# file: /home/runner/workspace/src/infrastructure/repositories/__init__.py
+# hypothesis_version: 6.148.7
+
+['DocumentRepository', 'Repository']
