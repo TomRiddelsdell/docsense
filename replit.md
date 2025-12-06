@@ -1,0 +1,128 @@
+# Trading Algorithm Document Analyzer
+
+## Project Overview
+
+An AI-powered application that analyzes trading algorithm documentation and provides actionable feedback for improvement. The application maintains a complete audit trail of all document changes.
+
+### Tech Stack
+- **Backend**: Python with FastAPI
+- **Architecture**: Domain-Driven Design (DDD) with Event Sourcing and CQRS
+- **AI Agent**: Google Agent Development Kit
+- **Database**: PostgreSQL (for event store and read models)
+- **Frontend**: TBD (React or Vue)
+
+### Current State
+- **Phase**: Documentation and Architecture Design
+- **Status**: Initial documentation structure created
+
+---
+
+## Directory Structure
+
+```
+/
+├── docs/                           # All project documentation
+│   ├── decisions/                  # Architecture Decision Records (ADRs)
+│   │   └── <number>-<short-description>.md
+│   ├── processes/                  # Multi-step repeatable processes
+│   │   └── <number>-<process-name>.md
+│   ├── changes/                    # Append-only change log
+│   │   └── yyyy-mm-dd-<short-description>.md
+│   ├── architecture/               # System architecture docs
+│   ├── domain/                     # Domain model documentation
+│   ├── api/                        # API specifications
+│   ├── development/                # Development guidelines
+│   ├── ai-agent/                   # AI agent integration docs
+│   ├── GLOSSARY.md                 # Ubiquitous language definitions
+│   └── VISION.md                   # Product vision and goals
+├── src/                            # Source code (to be created)
+│   ├── domain/                     # Domain layer (aggregates, events, commands)
+│   ├── application/                # Application layer (command/query handlers)
+│   ├── infrastructure/             # Infrastructure (event store, projections)
+│   └── api/                        # API layer (FastAPI routes)
+├── tests/                          # Test suite (to be created)
+├── main.py                         # Application entry point
+└── replit.md                       # This file
+```
+
+---
+
+## AI Agent Instructions
+
+### CRITICAL: Documentation Conventions
+
+When making changes to this project, you MUST follow these conventions:
+
+#### 1. Architecture Decision Records (ADRs)
+- **Location**: `/docs/decisions/`
+- **Naming**: `<number>-<short-description>.md` (e.g., `002-use-fastapi-for-backend.md`)
+- **When to create**: Any significant architectural or technical decision
+- **Template**: Use `/docs/decisions/000-template.md`
+- **Numbering**: Sequential, zero-padded to 3 digits
+
+#### 2. Process Documentation
+- **Location**: `/docs/processes/`
+- **Naming**: `<number>-<process-name>.md` (e.g., `002-version-rollback.md`)
+- **When to create**: Any repeatable multi-step workflow
+- **Template**: Use `/docs/processes/000-template.md`
+- **Numbering**: Sequential, zero-padded to 3 digits
+
+#### 3. Change Log (MANDATORY)
+- **Location**: `/docs/changes/`
+- **Naming**: `yyyy-mm-dd-<short-description>.md` (e.g., `2025-12-06-add-user-auth.md`)
+- **When to create**: After EVERY session that modifies files
+- **Content**: Must include:
+  - Date and author
+  - Summary of changes
+  - List of new/modified/deleted files
+  - Rationale for changes
+  - Related ADRs (if applicable)
+  - Next steps
+
+### Code Conventions
+
+#### Domain-Driven Design
+- Use ubiquitous language from `/docs/GLOSSARY.md`
+- Aggregates in `/src/domain/aggregates/`
+- Events in `/src/domain/events/`
+- Commands in `/src/domain/commands/`
+- Value objects in `/src/domain/value_objects/`
+
+#### Event Sourcing
+- Events are immutable and named in past tense (e.g., `DocumentUploaded`)
+- Events contain all data needed to reconstruct state
+- Never delete events; use compensating events
+
+#### CQRS
+- Commands are named imperatively (e.g., `UploadDocument`)
+- Separate read and write models
+- Projections build read models from events
+
+#### API Design
+- RESTful endpoints following OpenAPI 3.0
+- Commands: POST/PUT/DELETE operations
+- Queries: GET operations
+- Document API in `/docs/api/openapi.yaml`
+
+### Testing Requirements
+- Unit tests for domain logic
+- Integration tests for event store operations
+- End-to-end tests for API endpoints
+
+---
+
+## Recent Changes
+
+| Date | Description | Change Log |
+|------|-------------|------------|
+| 2025-12-06 | Initial documentation structure | [Link](docs/changes/2025-12-06-initial-documentation-structure.md) |
+
+---
+
+## Key References
+
+- [ADR-001: DDD with Event Sourcing and CQRS](docs/decisions/001-use-ddd-event-sourcing-cqrs.md)
+- [System Architecture Overview](docs/architecture/SYSTEM_OVERVIEW.md)
+- [Glossary](docs/GLOSSARY.md)
+- [Product Vision](docs/VISION.md)
+- [Document Analysis Workflow](docs/processes/001-document-analysis-workflow.md)
