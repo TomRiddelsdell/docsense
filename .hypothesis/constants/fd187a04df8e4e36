@@ -1,0 +1,4 @@
+# file: /home/runner/workspace/src/infrastructure/ai/rate_limiter.py
+# hypothesis_version: 6.148.7
+
+[0.1, 1000, 100000, 'concurrent_limit', 'hour_limit', 'minute_limit', 'requests_per_hour', 'requests_per_minute', 'tokens_per_minute']

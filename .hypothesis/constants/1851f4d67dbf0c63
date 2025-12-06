@@ -1,0 +1,4 @@
+# file: /home/runner/workspace/src/infrastructure/ai/prompts/base.py
+# hypothesis_version: 6.148.7
+
+[50000, 'document_content', 'extra_context', 'include_suggestions', 'issue_data', 'max_issues', 'policy_rules', 'requirement_type', 'section_focus', 'validation_criteria']

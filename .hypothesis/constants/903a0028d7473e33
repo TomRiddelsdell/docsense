@@ -1,0 +1,4 @@
+# file: /home/runner/workspace/src/infrastructure/ai/base.py
+# hypothesis_version: 6.148.7
+
+[0.0, 0.3, 1.0, 'Issue', 'PolicyRule', 'SHOULD', 'Suggestion', 'category', 'claude', 'confidence', 'created_at', 'critical', 'description', 'errors', 'examples', 'explanation', 'extra_context', 'focus_sections', 'gemini', 'general', 'high', 'id', 'include_suggestions', 'info', 'issue_id', 'issues', 'location', 'low', 'max_issues', 'medium', 'model_name', 'model_used', 'name', 'openai', 'original_text', 'processing_time_ms', 'requirement_type', 'rule_id', 'severity', 'severity_threshold', 'success', 'suggested_text', 'suggestions', 'summary', 'temperature', 'title', 'token_count', 'validation_criteria']

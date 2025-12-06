@@ -10,11 +10,11 @@ if TYPE_CHECKING:
 
 
 class ProviderFactory:
-    _instances: dict[ProviderType, AIProvider] = {}
-    _rate_limiters: dict[ProviderType, RateLimiter] = {}
 
     def __init__(self, rate_limit_config: RateLimitConfig | None = None):
         self._rate_limit_config = rate_limit_config or RateLimitConfig()
+        self._instances: dict[ProviderType, AIProvider] = {}
+        self._rate_limiters: dict[ProviderType, RateLimiter] = {}
 
     def get_provider(self, provider_type: ProviderType) -> AIProvider:
         if provider_type not in self._instances:
