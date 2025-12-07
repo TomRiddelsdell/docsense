@@ -29,6 +29,7 @@ import {
 import { useDocument, useDocumentFeedback, useAnalyzeDocument, useAcceptFeedback, useRejectFeedback } from '@/hooks/useDocuments';
 import ChatPanel from '@/components/ChatPanel';
 import ParameterGraph from '@/components/ParameterGraph';
+import AnalysisLogPanel from '@/components/AnalysisLogPanel';
 import { cn } from '@/lib/utils';
 import type { FeedbackItem } from '@/types/api';
 
@@ -257,6 +258,10 @@ export default function DocumentDetailPage() {
             <GitBranch className="h-4 w-4" />
             Graph
           </TabsTrigger>
+          <TabsTrigger value="logs" className="gap-2">
+            <Clock className="h-4 w-4" />
+            AI Logs
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="issues" className="mt-6">
@@ -336,6 +341,10 @@ export default function DocumentDetailPage() {
 
         <TabsContent value="graph" className="mt-6">
           <ParameterGraph documentId={id!} />
+        </TabsContent>
+
+        <TabsContent value="logs" className="mt-6">
+          <AnalysisLogPanel documentId={id!} />
         </TabsContent>
       </Tabs>
     </div>
