@@ -323,3 +323,177 @@ class TestEventSerializer:
             data = serializer.serialize(event)
             
             assert data["metadata"]["original_format"] == doc_format.value
+
+
+class TestEventSerializerRoundTrip:
+    """Round-trip serialization tests to ensure serialize/deserialize symmetry."""
+    
+    @pytest.fixture
+    def serializer(self):
+        return EventSerializer()
+
+    def test_round_trip_document_uploaded(self, serializer):
+        """Test serialize then deserialize produces equivalent event."""
+        original = DocumentUploaded(
+            event_id=uuid4(),
+            aggregate_id=uuid4(),
+            occurred_at=datetime.now(timezone.utc),
+            version=1,
+            filename="test.pdf",
+            original_format="pdf",
+            file_size_bytes=2048,
+            uploaded_by="user@example.com"
+        )
+        
+        data = serializer.serialize(original)
+        restored = serializer.deserialize("DocumentUploaded", data)
+        
+        assert restored.event_id == original.event_id
+        assert restored.aggregate_id == original.aggregate_id
+        assert restored.filename == original.filename
+        assert restored.original_format == original.original_format
+        assert restored.file_size_bytes == original.file_size_bytes
+        assert restored.uploaded_by == original.uploaded_by
+
+    def test_round_trip_document_converted_with_metadata(self, serializer):
+        """Test round-trip with complex metadata containing enums."""
+        original = DocumentConverted(
+            event_id=uuid4(),
+            aggregate_id=uuid4(),
+            occurred_at=datetime.now(timezone.utc),
+            version=2,
+            markdown_content="# Trading Algorithm\n\nTest content",
+            sections=[
+                {"id": "1", "title": "Introduction", "content": "Test"},
+                {"id": "2", "title": "Parameters", "content": "Params"}
+            ],
+            metadata={
+                "title": "Trading Doc",
+                "author": "Analyst",
+                "original_format": DocumentFormat.PDF,
+                "page_count": 15
+            },
+            conversion_warnings=["Some images skipped"]
+        )
+        
+        data = serializer.serialize(original)
+        restored = serializer.deserialize("DocumentConverted", data)
+        
+        assert restored.event_id == original.event_id
+        assert restored.markdown_content == original.markdown_content
+        assert len(restored.sections) == 2
+        assert restored.metadata["title"] == "Trading Doc"
+        assert restored.metadata["original_format"] == "pdf"
+        assert restored.conversion_warnings == ["Some images skipped"]
+
+    def test_round_trip_analysis_started(self, serializer):
+        """Test round-trip with UUID fields."""
+        policy_id = uuid4()
+        original = AnalysisStarted(
+            event_id=uuid4(),
+            aggregate_id=uuid4(),
+            occurred_at=datetime.now(timezone.utc),
+            version=3,
+            policy_repository_id=policy_id,
+            ai_model="gemini-pro",
+            initiated_by="analyst@example.com"
+        )
+        
+        data = serializer.serialize(original)
+        restored = serializer.deserialize("AnalysisStarted", data)
+        
+        assert restored.event_id == original.event_id
+        assert restored.policy_repository_id == original.policy_repository_id
+        assert restored.ai_model == original.ai_model
+
+    def test_round_trip_analysis_completed_with_nested_uuids(self, serializer):
+        """Test round-trip with nested UUID in findings."""
+        finding_id = uuid4()
+        original = AnalysisCompleted(
+            event_id=uuid4(),
+            aggregate_id=uuid4(),
+            occurred_at=datetime.now(timezone.utc),
+            version=4,
+            findings_count=2,
+            compliance_score=0.85,
+            findings=[
+                {"id": str(finding_id), "issue": "Missing stop loss"},
+                {"id": str(uuid4()), "issue": "No max position size"}
+            ],
+            processing_time_ms=1500
+        )
+        
+        data = serializer.serialize(original)
+        restored = serializer.deserialize("AnalysisCompleted", data)
+        
+        assert restored.event_id == original.event_id
+        assert restored.findings_count == 2
+        assert restored.compliance_score == 0.85
+        assert len(restored.findings) == 2
+        assert restored.findings[0]["id"] == str(finding_id)
+
+    def test_round_trip_feedback_generated(self, serializer):
+        """Test round-trip for FeedbackGenerated event."""
+        feedback_id = uuid4()
+        original = FeedbackGenerated(
+            event_id=uuid4(),
+            aggregate_id=uuid4(),
+            occurred_at=datetime.now(timezone.utc),
+            version=1,
+            feedback_id=feedback_id,
+            issue_description="Algorithm lacks proper risk controls",
+            suggested_change="Add stop loss at 2% of portfolio value",
+            confidence_score=0.92,
+            policy_reference="SEC-RiskManagement-001",
+            section_reference="Section 3.2"
+        )
+        
+        data = serializer.serialize(original)
+        restored = serializer.deserialize("FeedbackGenerated", data)
+        
+        assert restored.feedback_id == original.feedback_id
+        assert restored.issue_description == original.issue_description
+        assert restored.suggested_change == original.suggested_change
+        assert restored.confidence_score == original.confidence_score
+
+    def test_round_trip_policy_added(self, serializer):
+        """Test round-trip for PolicyAdded event."""
+        policy_id = uuid4()
+        original = PolicyAdded(
+            event_id=uuid4(),
+            aggregate_id=uuid4(),
+            occurred_at=datetime.now(timezone.utc),
+            version=2,
+            policy_id=policy_id,
+            policy_name="Risk Disclosure Requirements",
+            policy_content="All trading algorithms must disclose risk parameters",
+            requirement_type="MUST",
+            added_by="compliance@example.com"
+        )
+        
+        data = serializer.serialize(original)
+        restored = serializer.deserialize("PolicyAdded", data)
+        
+        assert restored.policy_id == original.policy_id
+        assert restored.policy_name == original.policy_name
+        assert restored.requirement_type == original.requirement_type
+
+    def test_json_round_trip(self, serializer):
+        """Test full JSON string round-trip."""
+        original = DocumentUploaded(
+            event_id=uuid4(),
+            aggregate_id=uuid4(),
+            occurred_at=datetime.now(timezone.utc),
+            version=1,
+            filename="algorithm.docx",
+            original_format="docx",
+            file_size_bytes=4096,
+            uploaded_by="trader@example.com"
+        )
+        
+        json_str = serializer.to_json(original)
+        restored = serializer.from_json("DocumentUploaded", json_str)
+        
+        assert restored.event_id == original.event_id
+        assert restored.filename == original.filename
+        assert restored.original_format == original.original_format

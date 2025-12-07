@@ -6,6 +6,7 @@ from src.infrastructure.persistence.event_store import (
     InMemoryEventStore,
     ConcurrencyError,
 )
+from src.infrastructure.converters.base import DocumentFormat
 from src.domain.events import DocumentUploaded, DocumentConverted
 
 
@@ -208,3 +209,165 @@ class TestConcurrencyError:
         assert error.aggregate_id == aggregate_id
         assert error.expected_version == 5
         assert error.actual_version == 7
+
+
+class TestEventStoreWithComplexPayloads:
+    """Tests for EventStore with complex payloads containing Enums, nested UUIDs, etc.
+    
+    These tests ensure that events with complex metadata can be stored and retrieved
+    without JSON serialization errors.
+    """
+    
+    @pytest.fixture
+    def store(self):
+        return InMemoryEventStore()
+
+    @pytest.mark.asyncio
+    async def test_store_event_with_enum_in_metadata(self, store):
+        """Test storing DocumentConverted with DocumentFormat enum in metadata."""
+        aggregate_id = uuid4()
+        event = DocumentConverted(
+            event_id=uuid4(),
+            aggregate_id=aggregate_id,
+            occurred_at=datetime.now(timezone.utc),
+            version=1,
+            markdown_content="# Trading Algorithm Documentation",
+            sections=[
+                {"id": "1", "title": "Overview", "content": "Algorithm overview"},
+                {"id": "2", "title": "Parameters", "content": "Risk parameters"}
+            ],
+            metadata={
+                "title": "Trading Strategy Doc",
+                "author": "Quantitative Analyst",
+                "original_format": DocumentFormat.PDF,
+                "page_count": 25,
+                "word_count": 5000
+            },
+            conversion_warnings=["Some charts were skipped"]
+        )
+        
+        await store.append(aggregate_id, [event], expected_version=0)
+        
+        retrieved = await store.get_events(aggregate_id)
+        assert len(retrieved) == 1
+        assert retrieved[0].metadata["original_format"] == DocumentFormat.PDF
+
+    @pytest.mark.asyncio
+    async def test_store_event_with_nested_uuids(self, store):
+        """Test storing event with nested UUID references in lists."""
+        aggregate_id = uuid4()
+        section_uuid = uuid4()
+        event = DocumentConverted(
+            event_id=uuid4(),
+            aggregate_id=aggregate_id,
+            occurred_at=datetime.now(timezone.utc),
+            version=1,
+            markdown_content="# Test",
+            sections=[
+                {"id": str(section_uuid), "title": "Section 1", "content": "Content"},
+            ],
+            metadata={"related_doc_id": str(uuid4())},
+            conversion_warnings=[]
+        )
+        
+        await store.append(aggregate_id, [event], expected_version=0)
+        
+        retrieved = await store.get_events(aggregate_id)
+        assert len(retrieved) == 1
+        assert retrieved[0].sections[0]["id"] == str(section_uuid)
+
+    @pytest.mark.asyncio
+    async def test_store_event_with_all_document_formats(self, store):
+        """Test storing events with all DocumentFormat enum values."""
+        aggregate_id = uuid4()
+        
+        for i, doc_format in enumerate(DocumentFormat):
+            event = DocumentConverted(
+                event_id=uuid4(),
+                aggregate_id=aggregate_id,
+                occurred_at=datetime.now(timezone.utc),
+                version=i + 1,
+                markdown_content=f"# Doc {i}",
+                sections=[],
+                metadata={"original_format": doc_format},
+                conversion_warnings=[]
+            )
+            await store.append(aggregate_id, [event], expected_version=i)
+        
+        retrieved = await store.get_events(aggregate_id)
+        assert len(retrieved) == len(DocumentFormat)
+
+    @pytest.mark.asyncio
+    async def test_store_event_with_deeply_nested_metadata(self, store):
+        """Test storing event with deeply nested metadata structure."""
+        aggregate_id = uuid4()
+        event = DocumentConverted(
+            event_id=uuid4(),
+            aggregate_id=aggregate_id,
+            occurred_at=datetime.now(timezone.utc),
+            version=1,
+            markdown_content="# Complex Doc",
+            sections=[],
+            metadata={
+                "analysis": {
+                    "summary": {
+                        "risk_score": 0.75,
+                        "format": DocumentFormat.WORD,
+                        "timestamps": {
+                            "created": datetime.now(timezone.utc).isoformat(),
+                            "modified": datetime.now(timezone.utc).isoformat()
+                        }
+                    }
+                }
+            },
+            conversion_warnings=[]
+        )
+        
+        await store.append(aggregate_id, [event], expected_version=0)
+        
+        retrieved = await store.get_events(aggregate_id)
+        assert len(retrieved) == 1
+        assert retrieved[0].metadata["analysis"]["summary"]["format"] == DocumentFormat.WORD
+
+    @pytest.mark.asyncio
+    async def test_store_multiple_events_with_mixed_complex_data(self, store):
+        """Test storing multiple events with various complex data types."""
+        aggregate_id = uuid4()
+        
+        event1 = DocumentUploaded(
+            event_id=uuid4(),
+            aggregate_id=aggregate_id,
+            occurred_at=datetime.now(timezone.utc),
+            version=1,
+            filename="strategy.pdf",
+            original_format="pdf",
+            file_size_bytes=1024 * 1024,
+            uploaded_by="trader@fund.com"
+        )
+        
+        event2 = DocumentConverted(
+            event_id=uuid4(),
+            aggregate_id=aggregate_id,
+            occurred_at=datetime.now(timezone.utc),
+            version=2,
+            markdown_content="# Trading Strategy",
+            sections=[
+                {"id": "overview", "title": "Overview", "content": "Strategy overview"},
+                {"id": "params", "title": "Parameters", "content": "Key parameters"}
+            ],
+            metadata={
+                "original_format": DocumentFormat.PDF,
+                "title": "Algorithmic Trading Strategy",
+                "page_count": 50,
+                "nested_ids": [str(uuid4()), str(uuid4())]
+            },
+            conversion_warnings=["Table on page 12 simplified"]
+        )
+        
+        await store.append(aggregate_id, [event1, event2], expected_version=0)
+        
+        retrieved = await store.get_events(aggregate_id)
+        assert len(retrieved) == 2
+        assert isinstance(retrieved[0], DocumentUploaded)
+        assert isinstance(retrieved[1], DocumentConverted)
+        assert retrieved[1].metadata["original_format"] == DocumentFormat.PDF
