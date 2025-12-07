@@ -33,9 +33,12 @@ import { cn } from '@/lib/utils';
 import type { FeedbackItem } from '@/types/api';
 
 const statusColors: Record<string, string> = {
-  pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
+  pending: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200',
+  uploaded: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
+  converted: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+  analyzing: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
   analyzed: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-  exported: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+  exported: 'bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200',
 };
 
 const severityIcons: Record<string, React.ReactNode> = {
@@ -219,10 +222,10 @@ export default function DocumentDetailPage() {
           <div className="flex gap-2">
             <Button 
               onClick={handleAnalyze} 
-              disabled={analyzeMutation.isPending || document.analysis_session?.status === 'in_progress'}
+              disabled={analyzeMutation.isPending || document.status === 'analyzing'}
             >
               <Play className="h-4 w-4 mr-2" />
-              {analyzeMutation.isPending || document.analysis_session?.status === 'in_progress' 
+              {analyzeMutation.isPending || document.status === 'analyzing' 
                 ? 'Analyzing...' 
                 : 'Analyze Document'}
             </Button>
@@ -233,13 +236,6 @@ export default function DocumentDetailPage() {
           <p className="text-muted-foreground mt-4">{document.description}</p>
         )}
 
-        {document.tags && document.tags.length > 0 && (
-          <div className="flex gap-2 mt-3">
-            {document.tags.map((tag) => (
-              <Badge key={tag} variant="outline">{tag}</Badge>
-            ))}
-          </div>
-        )}
       </div>
 
       <Separator className="my-6" />
@@ -278,12 +274,12 @@ export default function DocumentDetailPage() {
                     <Skeleton key={i} className="h-16 w-full" />
                   ))}
                 </div>
-              ) : !feedbackData || feedbackData.feedback.length === 0 ? (
+              ) : !feedbackData || feedbackData.items.length === 0 ? (
                 <div className="py-12 text-center">
                   <CheckCircle className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                   <CardTitle className="text-lg mb-2">No issues found</CardTitle>
                   <CardDescription>
-                    {document.status === 'pending' 
+                    {document.status === 'converted' || document.status === 'uploaded'
                       ? 'Run analysis to generate feedback.'
                       : 'This document has no outstanding issues.'}
                   </CardDescription>
@@ -316,7 +312,7 @@ export default function DocumentDetailPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {feedbackData.feedback.map((item) => (
+                      {feedbackData.items.map((item) => (
                         <FeedbackRow
                           key={item.id}
                           item={item}

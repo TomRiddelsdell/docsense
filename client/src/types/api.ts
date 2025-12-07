@@ -12,8 +12,9 @@ export interface DocumentSummary {
 }
 
 export interface DocumentDetail extends DocumentSummary {
-  content_markdown: string | null;
-  analysis_session: AnalysisSession | null;
+  markdown_content: string | null;
+  sections: Record<string, unknown>[] | null;
+  metadata: Record<string, unknown> | null;
 }
 
 export interface DocumentListResponse {
@@ -52,7 +53,7 @@ export interface FeedbackItem {
 }
 
 export interface FeedbackListResponse {
-  feedback: FeedbackItem[];
+  items: FeedbackItem[];
   total: number;
   pending_count: number;
   accepted_count: number;
