@@ -29,6 +29,7 @@ from src.application.queries.policy_queries import (
     ListPolicyRepositories,
     GetPoliciesByRepository,
 )
+from src.application.queries.base import PaginationParams
 from src.application.queries.document_queries import GetDocumentById
 
 router = APIRouter()
@@ -42,7 +43,7 @@ async def create_policy_repository(
 ):
     command = CreatePolicyRepository(
         name=request.name,
-        description=request.description,
+        description=request.description or "",
         created_by="anonymous",
     )
 
@@ -75,8 +76,10 @@ async def list_policy_repositories(
     handler=Depends(get_list_policy_repositories_handler),
 ):
     query = ListPolicyRepositories(
-        limit=per_page,
-        offset=(page - 1) * per_page,
+        pagination=PaginationParams(
+            limit=per_page,
+            offset=(page - 1) * per_page,
+        )
     )
 
     repositories = await handler.handle(query)

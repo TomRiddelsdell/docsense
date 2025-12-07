@@ -11,6 +11,7 @@ from src.api.schemas.documents import (
     DocumentContentResponse,
     DocumentUpdateRequest,
     ExportDocumentRequest,
+    AssignPolicyRepositoryRequest,
 )
 from src.api.dependencies import (
     get_upload_document_handler,
@@ -244,7 +245,6 @@ async def export_document(
         document_id=document_id,
         export_format=request.format,
         exported_by="anonymous",
-        include_feedback_history=request.include_feedback_history,
     )
 
     await handler.handle(command)
@@ -255,7 +255,7 @@ async def export_document(
 @router.put("/documents/{document_id}/policy-repository", response_model=DocumentResponse)
 async def assign_policy_repository(
     document_id: UUID,
-    policy_repository_id: UUID,
+    request: AssignPolicyRepositoryRequest,
     assign_handler=Depends(get_assign_document_handler),
     query_handler=Depends(get_document_by_id_handler),
 ):
@@ -263,7 +263,7 @@ async def assign_policy_repository(
     
     command = AssignDocumentToPolicy(
         document_id=document_id,
-        repository_id=policy_repository_id,
+        repository_id=request.policy_repository_id,
         assigned_by="anonymous",
     )
     

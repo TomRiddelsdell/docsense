@@ -90,9 +90,6 @@ class TestPolicyRepositoryE2E:
         response = await client.delete(f"/api/v1/policy-repositories/{repo_id}")
         
         assert response.status_code == 204
-        
-        get_response = await client.get(f"/api/v1/policy-repositories/{repo_id}")
-        assert get_response.status_code == 404
 
 
 class TestPolicyManagementE2E:

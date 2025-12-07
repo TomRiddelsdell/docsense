@@ -3,13 +3,14 @@
 Tests retrieving, accepting, and rejecting feedback.
 """
 import pytest
+import pytest_asyncio
 from uuid import uuid4
 
 
 class TestFeedbackE2E:
     """End-to-end tests for feedback operations."""
 
-    @pytest.fixture
+    @pytest_asyncio.fixture
     async def document_with_policy(self, client, sample_markdown_file, sample_policy_data):
         """Create a document assigned to a policy repository."""
         repo_response = await client.post(
@@ -78,7 +79,7 @@ class TestFeedbackActionsE2E:
     the API endpoints respond correctly.
     """
 
-    @pytest.fixture
+    @pytest_asyncio.fixture
     async def document_with_policy(self, client, sample_markdown_file, sample_policy_data):
         """Create a document assigned to a policy repository."""
         repo_response = await client.post(

@@ -97,9 +97,9 @@ class ExportDocumentHandler(CommandHandler[ExportDocument, str]):
             exported_by=command.exported_by
         )
 
+        events = list(document.pending_events)
         await self._documents.save(document)
 
-        events = document.pending_events
         if events:
             await self._publisher.publish_all(events)
 

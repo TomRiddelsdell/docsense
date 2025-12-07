@@ -19,6 +19,7 @@ from src.infrastructure.queries.policy_queries import PolicyQueries
 from src.infrastructure.queries.audit_queries import AuditQueries
 from src.infrastructure.converters.converter_factory import ConverterFactory
 from src.infrastructure.projections.document_projector import DocumentProjection
+from src.infrastructure.projections.policy_projector import PolicyProjection
 from src.application.services.event_publisher import InMemoryEventPublisher
 from src.application.commands.document_handlers import (
     UploadDocumentHandler,
@@ -106,7 +107,9 @@ class Container:
             logger.info("Registering projections with event publisher")
             document_projection = DocumentProjection(self._pool)
             self.event_publisher.register_projection(document_projection)
-            logger.info(f"Registered DocumentProjection, event_publisher now has {len(self.event_publisher._projections)} projections")
+            policy_projection = PolicyProjection(self._pool)
+            self.event_publisher.register_projection(policy_projection)
+            logger.info(f"Registered projections, event_publisher now has {len(self.event_publisher._projections)} projections")
 
     async def close(self) -> None:
         if self._pool:

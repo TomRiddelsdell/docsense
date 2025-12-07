@@ -33,9 +33,10 @@ class CreatePolicyRepositoryHandler(CommandHandler[CreatePolicyRepository, UUID]
             created_by=command.created_by,
         )
         
+        events = list(policy_repo.pending_events)
         await self._policy_repo.save(policy_repo)
         
-        for event in policy_repo.pending_events:
+        for event in events:
             await self._publisher.publish(event)
         
         return repository_id
@@ -65,9 +66,10 @@ class AddPolicyHandler(CommandHandler[AddPolicy, UUID]):
             added_by=command.added_by,
         )
         
+        events = list(repo.pending_events)
         await self._policy_repo.save(repo)
         
-        for event in repo.pending_events:
+        for event in events:
             await self._publisher.publish(event)
         
         return policy_id
@@ -100,9 +102,10 @@ class AssignDocumentToPolicyHandler(CommandHandler[AssignDocumentToPolicy, bool]
             assigned_by=command.assigned_by,
         )
         
+        events = list(repo.pending_events)
         await self._policy_repo.save(repo)
         
-        for event in repo.pending_events:
+        for event in events:
             await self._publisher.publish(event)
         
         return True

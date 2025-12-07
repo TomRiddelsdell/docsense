@@ -28,9 +28,9 @@ class AcceptChangeHandler(CommandHandler[AcceptChange, bool]):
             applied_change=""
         )
 
+        events = list(sessions.pending_events)
         await self._feedback.save(sessions)
 
-        events = sessions.pending_events
         if events:
             await self._publisher.publish_all(events)
 
@@ -60,9 +60,9 @@ class RejectChangeHandler(CommandHandler[RejectChange, bool]):
             rejection_reason=command.reason
         )
 
+        events = list(session.pending_events)
         await self._feedback.save(session)
 
-        events = session.pending_events
         if events:
             await self._publisher.publish_all(events)
 
@@ -90,9 +90,9 @@ class ModifyChangeHandler(CommandHandler[ModifyChange, bool]):
             original_change=""
         )
 
+        events = list(session.pending_events)
         await self._feedback.save(session)
 
-        events = session.pending_events
         if events:
             await self._publisher.publish_all(events)
 

@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from datetime import datetime
-from typing import List, Optional
+from typing import Any, List, Optional
 from uuid import UUID
 
 import asyncpg
@@ -99,7 +99,7 @@ class PolicyQueries:
             FROM policy_views
             WHERE repository_id = $1
         """
-        params = [repository_id]
+        params: List[Any] = [repository_id]
 
         if requirement_type:
             query += " AND requirement_type = $2"

@@ -3,13 +3,14 @@
 Tests starting analysis, checking status, and cancellation.
 """
 import pytest
+import pytest_asyncio
 from uuid import uuid4
 
 
 class TestDocumentAnalysisE2E:
     """End-to-end tests for document analysis operations."""
 
-    @pytest.fixture
+    @pytest_asyncio.fixture
     async def document_with_policy(self, client, sample_markdown_file, sample_policy_data):
         """Create a document assigned to a policy repository."""
         repo_response = await client.post(
@@ -114,7 +115,7 @@ class TestDocumentAnalysisE2E:
 class TestAnalysisWithDifferentProviders:
     """Tests for analysis with different AI model providers."""
 
-    @pytest.fixture
+    @pytest_asyncio.fixture
     async def document_with_policy(self, client, sample_markdown_file, sample_policy_data):
         """Create a document assigned to a policy repository."""
         repo_response = await client.post(

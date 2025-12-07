@@ -36,9 +36,9 @@ class StartAnalysisHandler(CommandHandler[StartAnalysis, UUID]):
             initiated_by=command.initiated_by
         )
 
+        events = list(document.pending_events)
         await self._documents.save(document)
 
-        events = document.pending_events
         if events:
             await self._publisher.publish_all(events)
 

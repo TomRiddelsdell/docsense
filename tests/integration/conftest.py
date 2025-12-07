@@ -1,6 +1,7 @@
 """Shared fixtures for end-to-end integration tests."""
 import os
 import pytest
+import pytest_asyncio
 import asyncio
 from typing import AsyncGenerator
 from uuid import uuid4
@@ -19,7 +20,7 @@ def event_loop():
     loop.close()
 
 
-@pytest.fixture(scope="session")
+@pytest_asyncio.fixture(scope="session")
 async def db_pool():
     settings = get_settings()
     if not settings.database_url:
@@ -34,8 +35,9 @@ async def db_pool():
     await pool.close()
 
 
-@pytest.fixture(autouse=True)
+@pytest_asyncio.fixture
 async def reset_container():
+    """Reset the dependency injection container between tests."""
     Container._instance = None
     Container._pool = None
     yield
@@ -45,8 +47,9 @@ async def reset_container():
     Container._pool = None
 
 
-@pytest.fixture
-async def client() -> AsyncGenerator[AsyncClient, None]:
+@pytest_asyncio.fixture
+async def client(reset_container) -> AsyncGenerator[AsyncClient, None]:
+    """Create an async test client with the app."""
     app = create_app()
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
@@ -96,6 +99,17 @@ def sample_policy_rule():
     return {
         "name": "Entry/Exit Conditions Required",
         "description": "Trading documents must specify clear entry and exit conditions",
-        "requirement_type": "MUST",
-        "validation_rules": ["entry_conditions", "exit_conditions"],
+        "requirement_type": "must",
+        "validation_rules": [
+            {
+                "rule_type": "section_required",
+                "pattern": "entry_conditions",
+                "error_message": "Entry conditions section is required",
+            },
+            {
+                "rule_type": "section_required",
+                "pattern": "exit_conditions",
+                "error_message": "Exit conditions section is required",
+            },
+        ],
     }

@@ -1,6 +1,7 @@
 import logging
-from typing import List, Type
+from typing import List, Type, Any
 import json
+from enum import Enum
 
 import asyncpg
 
@@ -16,6 +17,17 @@ from src.domain.events import (
     AnalysisFailed,
 )
 from src.infrastructure.projections.base import Projection
+
+
+def serialize_for_json(obj: Any) -> Any:
+    """Convert objects to JSON-serializable format, handling enums."""
+    if isinstance(obj, Enum):
+        return obj.value
+    elif isinstance(obj, dict):
+        return {k: serialize_for_json(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [serialize_for_json(item) for item in obj]
+    return obj
 
 
 class DocumentProjection(Projection):
@@ -95,8 +107,8 @@ class DocumentProjection(Projection):
                 """,
                 event.aggregate_id,
                 event.markdown_content,
-                json.dumps(event.sections),
-                json.dumps(event.metadata)
+                json.dumps(serialize_for_json(event.sections)),
+                json.dumps(serialize_for_json(event.metadata))
             )
 
     async def _handle_analysis_started(self, event: AnalysisStarted) -> None:

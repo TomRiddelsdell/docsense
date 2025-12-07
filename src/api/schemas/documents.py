@@ -23,6 +23,10 @@ class ExportDocumentRequest(BaseModel):
     include_feedback_history: bool = False
 
 
+class AssignPolicyRepositoryRequest(BaseModel):
+    policy_repository_id: UUID
+
+
 class PolicyRepositorySummary(BaseModel):
     id: UUID
     name: str
