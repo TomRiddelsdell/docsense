@@ -37,6 +37,10 @@ def create_app() -> FastAPI:
 
     add_exception_handlers(app)
 
+    @app.get("/", tags=["health"])
+    async def root_health_check() -> dict:
+        return {"status": "healthy", "version": "1.0.0"}
+
     app.include_router(health.router, prefix="/api/v1", tags=["health"])
     app.include_router(documents.router, prefix="/api/v1", tags=["documents"])
     app.include_router(analysis.router, prefix="/api/v1", tags=["analysis"])
