@@ -25,9 +25,12 @@ import { useDocuments } from '@/hooks/useDocuments';
 import { cn } from '@/lib/utils';
 
 const statusColors: Record<string, string> = {
-  pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
+  pending: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200',
+  uploaded: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
+  converted: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+  analyzing: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
   analyzed: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-  exported: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+  exported: 'bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200',
 };
 
 export default function DocumentListPage() {
@@ -53,11 +56,11 @@ export default function DocumentListPage() {
     });
   };
 
-  const formatFileSize = (bytes: number): string => {
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  const formatFileType = (format: string): string => {
+    return format.replace('application/', '').replace('text/', '').toUpperCase();
   };
+
+  const totalPages = data ? Math.ceil(data.total / 10) : 1;
 
   if (isError) {
     return (
@@ -154,7 +157,6 @@ export default function DocumentListPage() {
                     <TableHead>Document</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="hidden md:table-cell">Type</TableHead>
-                    <TableHead className="hidden md:table-cell">Size</TableHead>
                     <TableHead className="hidden sm:table-cell">Created</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
@@ -172,9 +174,6 @@ export default function DocumentListPage() {
                           </div>
                           <div>
                             <p className="font-medium">{doc.title}</p>
-                            <p className="text-sm text-muted-foreground truncate max-w-[200px]">
-                              {doc.file_name}
-                            </p>
                           </div>
                         </Link>
                       </TableCell>
@@ -186,11 +185,8 @@ export default function DocumentListPage() {
                           {doc.status}
                         </Badge>
                       </TableCell>
-                      <TableCell className="hidden md:table-cell uppercase text-sm">
-                        {doc.file_type.replace('application/', '').replace('text/', '')}
-                      </TableCell>
                       <TableCell className="hidden md:table-cell text-sm">
-                        {formatFileSize(doc.file_size)}
+                        {formatFileType(doc.original_format)}
                       </TableCell>
                       <TableCell className="hidden sm:table-cell text-sm text-muted-foreground">
                         {formatDate(doc.created_at)}
@@ -205,10 +201,10 @@ export default function DocumentListPage() {
                 </TableBody>
               </Table>
 
-              {data && data.total_pages > 1 && (
+              {data && totalPages > 1 && (
                 <div className="flex items-center justify-between pt-4 border-t mt-4">
                   <p className="text-sm text-muted-foreground">
-                    Page {data.page} of {data.total_pages} ({data.total} documents)
+                    Page {data.page} of {totalPages} ({data.total} documents)
                   </p>
                   <div className="flex gap-2">
                     <Button
@@ -223,8 +219,8 @@ export default function DocumentListPage() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setPage(p => Math.min(data.total_pages, p + 1))}
-                      disabled={page === data.total_pages}
+                      onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                      disabled={page === totalPages}
                     >
                       Next
                       <ChevronRight className="h-4 w-4" />

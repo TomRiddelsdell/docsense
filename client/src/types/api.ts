@@ -2,12 +2,10 @@ export interface DocumentSummary {
   id: string;
   title: string;
   description: string | null;
-  status: 'pending' | 'analyzed' | 'exported';
-  file_name: string;
-  file_type: string;
-  file_size: number;
-  tags: string[];
-  policy_repository_id: string | null;
+  status: 'pending' | 'uploaded' | 'converted' | 'analyzing' | 'analyzed' | 'exported';
+  original_format: string;
+  policy_repository: string | null;
+  compliance_status: 'pending' | 'compliant' | 'partial' | 'non_compliant';
   version: number;
   created_at: string;
   updated_at: string;
@@ -23,7 +21,6 @@ export interface DocumentListResponse {
   total: number;
   page: number;
   per_page: number;
-  total_pages: number;
 }
 
 export interface AnalysisSession {
