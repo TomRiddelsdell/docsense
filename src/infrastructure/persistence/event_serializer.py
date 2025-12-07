@@ -1,6 +1,7 @@
 import json
 from dataclasses import asdict, fields
 from datetime import datetime
+from enum import Enum
 from typing import Dict, Type, Any
 from uuid import UUID
 
@@ -53,6 +54,8 @@ class EventSerializer:
                 data[field.name] = str(value)
             elif isinstance(value, datetime):
                 data[field.name] = value.isoformat()
+            elif isinstance(value, Enum):
+                data[field.name] = value.value
             elif isinstance(value, list):
                 data[field.name] = self._serialize_list(value)
             elif isinstance(value, dict):
@@ -68,6 +71,8 @@ class EventSerializer:
                 result.append(str(item))
             elif isinstance(item, datetime):
                 result.append(item.isoformat())
+            elif isinstance(item, Enum):
+                result.append(item.value)
             elif isinstance(item, dict):
                 result.append(self._serialize_dict(item))
             else:
@@ -81,6 +86,8 @@ class EventSerializer:
                 result[k] = str(v)
             elif isinstance(v, datetime):
                 result[k] = v.isoformat()
+            elif isinstance(v, Enum):
+                result[k] = v.value
             elif isinstance(v, list):
                 result[k] = self._serialize_list(v)
             elif isinstance(v, dict):
