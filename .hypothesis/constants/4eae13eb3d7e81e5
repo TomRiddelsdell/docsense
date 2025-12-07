@@ -1,0 +1,4 @@
+# file: /home/runner/workspace/src/api/routes/policies.py
+# hypothesis_version: 6.148.7
+
+[100, '/policy-repositories', 'anonymous', 'pending']

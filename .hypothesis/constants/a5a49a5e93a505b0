@@ -1,0 +1,4 @@
+# file: /home/runner/workspace/src/api/schemas/documents.py
+# hypothesis_version: 6.148.7
+
+[255, 1000, '^(pdf|docx|md)$']
