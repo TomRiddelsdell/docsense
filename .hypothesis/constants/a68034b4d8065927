@@ -1,0 +1,4 @@
+# file: /home/runner/workspace/src/api/routes/health.py
+# hypothesis_version: 6.148.7
+
+['/health', '1.0.0', 'healthy', 'status', 'version']

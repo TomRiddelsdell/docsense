@@ -1,0 +1,4 @@
+# file: /home/runner/workspace/src/api/middleware/error_handler.py
+# hypothesis_version: 6.148.7
+
+['conflict', 'error', 'internal_error', 'invalid_format', 'message', 'not_found', 'supported_formats', 'validation_error']

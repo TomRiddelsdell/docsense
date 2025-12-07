@@ -1,0 +1,4 @@
+# file: /home/runner/workspace/src/api/schemas/policies.py
+# hypothesis_version: 6.148.7
+
+[255, 1000, 2000, '^(must|should|may)$']
