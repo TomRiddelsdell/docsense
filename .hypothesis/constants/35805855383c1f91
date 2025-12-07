@@ -1,0 +1,4 @@
+# file: /home/runner/workspace/src/api/routes/chat.py
+# hypothesis_version: 6.148.7
+
+[0.7, 'api_version', 'base_url', 'gemini-2.5-flash', 'model', 'user']

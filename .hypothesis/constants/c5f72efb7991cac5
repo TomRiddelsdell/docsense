@@ -1,0 +1,4 @@
+# file: /home/runner/workspace/src/api/main.py
+# hypothesis_version: 6.148.7
+
+['*', '/', '/api/v1', '/assets', '/{full_path:path}', '1.0.0', 'analysis', 'assets', 'audit', 'chat', 'client', 'dist', 'documents', 'feedback', 'health', 'healthy', 'index.html', 'parameters', 'policies', 'status', 'version']

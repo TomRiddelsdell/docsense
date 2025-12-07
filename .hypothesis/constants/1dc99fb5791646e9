@@ -1,0 +1,4 @@
+# file: /home/runner/workspace/src/api/routes/parameters.py
+# hypothesis_version: 6.148.7
+
+[0.3, 'Unknown', 'api_version', 'application/json', 'base_url', 'dependencies', 'description', 'gemini-2.5-flash', 'id', 'name', 'parameters', 'section', 'text', 'type', 'user', 'value', '{}']

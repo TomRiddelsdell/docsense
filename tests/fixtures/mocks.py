@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Callable, Any
+from typing import Dict, List, Optional, Callable, Any, Awaitable, Union
 from uuid import UUID
 
 from src.domain.aggregates.document import Document
@@ -133,18 +133,20 @@ class MockPolicyRepository:
 class MockEventPublisher:
     def __init__(self):
         self._published_events: List[DomainEvent] = []
-        self._handlers: List[Callable[[DomainEvent], None]] = []
+        self._handlers: List[Callable[[DomainEvent], Union[None, Awaitable[None]]]] = []
 
     async def publish(self, event: DomainEvent) -> None:
         self._published_events.append(event)
         for handler in self._handlers:
-            await handler(event)
+            result = handler(event)
+            if result is not None:
+                await result
 
     async def publish_all(self, events: List[DomainEvent]) -> None:
         for event in events:
             await self.publish(event)
 
-    def subscribe(self, handler: Callable[[DomainEvent], None]) -> None:
+    def subscribe(self, handler: Callable[[DomainEvent], Union[None, Awaitable[None]]]) -> None:
         self._handlers.append(handler)
 
     @property
@@ -156,10 +158,10 @@ class MockEventPublisher:
 
 
 class MockConverterFactory:
-    def __init__(self, success: bool = True, markdown: str = "", sections: List[dict] = None):
+    def __init__(self, success: bool = True, markdown: str = "", sections: Optional[List[dict]] = None):
         self._success = success
         self._markdown = markdown
-        self._sections = sections or []
+        self._sections = sections if sections is not None else []
         self._convert_calls: List[tuple] = []
 
     def get_converter(self, file_path):
@@ -180,10 +182,10 @@ class MockConverterFactory:
 
 
 class MockConverter:
-    def __init__(self, success: bool = True, markdown: str = "", sections: List[dict] = None):
+    def __init__(self, success: bool = True, markdown: str = "", sections: Optional[List[dict]] = None):
         self._success = success
         self._markdown = markdown
-        self._sections = sections or []
+        self._sections = sections if sections is not None else []
 
     def convert_from_bytes(self, content: bytes, filename: str):
         return MockConversionResult(
