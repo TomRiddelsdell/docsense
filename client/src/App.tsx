@@ -1,103 +1,42 @@
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { FileText, Upload, CheckCircle, History } from "lucide-react"
+import { Routes, Route } from 'react-router-dom';
+import Layout from '@/components/layout/Layout';
+import HomePage from '@/pages/HomePage';
+import DocumentListPage from '@/pages/DocumentListPage';
+import DocumentUploadPage from '@/pages/DocumentUploadPage';
+import DocumentDetailPage from '@/pages/DocumentDetailPage';
+
+function AuditPage() {
+  return (
+    <div className="container mx-auto px-4 py-8">
+      <h1 className="text-2xl font-bold mb-4">Audit Log</h1>
+      <p className="text-muted-foreground">Audit log coming soon...</p>
+    </div>
+  );
+}
+
+function NotFoundPage() {
+  return (
+    <div className="container mx-auto px-4 py-8 text-center">
+      <h1 className="text-4xl font-bold mb-4">404</h1>
+      <p className="text-muted-foreground">Page not found</p>
+    </div>
+  );
+}
 
 function App() {
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <FileText className="h-6 w-6 text-primary" />
-            <span className="text-xl font-semibold">DocSense</span>
-          </div>
-          <nav className="flex items-center gap-4">
-            <Button variant="ghost">Documents</Button>
-            <Button variant="ghost">Policies</Button>
-            <Button variant="ghost">Audit Log</Button>
-          </nav>
-        </div>
-      </header>
-
-      <main className="container mx-auto px-4 py-12">
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold tracking-tight mb-4">
-            Trading Algorithm Document Analyzer
-          </h1>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            AI-powered analysis for trading documentation with complete audit trails
-            and compliance tracking.
-          </p>
-        </div>
-
-        <div className="flex justify-center mb-12">
-          <Button size="lg" className="gap-2">
-            <Upload className="h-5 w-5" />
-            Upload Document
-          </Button>
-        </div>
-
-        <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
-          <Card>
-            <CardHeader>
-              <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center mb-2">
-                <Upload className="h-5 w-5 text-primary" />
-              </div>
-              <CardTitle className="text-lg">Upload & Convert</CardTitle>
-              <CardDescription>
-                Support for Word, PDF, RST, and Markdown documents up to 100 pages.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                Documents are automatically converted to a standardized format for AI analysis.
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center mb-2">
-                <CheckCircle className="h-5 w-5 text-primary" />
-              </div>
-              <CardTitle className="text-lg">AI Analysis</CardTitle>
-              <CardDescription>
-                Multi-model AI support with Gemini, OpenAI, and Claude.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                Get actionable feedback with policy compliance checking and user acceptance workflow.
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center mb-2">
-                <History className="h-5 w-5 text-primary" />
-              </div>
-              <CardTitle className="text-lg">Complete Audit Trail</CardTitle>
-              <CardDescription>
-                Every change is tracked with immutable event sourcing.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                Version history, rollback capability, and compliance reporting for regulatory needs.
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-      </main>
-
-      <footer className="border-t mt-12">
-        <div className="container mx-auto px-4 py-6 text-center text-sm text-muted-foreground">
-          Trading Algorithm Document Analyzer - Built with Event Sourcing & CQRS
-        </div>
-      </footer>
-    </div>
-  )
+    <Routes>
+      <Route path="/" element={<Layout />}>
+        <Route index element={<HomePage />} />
+        <Route path="documents" element={<DocumentListPage />} />
+        <Route path="documents/upload" element={<DocumentUploadPage />} />
+        <Route path="documents/:id" element={<DocumentDetailPage />} />
+        <Route path="documents/:id/:tab" element={<DocumentDetailPage />} />
+        <Route path="audit" element={<AuditPage />} />
+        <Route path="*" element={<NotFoundPage />} />
+      </Route>
+    </Routes>
+  );
 }
 
-export default App
+export default App;

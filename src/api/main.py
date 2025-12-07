@@ -10,7 +10,7 @@ from fastapi.staticfiles import StaticFiles
 
 from .middleware.error_handler import add_exception_handlers
 from .middleware.request_id import RequestIdMiddleware
-from .routes import documents, analysis, feedback, policies, audit, health
+from .routes import documents, analysis, feedback, policies, audit, health, chat, parameters
 from .dependencies import Container
 
 STATIC_DIR = Path(__file__).parent.parent.parent / "client" / "dist"
@@ -49,6 +49,8 @@ def create_app() -> FastAPI:
     app.include_router(feedback.router, prefix="/api/v1", tags=["feedback"])
     app.include_router(policies.router, prefix="/api/v1", tags=["policies"])
     app.include_router(audit.router, prefix="/api/v1", tags=["audit"])
+    app.include_router(chat.router, prefix="/api/v1", tags=["chat"])
+    app.include_router(parameters.router, prefix="/api/v1", tags=["parameters"])
 
     if STATIC_DIR.exists():
         app.mount("/assets", StaticFiles(directory=STATIC_DIR / "assets"), name="assets")

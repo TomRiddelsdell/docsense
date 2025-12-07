@@ -1,0 +1,347 @@
+import { useParams, useNavigate, Link } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Separator } from '@/components/ui/separator';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { 
+  FileText, 
+  ArrowLeft, 
+  Play, 
+  CheckCircle, 
+  XCircle, 
+  AlertTriangle,
+  MessageSquare,
+  GitBranch,
+  Clock,
+  AlertCircle,
+  Lightbulb,
+} from 'lucide-react';
+import { useDocument, useDocumentFeedback, useAnalyzeDocument, useAcceptFeedback, useRejectFeedback } from '@/hooks/useDocuments';
+import ChatPanel from '@/components/ChatPanel';
+import ParameterGraph from '@/components/ParameterGraph';
+import { cn } from '@/lib/utils';
+import type { FeedbackItem } from '@/types/api';
+
+const statusColors: Record<string, string> = {
+  pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
+  analyzed: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+  exported: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+};
+
+const severityIcons: Record<string, React.ReactNode> = {
+  low: <Lightbulb className="h-4 w-4 text-blue-500" />,
+  medium: <AlertCircle className="h-4 w-4 text-yellow-500" />,
+  high: <AlertTriangle className="h-4 w-4 text-orange-500" />,
+  critical: <XCircle className="h-4 w-4 text-red-500" />,
+};
+
+const severityColors: Record<string, string> = {
+  low: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+  medium: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
+  high: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
+  critical: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
+};
+
+const feedbackStatusColors: Record<string, string> = {
+  pending: 'bg-yellow-100 text-yellow-800',
+  accepted: 'bg-green-100 text-green-800',
+  rejected: 'bg-gray-100 text-gray-800',
+};
+
+function FeedbackRow({ 
+  item, 
+  onAccept,
+  onReject,
+  isAccepting,
+  isRejecting,
+}: { 
+  item: FeedbackItem; 
+  onAccept: () => void;
+  onReject: () => void;
+  isAccepting: boolean;
+  isRejecting: boolean;
+}) {
+  return (
+    <TableRow>
+      <TableCell>
+        <div className="flex items-center gap-2">
+          {severityIcons[item.severity]}
+          <Badge variant="secondary" className={cn('capitalize', severityColors[item.severity])}>
+            {item.severity}
+          </Badge>
+        </div>
+      </TableCell>
+      <TableCell>
+        <div>
+          <p className="font-medium">{item.title}</p>
+          <p className="text-sm text-muted-foreground line-clamp-2">{item.description}</p>
+        </div>
+      </TableCell>
+      <TableCell className="hidden md:table-cell">
+        {item.location || '—'}
+      </TableCell>
+      <TableCell>
+        <Badge variant="secondary" className={cn('capitalize', feedbackStatusColors[item.status])}>
+          {item.status}
+        </Badge>
+      </TableCell>
+      <TableCell className="text-right">
+        {item.status === 'pending' && (
+          <div className="flex justify-end gap-2">
+            <Button 
+              size="sm" 
+              variant="outline"
+              onClick={onAccept}
+              disabled={isAccepting || isRejecting}
+            >
+              <CheckCircle className="h-4 w-4 mr-1" />
+              Accept
+            </Button>
+            <Button 
+              size="sm" 
+              variant="ghost"
+              onClick={onReject}
+              disabled={isAccepting || isRejecting}
+            >
+              <XCircle className="h-4 w-4 mr-1" />
+              Reject
+            </Button>
+          </div>
+        )}
+      </TableCell>
+    </TableRow>
+  );
+}
+
+export default function DocumentDetailPage() {
+  const { id, tab } = useParams<{ id: string; tab?: string }>();
+  const navigate = useNavigate();
+  const currentTab = tab || 'issues';
+
+  const { data: document, isLoading: docLoading, isError: docError } = useDocument(id);
+  const { data: feedbackData, isLoading: feedbackLoading } = useDocumentFeedback(id);
+  const analyzeMutation = useAnalyzeDocument();
+  const acceptMutation = useAcceptFeedback();
+  const rejectMutation = useRejectFeedback();
+
+  const handleTabChange = (value: string) => {
+    navigate(`/documents/${id}/${value}`);
+  };
+
+  const handleAnalyze = async () => {
+    if (!id) return;
+    await analyzeMutation.mutateAsync({ documentId: id });
+  };
+
+  const formatDate = (dateStr: string) => {
+    return new Date(dateStr).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  if (docLoading) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="space-y-4">
+          <Skeleton className="h-8 w-48" />
+          <Skeleton className="h-4 w-96" />
+          <Skeleton className="h-64 w-full" />
+        </div>
+      </div>
+    );
+  }
+
+  if (docError || !document) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <Card>
+          <CardContent className="py-12 text-center">
+            <AlertCircle className="h-12 w-12 mx-auto text-destructive mb-4" />
+            <CardTitle className="text-lg mb-2">Document not found</CardTitle>
+            <CardDescription className="mb-4">
+              The document you're looking for doesn't exist or has been deleted.
+            </CardDescription>
+            <Button asChild>
+              <Link to="/documents">Back to Documents</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  return (
+    <div className="container mx-auto px-4 py-8">
+      <div className="mb-6">
+        <Button variant="ghost" size="sm" asChild className="mb-4">
+          <Link to="/documents">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Documents
+          </Link>
+        </Button>
+
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div className="flex items-start gap-4">
+            <div className="h-14 w-14 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+              <FileText className="h-7 w-7 text-primary" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold">{document.title}</h1>
+              <div className="flex items-center gap-3 mt-1">
+                <Badge variant="secondary" className={cn('capitalize', statusColors[document.status])}>
+                  {document.status}
+                </Badge>
+                <span className="text-sm text-muted-foreground">
+                  v{document.version}
+                </span>
+                <span className="text-sm text-muted-foreground flex items-center gap-1">
+                  <Clock className="h-3 w-3" />
+                  {formatDate(document.updated_at)}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex gap-2">
+            <Button 
+              onClick={handleAnalyze} 
+              disabled={analyzeMutation.isPending || document.analysis_session?.status === 'in_progress'}
+            >
+              <Play className="h-4 w-4 mr-2" />
+              {analyzeMutation.isPending || document.analysis_session?.status === 'in_progress' 
+                ? 'Analyzing...' 
+                : 'Analyze Document'}
+            </Button>
+          </div>
+        </div>
+
+        {document.description && (
+          <p className="text-muted-foreground mt-4">{document.description}</p>
+        )}
+
+        {document.tags && document.tags.length > 0 && (
+          <div className="flex gap-2 mt-3">
+            {document.tags.map((tag) => (
+              <Badge key={tag} variant="outline">{tag}</Badge>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <Separator className="my-6" />
+
+      <Tabs value={currentTab} onValueChange={handleTabChange}>
+        <TabsList>
+          <TabsTrigger value="issues" className="gap-2">
+            <AlertTriangle className="h-4 w-4" />
+            Issues
+            {feedbackData && feedbackData.pending_count > 0 && (
+              <Badge variant="secondary" className="ml-1">{feedbackData.pending_count}</Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="chat" className="gap-2">
+            <MessageSquare className="h-4 w-4" />
+            Chat
+          </TabsTrigger>
+          <TabsTrigger value="graph" className="gap-2">
+            <GitBranch className="h-4 w-4" />
+            Graph
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="issues" className="mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Issue Blotter</CardTitle>
+              <CardDescription>
+                Review and respond to AI-generated feedback
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {feedbackLoading ? (
+                <div className="space-y-4">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <Skeleton key={i} className="h-16 w-full" />
+                  ))}
+                </div>
+              ) : !feedbackData || feedbackData.feedback.length === 0 ? (
+                <div className="py-12 text-center">
+                  <CheckCircle className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <CardTitle className="text-lg mb-2">No issues found</CardTitle>
+                  <CardDescription>
+                    {document.status === 'pending' 
+                      ? 'Run analysis to generate feedback.'
+                      : 'This document has no outstanding issues.'}
+                  </CardDescription>
+                </div>
+              ) : (
+                <>
+                  <div className="flex gap-4 mb-4">
+                    <div className="text-sm">
+                      <span className="font-medium">{feedbackData.pending_count}</span>
+                      <span className="text-muted-foreground ml-1">Pending</span>
+                    </div>
+                    <div className="text-sm">
+                      <span className="font-medium text-green-600">{feedbackData.accepted_count}</span>
+                      <span className="text-muted-foreground ml-1">Accepted</span>
+                    </div>
+                    <div className="text-sm">
+                      <span className="font-medium text-gray-600">{feedbackData.rejected_count}</span>
+                      <span className="text-muted-foreground ml-1">Rejected</span>
+                    </div>
+                  </div>
+
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-[100px]">Severity</TableHead>
+                        <TableHead>Issue</TableHead>
+                        <TableHead className="hidden md:table-cell">Location</TableHead>
+                        <TableHead className="w-[100px]">Status</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {feedbackData.feedback.map((item) => (
+                        <FeedbackRow
+                          key={item.id}
+                          item={item}
+                          onAccept={() => acceptMutation.mutate({ documentId: id!, feedbackId: item.id })}
+                          onReject={() => rejectMutation.mutate({ documentId: id!, feedbackId: item.id })}
+                          isAccepting={acceptMutation.isPending}
+                          isRejecting={rejectMutation.isPending}
+                        />
+                      ))}
+                    </TableBody>
+                  </Table>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="chat" className="mt-6">
+          <ChatPanel documentId={id!} />
+        </TabsContent>
+
+        <TabsContent value="graph" className="mt-6">
+          <ParameterGraph documentId={id!} />
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
