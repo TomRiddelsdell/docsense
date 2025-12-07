@@ -1,0 +1,22 @@
+{
+  "name": "workspace",
+  "version": "1.0.0",
+  "description": "\"Python: Gemini API\" is a simple sample application that shows you how to interact with Google's Gemini APIs .",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs",
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@tanstack/react-query": "^5.90.12",
+    "@xyflow/react": "^12.10.0",
+    "axios": "^1.13.2",
+    "react-router-dom": "^7.10.1"
+  }
+}
