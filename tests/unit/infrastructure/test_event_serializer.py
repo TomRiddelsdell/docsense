@@ -1,8 +1,10 @@
 import pytest
+from enum import Enum
 from uuid import uuid4
 from datetime import datetime, timezone
 
 from src.infrastructure.persistence.event_serializer import EventSerializer
+from src.infrastructure.converters.base import DocumentFormat
 from src.domain.events import (
     DocumentUploaded,
     DocumentConverted,
@@ -232,3 +234,92 @@ class TestEventSerializer:
         
         assert data["sections"] == []
         assert data["metadata"] == {}
+
+    def test_serialize_enum_in_nested_dict(self, serializer):
+        """Test that Enum values in nested dicts are serialized to their values.
+        
+        This covers the bug where DocumentFormat enum in metadata caused
+        'Object of type DocumentFormat is not JSON serializable' error.
+        """
+        event = DocumentConverted(
+            event_id=uuid4(),
+            aggregate_id=uuid4(),
+            occurred_at=datetime.now(timezone.utc),
+            version=1,
+            markdown_content="# Test",
+            sections=[],
+            metadata={
+                "title": "Test Document",
+                "original_format": DocumentFormat.PDF,
+                "page_count": 10
+            },
+            conversion_warnings=[]
+        )
+        
+        data = serializer.serialize(event)
+        
+        assert data["metadata"]["original_format"] == "pdf"
+        assert data["metadata"]["title"] == "Test Document"
+        assert data["metadata"]["page_count"] == 10
+
+    def test_serialize_enum_in_list(self, serializer):
+        """Test that Enum values in lists are serialized to their values."""
+        event = DocumentConverted(
+            event_id=uuid4(),
+            aggregate_id=uuid4(),
+            occurred_at=datetime.now(timezone.utc),
+            version=1,
+            markdown_content="# Test",
+            sections=[
+                {"format": DocumentFormat.MARKDOWN},
+                {"format": DocumentFormat.PDF}
+            ],
+            metadata={},
+            conversion_warnings=[]
+        )
+        
+        data = serializer.serialize(event)
+        
+        assert data["sections"][0]["format"] == "md"
+        assert data["sections"][1]["format"] == "pdf"
+
+    def test_serialize_deeply_nested_enum(self, serializer):
+        """Test that Enum values in deeply nested structures are serialized."""
+        event = DocumentConverted(
+            event_id=uuid4(),
+            aggregate_id=uuid4(),
+            occurred_at=datetime.now(timezone.utc),
+            version=1,
+            markdown_content="# Test",
+            sections=[],
+            metadata={
+                "nested": {
+                    "deeply": {
+                        "format": DocumentFormat.WORD
+                    }
+                }
+            },
+            conversion_warnings=[]
+        )
+        
+        data = serializer.serialize(event)
+        
+        assert data["metadata"]["nested"]["deeply"]["format"] == "docx"
+
+    def test_serialize_all_document_formats(self, serializer):
+        """Test all DocumentFormat enum values serialize correctly."""
+        for doc_format in DocumentFormat:
+            event = DocumentConverted(
+                event_id=uuid4(),
+                aggregate_id=uuid4(),
+                occurred_at=datetime.now(timezone.utc),
+                version=1,
+                markdown_content="# Test",
+                sections=[],
+                metadata={"original_format": doc_format},
+                conversion_warnings=[]
+            )
+            
+            data = serializer.serialize(event)
+            
+            assert data["metadata"]["original_format"] == doc_format.value
