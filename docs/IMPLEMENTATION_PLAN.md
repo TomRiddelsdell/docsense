@@ -831,134 +831,750 @@ async def get_document(
 
 ## Phase 6: Frontend Implementation
 
-**Duration**: 3-4 weeks  
-**Goal**: Build complete React frontend
+**Duration**: 4-5 weeks  
+**Goal**: Build complete React frontend with document management, issue blotter, AI chatbot, and parameter visualization
 
-### 6.1 Project Structure
+### 6.1 Phase Overview
+
+The frontend implementation is divided into 6 increments:
+1. **Foundation Setup** - Routing, API client, state management
+2. **Document Upload Page** - File upload with validation
+3. **Document List Page** - Paginated document browser
+4. **Document Detail Page** - Core layout with tabbed interface
+5. **AI Chatbot Integration** - Interactive issue exploration
+6. **Parameter Graph Visualization** - Dependency diagram
+
+### 6.2 Dependencies to Install
+
+```bash
+cd client
+npm install react-router-dom @tanstack/react-query axios @xyflow/react
+npm install -D @types/react-router-dom
+```
+
+### 6.3 Project Structure
 
 **Files to Create**:
 ```
 client/src/
-├── api/
-│   ├── client.ts               # API client with fetch
-│   ├── documents.ts            # Document API hooks
-│   ├── analysis.ts             # Analysis API hooks
-│   ├── feedback.ts             # Feedback API hooks
-│   └── policies.ts             # Policy API hooks
-├── components/
-│   ├── ui/                     # Shadcn/ui components (existing)
-│   ├── documents/
-│   │   ├── DocumentUpload.tsx
-│   │   ├── DocumentList.tsx
-│   │   ├── DocumentDetail.tsx
-│   │   └── DocumentViewer.tsx
-│   ├── analysis/
-│   │   ├── AnalysisProgress.tsx
-│   │   ├── AnalysisResult.tsx
-│   │   └── SuggestionCard.tsx
-│   ├── feedback/
-│   │   ├── FeedbackList.tsx
-│   │   ├── FeedbackItem.tsx
-│   │   ├── DiffViewer.tsx
-│   │   └── AcceptRejectButtons.tsx
-│   ├── policies/
-│   │   ├── PolicySelector.tsx
-│   │   └── ComplianceStatus.tsx
-│   ├── audit/
-│   │   ├── AuditTimeline.tsx
-│   │   └── AuditEntry.tsx
-│   └── layout/
-│       ├── Header.tsx
-│       ├── Sidebar.tsx
-│       └── Footer.tsx
+├── lib/
+│   ├── api.ts                  # Axios instance with base URL
+│   └── utils.ts                # Utility functions (existing)
+├── types/
+│   ├── index.ts                # Re-exports
+│   ├── document.ts             # Document, DocumentStatus DTOs
+│   ├── analysis.ts             # AnalysisSession, AnalysisResult DTOs
+│   ├── feedback.ts             # FeedbackItem, Severity, AcceptanceStatus
+│   ├── chat.ts                 # ChatMessage, ChatRequest, ChatResponse
+│   └── graph.ts                # GraphNode, GraphEdge, ParameterDependency
+├── services/
+│   ├── documents.ts            # Document CRUD operations
+│   ├── analysis.ts             # Analysis start/status/results
+│   ├── feedback.ts             # Accept/reject feedback items
+│   ├── chat.ts                 # AI chat interactions
+│   └── parameters.ts           # Parameter graph data
 ├── hooks/
-│   ├── useDocuments.ts
-│   ├── useAnalysis.ts
-│   ├── useFeedback.ts
-│   └── usePolling.ts
+│   ├── useDocuments.ts         # Document list/detail queries
+│   ├── useDocument.ts          # Single document query
+│   ├── useUploadDocument.ts    # Upload mutation
+│   ├── useAnalysis.ts          # Analysis queries/mutations
+│   ├── useFeedback.ts          # Feedback queries/mutations
+│   ├── useChat.ts              # Chat message management
+│   └── useParameters.ts        # Parameter graph data
+├── components/
+│   ├── ui/                     # Shadcn/ui components
+│   │   ├── button.tsx          # (existing)
+│   │   ├── card.tsx            # (existing)
+│   │   ├── table.tsx           # NEW: Data tables
+│   │   ├── tabs.tsx            # NEW: Tabbed interface
+│   │   ├── badge.tsx           # NEW: Status badges
+│   │   ├── dialog.tsx          # NEW: Modal dialogs
+│   │   ├── input.tsx           # NEW: Form inputs
+│   │   ├── textarea.tsx        # NEW: Chat input
+│   │   ├── scroll-area.tsx     # NEW: Scrollable containers
+│   │   ├── skeleton.tsx        # NEW: Loading states
+│   │   ├── tooltip.tsx         # NEW: Tooltips
+│   │   └── alert.tsx           # NEW: Error/success messages
+│   ├── layout/
+│   │   ├── Header.tsx          # Navigation header
+│   │   ├── Layout.tsx          # Page wrapper with header
+│   │   └── ErrorBoundary.tsx   # Error handling
+│   ├── documents/
+│   │   ├── DocumentUploadForm.tsx    # Upload form with drag-drop
+│   │   ├── DocumentCard.tsx          # Document preview card
+│   │   ├── DocumentTable.tsx         # Document list table
+│   │   ├── DocumentStatusBadge.tsx   # Status indicator
+│   │   └── PolicySelector.tsx        # Policy repository picker
+│   ├── analysis/
+│   │   ├── AnalysisProgress.tsx      # Analysis status/progress
+│   │   ├── AnalysisTrigger.tsx       # Start analysis button
+│   │   └── AnalysisSummary.tsx       # Results overview
+│   ├── feedback/
+│   │   ├── IssueBlotter.tsx          # Main issue list component
+│   │   ├── IssueRow.tsx              # Expandable issue row
+│   │   ├── IssueDetails.tsx          # Issue detail panel
+│   │   ├── SeverityBadge.tsx         # Severity indicator
+│   │   ├── AcceptRejectButtons.tsx   # Action buttons
+│   │   └── DiffViewer.tsx            # Before/after comparison
+│   ├── chat/
+│   │   ├── ChatPanel.tsx             # Main chat container
+│   │   ├── ChatMessageList.tsx       # Message history
+│   │   ├── ChatMessage.tsx           # Single message bubble
+│   │   ├── ChatComposer.tsx          # Message input
+│   │   └── TypingIndicator.tsx       # AI typing animation
+│   └── graph/
+│       ├── ParameterGraph.tsx        # React Flow graph wrapper
+│       ├── ParameterNode.tsx         # Custom node component
+│       ├── DependencyEdge.tsx        # Custom edge component
+│       └── GraphControls.tsx         # Zoom/pan controls
 ├── pages/
-│   ├── Dashboard.tsx
-│   ├── Documents.tsx
-│   ├── DocumentAnalysis.tsx
-│   ├── Policies.tsx
-│   └── AuditLog.tsx
-├── store/
-│   ├── index.ts
-│   └── slices/
-│       ├── documents.ts
-│       └── ui.ts
-└── types/
-    ├── index.ts
-    ├── documents.ts
-    ├── analysis.ts
-    └── feedback.ts
+│   ├── HomePage.tsx                  # Landing page (existing App.tsx content)
+│   ├── DocumentsPage.tsx             # Document list
+│   ├── DocumentUploadPage.tsx        # Upload new document
+│   ├── DocumentDetailPage.tsx        # Detail with tabs
+│   ├── PoliciesPage.tsx              # Policy management (future)
+│   └── AuditLogPage.tsx              # Audit trail (future)
+├── App.tsx                           # Router setup
+└── main.tsx                          # App entry point
 ```
 
-### 6.2 State Management
+---
 
-Use React Query for server state:
+### 6.4 Increment 1: Foundation Setup
+
+**Duration**: 3-4 days
+
+#### 6.4.1 API Client Setup
+
 ```typescript
-// client/src/hooks/useDocuments.ts
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { documentsApi } from '../api/documents';
+// client/src/lib/api.ts
+import axios from 'axios';
 
-export function useDocuments() {
-  return useQuery({
-    queryKey: ['documents'],
-    queryFn: documentsApi.list,
-  });
+export const api = axios.create({
+  baseURL: '/api/v1',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+// Request/response interceptors for error handling
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    // Handle common errors (401, 500, etc.)
+    return Promise.reject(error);
+  }
+);
+```
+
+#### 6.4.2 TypeScript DTOs
+
+```typescript
+// client/src/types/document.ts
+export interface Document {
+  id: string;
+  filename: string;
+  originalFormat: string;
+  status: DocumentStatus;
+  version: string;
+  policyRepositoryId?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
-export function useUploadDocument() {
-  const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: documentsApi.upload,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['documents'] });
+export type DocumentStatus = 
+  | 'uploaded' 
+  | 'converting' 
+  | 'converted' 
+  | 'analyzing' 
+  | 'analyzed' 
+  | 'error';
+
+// client/src/types/feedback.ts
+export interface FeedbackItem {
+  id: string;
+  documentId: string;
+  sectionId?: string;
+  issueType: string;
+  severity: 'critical' | 'major' | 'minor' | 'suggestion';
+  description: string;
+  originalText?: string;
+  suggestedText?: string;
+  policyReference?: string;
+  status: 'pending' | 'accepted' | 'rejected' | 'modified';
+  confidence: number;
+  createdAt: string;
+}
+
+// client/src/types/chat.ts
+export interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  citations?: Citation[];
+  timestamp: string;
+}
+
+export interface Citation {
+  feedbackId: string;
+  sectionTitle: string;
+}
+
+// client/src/types/graph.ts
+export interface ParameterNode {
+  id: string;
+  name: string;
+  definition: string;
+  type: 'parameter' | 'term' | 'formula';
+}
+
+export interface ParameterEdge {
+  source: string;
+  target: string;
+  relationship: 'uses' | 'defines' | 'references';
+}
+```
+
+#### 6.4.3 React Router Setup
+
+```typescript
+// client/src/App.tsx
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Layout } from './components/layout/Layout';
+import { HomePage } from './pages/HomePage';
+import { DocumentsPage } from './pages/DocumentsPage';
+import { DocumentUploadPage } from './pages/DocumentUploadPage';
+import { DocumentDetailPage } from './pages/DocumentDetailPage';
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      retry: 1,
     },
-  });
+  },
+});
+
+export default function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<Layout />}>
+            <Route index element={<HomePage />} />
+            <Route path="documents" element={<DocumentsPage />} />
+            <Route path="documents/upload" element={<DocumentUploadPage />} />
+            <Route path="documents/:id" element={<DocumentDetailPage />} />
+          </Route>
+        </Routes>
+      </BrowserRouter>
+    </QueryClientProvider>
+  );
 }
 ```
 
-### 6.3 Key Components
+---
 
-**Document Upload with Drag & Drop**:
-```typescript
-// client/src/components/documents/DocumentUpload.tsx
-export function DocumentUpload() {
-  const { mutate: upload, isPending } = useUploadDocument();
-  
-  const onDrop = useCallback((files: File[]) => {
-    files.forEach(file => {
-      upload({ file, policyRepositoryId: selectedPolicy });
-    });
-  }, [upload, selectedPolicy]);
-  
-  // ... drag and drop implementation
-}
-```
+### 6.5 Increment 2: Document Upload Page
 
-**Diff Viewer for Suggestions**:
+**Duration**: 2-3 days
+
+#### Features:
+- Drag-and-drop file upload
+- Supported formats: PDF, DOCX, MD, RST
+- File size validation (max 100 pages / 10MB)
+- Policy repository selection
+- Upload progress indicator
+- Success redirect to document detail
+
+#### Key Component:
+
 ```typescript
-// client/src/components/feedback/DiffViewer.tsx
-export function DiffViewer({ original, suggested }: DiffViewerProps) {
-  const diff = useMemo(() => computeDiff(original, suggested), [original, suggested]);
+// client/src/components/documents/DocumentUploadForm.tsx
+export function DocumentUploadForm() {
+  const navigate = useNavigate();
+  const { mutate: upload, isPending, error } = useUploadDocument();
+  const [dragActive, setDragActive] = useState(false);
+  
+  const onDrop = useCallback((e: DragEvent) => {
+    e.preventDefault();
+    const files = Array.from(e.dataTransfer?.files || []);
+    const validFile = files.find(f => isValidFormat(f));
+    
+    if (validFile) {
+      upload(
+        { file: validFile, policyRepositoryId: selectedPolicy },
+        {
+          onSuccess: (data) => navigate(`/documents/${data.id}`),
+        }
+      );
+    }
+  }, [upload, selectedPolicy, navigate]);
   
   return (
-    <div className="grid grid-cols-2 gap-4">
-      <div className="bg-red-50 p-4 rounded">
-        <h4>Original</h4>
-        <pre>{highlightRemoved(diff)}</pre>
-      </div>
-      <div className="bg-green-50 p-4 rounded">
-        <h4>Suggested</h4>
-        <pre>{highlightAdded(diff)}</pre>
-      </div>
+    <div 
+      className={cn(
+        "border-2 border-dashed rounded-lg p-12 text-center",
+        dragActive && "border-primary bg-primary/5"
+      )}
+      onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
+      onDragLeave={() => setDragActive(false)}
+      onDrop={onDrop}
+    >
+      {isPending ? (
+        <UploadProgress />
+      ) : (
+        <>
+          <Upload className="mx-auto h-12 w-12 text-muted-foreground" />
+          <p>Drag & drop your document here, or click to browse</p>
+          <p className="text-sm text-muted-foreground">
+            Supports PDF, Word, Markdown, and RST (max 10MB)
+          </p>
+        </>
+      )}
     </div>
   );
 }
 ```
+
+---
+
+### 6.6 Increment 3: Document List Page
+
+**Duration**: 2-3 days
+
+#### Features:
+- Paginated table with sorting
+- Status badges with color coding
+- Search/filter functionality
+- Quick actions (view, delete, re-analyze)
+- Empty state for new users
+- Loading skeletons
+
+#### Key Component:
+
+```typescript
+// client/src/pages/DocumentsPage.tsx
+export function DocumentsPage() {
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState('');
+  const { data, isLoading, error } = useDocuments({ page, search });
+  
+  if (isLoading) return <DocumentTableSkeleton />;
+  if (error) return <ErrorAlert message="Failed to load documents" />;
+  if (!data?.documents.length) return <EmptyDocumentState />;
+  
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold">Your Documents</h1>
+        <Button asChild>
+          <Link to="/documents/upload">
+            <Upload className="mr-2 h-4 w-4" /> Upload Document
+          </Link>
+        </Button>
+      </div>
+      
+      <SearchInput value={search} onChange={setSearch} />
+      
+      <DocumentTable 
+        documents={data.documents}
+        onRowClick={(doc) => navigate(`/documents/${doc.id}`)}
+      />
+      
+      <Pagination 
+        currentPage={page}
+        totalPages={data.totalPages}
+        onPageChange={setPage}
+      />
+    </div>
+  );
+}
+```
+
+---
+
+### 6.7 Increment 4: Document Detail Page with Issue Blotter
+
+**Duration**: 4-5 days
+
+#### Features:
+- Document metadata panel (status, version, policy, dates)
+- Tabbed interface: Issues | Chat | Parameters
+- **Issue Blotter Tab**:
+  - Table of all feedback items
+  - Grouped by severity (critical, major, minor, suggestion)
+  - Expandable rows with full issue details
+  - Accept/Reject/Modify actions
+  - Optimistic updates on actions
+  - Issue counts by status
+
+#### Key Components:
+
+```typescript
+// client/src/pages/DocumentDetailPage.tsx
+export function DocumentDetailPage() {
+  const { id } = useParams<{ id: string }>();
+  const { data: document, isLoading } = useDocument(id!);
+  const { data: feedback } = useFeedback(id!);
+  
+  if (isLoading) return <DocumentDetailSkeleton />;
+  if (!document) return <NotFound />;
+  
+  return (
+    <div className="grid grid-cols-12 gap-6">
+      {/* Left Panel - Metadata */}
+      <div className="col-span-3">
+        <DocumentMetadataPanel document={document} />
+        <AnalysisTrigger documentId={id!} status={document.status} />
+      </div>
+      
+      {/* Right Panel - Tabbed Content */}
+      <div className="col-span-9">
+        <Tabs defaultValue="issues">
+          <TabsList>
+            <TabsTrigger value="issues">
+              Issues <Badge variant="secondary">{feedback?.length || 0}</Badge>
+            </TabsTrigger>
+            <TabsTrigger value="chat">AI Assistant</TabsTrigger>
+            <TabsTrigger value="graph">Parameters</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="issues">
+            <IssueBlotter documentId={id!} feedback={feedback || []} />
+          </TabsContent>
+          
+          <TabsContent value="chat">
+            <ChatPanel documentId={id!} feedback={feedback || []} />
+          </TabsContent>
+          
+          <TabsContent value="graph">
+            <ParameterGraph documentId={id!} />
+          </TabsContent>
+        </Tabs>
+      </div>
+    </div>
+  );
+}
+
+// client/src/components/feedback/IssueBlotter.tsx
+export function IssueBlotter({ documentId, feedback }: IssueBlotterProps) {
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const { mutate: acceptFeedback } = useAcceptFeedback();
+  const { mutate: rejectFeedback } = useRejectFeedback();
+  
+  const grouped = useMemo(() => groupBySeverity(feedback), [feedback]);
+  const counts = useMemo(() => countByStatus(feedback), [feedback]);
+  
+  return (
+    <div className="space-y-4">
+      {/* Summary Stats */}
+      <div className="flex gap-4">
+        <StatCard label="Pending" value={counts.pending} variant="warning" />
+        <StatCard label="Accepted" value={counts.accepted} variant="success" />
+        <StatCard label="Rejected" value={counts.rejected} variant="muted" />
+      </div>
+      
+      {/* Issue Table */}
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Severity</TableHead>
+            <TableHead>Issue Type</TableHead>
+            <TableHead>Description</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead>Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {feedback.map((item) => (
+            <IssueRow
+              key={item.id}
+              issue={item}
+              isExpanded={expandedId === item.id}
+              onToggle={() => setExpandedId(
+                expandedId === item.id ? null : item.id
+              )}
+              onAccept={() => acceptFeedback({ documentId, feedbackId: item.id })}
+              onReject={() => rejectFeedback({ documentId, feedbackId: item.id })}
+            />
+          ))}
+        </TableBody>
+      </Table>
+    </div>
+  );
+}
+```
+
+---
+
+### 6.8 Increment 5: AI Chatbot Integration
+
+**Duration**: 3-4 days
+
+#### Features:
+- Chat panel with message history
+- User input composer with send button
+- AI typing indicator during response
+- Context-aware responses about document issues
+- Clickable citations linking to specific issues
+- Message persistence within session
+
+#### Backend Requirements:
+**NEW ENDPOINT NEEDED**: `POST /api/v1/documents/{id}/chat`
+```json
+Request:  { "message": "string", "context": { "feedbackIds": ["uuid"] } }
+Response: { "reply": "string", "citations": [{ "feedbackId": "uuid", "excerpt": "string" }] }
+```
+
+#### Key Components:
+
+```typescript
+// client/src/components/chat/ChatPanel.tsx
+export function ChatPanel({ documentId, feedback }: ChatPanelProps) {
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const { mutate: sendMessage, isPending } = useSendChatMessage();
+  const scrollRef = useRef<HTMLDivElement>(null);
+  
+  const handleSend = (content: string) => {
+    // Add user message immediately
+    const userMessage: ChatMessage = {
+      id: crypto.randomUUID(),
+      role: 'user',
+      content,
+      timestamp: new Date().toISOString(),
+    };
+    setMessages(prev => [...prev, userMessage]);
+    
+    // Send to API
+    sendMessage(
+      { documentId, message: content, feedbackIds: feedback.map(f => f.id) },
+      {
+        onSuccess: (response) => {
+          setMessages(prev => [...prev, {
+            id: crypto.randomUUID(),
+            role: 'assistant',
+            content: response.reply,
+            citations: response.citations,
+            timestamp: new Date().toISOString(),
+          }]);
+        },
+      }
+    );
+  };
+  
+  return (
+    <div className="flex flex-col h-[600px] border rounded-lg">
+      {/* Message List */}
+      <ScrollArea ref={scrollRef} className="flex-1 p-4">
+        <ChatMessageList messages={messages} />
+        {isPending && <TypingIndicator />}
+      </ScrollArea>
+      
+      {/* Composer */}
+      <ChatComposer onSend={handleSend} disabled={isPending} />
+    </div>
+  );
+}
+
+// client/src/components/chat/ChatMessage.tsx
+export function ChatMessage({ message }: { message: ChatMessage }) {
+  const isUser = message.role === 'user';
+  
+  return (
+    <div className={cn(
+      "flex gap-3 mb-4",
+      isUser ? "justify-end" : "justify-start"
+    )}>
+      {!isUser && <BotAvatar />}
+      <div className={cn(
+        "max-w-[80%] rounded-lg px-4 py-2",
+        isUser ? "bg-primary text-primary-foreground" : "bg-muted"
+      )}>
+        <p>{message.content}</p>
+        {message.citations?.length > 0 && (
+          <div className="mt-2 text-xs opacity-80">
+            <span>References: </span>
+            {message.citations.map((c, i) => (
+              <CitationLink key={i} citation={c} />
+            ))}
+          </div>
+        )}
+      </div>
+      {isUser && <UserAvatar />}
+    </div>
+  );
+}
+```
+
+---
+
+### 6.9 Increment 6: Parameter Graph Visualization
+
+**Duration**: 3-4 days
+
+#### Features:
+- Interactive node-edge graph using React Flow
+- Parameter nodes showing name and definition
+- Directed edges showing usage relationships
+- Zoom and pan controls
+- Node click to highlight dependencies
+- Minimap for navigation
+- Export graph as image
+
+#### Backend Requirements:
+**NEW ENDPOINT NEEDED**: `GET /api/v1/documents/{id}/parameters`
+```json
+Response: {
+  "nodes": [
+    { "id": "uuid", "name": "string", "definition": "string", "type": "parameter|term|formula" }
+  ],
+  "edges": [
+    { "source": "uuid", "target": "uuid", "relationship": "uses|defines|references" }
+  ]
+}
+```
+
+#### Key Components:
+
+```typescript
+// client/src/components/graph/ParameterGraph.tsx
+import { 
+  ReactFlow, 
+  Background, 
+  Controls, 
+  MiniMap,
+  useNodesState,
+  useEdgesState,
+} from '@xyflow/react';
+import '@xyflow/react/dist/style.css';
+
+export function ParameterGraph({ documentId }: { documentId: string }) {
+  const { data, isLoading, error } = useParameters(documentId);
+  
+  const [nodes, setNodes, onNodesChange] = useNodesState([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  
+  useEffect(() => {
+    if (data) {
+      setNodes(data.nodes.map(n => ({
+        id: n.id,
+        type: 'parameter',
+        position: calculatePosition(n, data.nodes), // Auto-layout
+        data: { label: n.name, definition: n.definition, type: n.type },
+      })));
+      
+      setEdges(data.edges.map(e => ({
+        id: `${e.source}-${e.target}`,
+        source: e.source,
+        target: e.target,
+        type: 'dependency',
+        animated: e.relationship === 'uses',
+        label: e.relationship,
+      })));
+    }
+  }, [data]);
+  
+  if (isLoading) return <GraphSkeleton />;
+  if (error) return <ErrorAlert message="Failed to load parameter graph" />;
+  if (!data?.nodes.length) return <EmptyGraphState />;
+  
+  return (
+    <div className="h-[600px] border rounded-lg">
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
+        nodeTypes={{ parameter: ParameterNode }}
+        edgeTypes={{ dependency: DependencyEdge }}
+        fitView
+      >
+        <Background />
+        <Controls />
+        <MiniMap />
+      </ReactFlow>
+    </div>
+  );
+}
+
+// client/src/components/graph/ParameterNode.tsx
+export function ParameterNode({ data }: NodeProps) {
+  const colorMap = {
+    parameter: 'bg-blue-100 border-blue-400',
+    term: 'bg-green-100 border-green-400',
+    formula: 'bg-purple-100 border-purple-400',
+  };
+  
+  return (
+    <div className={cn(
+      "px-4 py-2 rounded-lg border-2 shadow-sm",
+      colorMap[data.type]
+    )}>
+      <Tooltip content={data.definition}>
+        <div className="font-medium">{data.label}</div>
+      </Tooltip>
+      <Handle type="target" position={Position.Top} />
+      <Handle type="source" position={Position.Bottom} />
+    </div>
+  );
+}
+```
+
+---
+
+### 6.10 Backend API Extensions Required
+
+The frontend requires two new backend endpoints:
+
+#### 1. Chat Endpoint
+**File**: `src/api/routes/chat.py`
+```python
+@router.post("/documents/{document_id}/chat")
+async def chat_with_document(
+    document_id: UUID,
+    request: ChatRequest,
+    ai_service: AIService = Depends(get_ai_service)
+) -> ChatResponse:
+    """Query AI about document issues"""
+    pass
+```
+
+#### 2. Parameters Endpoint
+**File**: `src/api/routes/documents.py` (extend)
+```python
+@router.get("/documents/{document_id}/parameters")
+async def get_document_parameters(
+    document_id: UUID,
+    queries: DocumentQueries = Depends(get_document_queries)
+) -> ParameterGraphResponse:
+    """Get parameter dependency graph for document"""
+    pass
+```
+
+---
+
+### 6.11 Additional Shadcn/ui Components Needed
+
+Install via npx shadcn-ui:
+```bash
+cd client
+npx shadcn@latest add table tabs badge dialog input textarea scroll-area skeleton tooltip alert separator avatar dropdown-menu
+```
+
+---
+
+### 6.12 Testing Strategy
+
+| Component | Test Type | Coverage |
+|-----------|-----------|----------|
+| API Services | Unit (Vitest) | Request/response handling |
+| Hooks | Unit (React Testing Library) | State management, mutations |
+| Pages | Integration | User flows, navigation |
+| Issue Blotter | Component | Expand/collapse, actions |
+| Chat Panel | Component | Message flow, loading states |
+| Parameter Graph | Component | Node rendering, interactions |
 
 ---
 
