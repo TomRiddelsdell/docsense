@@ -11,7 +11,7 @@ packages = ["freetype", "gumbo", "harfbuzz", "jbig2dec", "libjpeg_turbo", "mupdf
 language = "python3"
 
 [deployment]
-run = ["python", "main.py"]
+run = ["uvicorn", "src.api.main:app", "--host", "0.0.0.0", "--port", "5000"]
 deploymentTarget = "autoscale"
 
 [agent]
@@ -34,22 +34,18 @@ args = "Backend"
 name = "Backend"
 author = "agent"
 
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "python main.py"
-waitForPort = 5000
-
 [workflows.workflow.metadata]
 outputType = "webview"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "uvicorn src.api.main:app --host 0.0.0.0 --port 5000"
+waitForPort = 5000
 
 [[ports]]
 localPort = 5000
 externalPort = 80
 
 [[ports]]
-localPort = 5001
+localPort = 37381
 externalPort = 3000
-
-[[ports]]
-localPort = 35387
-externalPort = 3001
