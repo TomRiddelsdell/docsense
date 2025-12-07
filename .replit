@@ -11,8 +11,8 @@ packages = ["freetype", "gumbo", "harfbuzz", "jbig2dec", "libjpeg_turbo", "mupdf
 language = "python3"
 
 [deployment]
-run = ["python3", "main.py"]
-deploymentTarget = "cloudrun"
+run = ["python", "main.py"]
+deploymentTarget = "autoscale"
 
 [agent]
 expertMode = true
@@ -28,15 +28,15 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "Frontend"
+args = "Backend"
 
 [[workflows.workflow]]
-name = "Frontend"
+name = "Backend"
 author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd client && npm run dev"
+args = "python main.py"
 waitForPort = 5000
 
 [workflows.workflow.metadata]
@@ -47,5 +47,5 @@ localPort = 5000
 externalPort = 80
 
 [[ports]]
-localPort = 5001
+localPort = 43673
 externalPort = 3000
