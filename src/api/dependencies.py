@@ -1,9 +1,12 @@
 import os
+import logging
 from dataclasses import dataclass
 from functools import lru_cache
 from typing import Optional
 
 import asyncpg
+
+logger = logging.getLogger(__name__)
 
 from src.infrastructure.persistence.event_store import PostgresEventStore
 from src.infrastructure.persistence.snapshot_store import InMemorySnapshotStore
@@ -15,6 +18,7 @@ from src.infrastructure.queries.feedback_queries import FeedbackQueries
 from src.infrastructure.queries.policy_queries import PolicyQueries
 from src.infrastructure.queries.audit_queries import AuditQueries
 from src.infrastructure.converters.converter_factory import ConverterFactory
+from src.infrastructure.projections.document_projector import DocumentProjection
 from src.application.services.event_publisher import InMemoryEventPublisher
 from src.application.commands.document_handlers import (
     UploadDocumentHandler,
@@ -95,6 +99,14 @@ class Container:
                 min_size=self._settings.pool_min_size,
                 max_size=self._settings.pool_max_size,
             )
+            self._register_projections()
+
+    def _register_projections(self) -> None:
+        if self._pool:
+            logger.info("Registering projections with event publisher")
+            document_projection = DocumentProjection(self._pool)
+            self.event_publisher.register_projection(document_projection)
+            logger.info(f"Registered DocumentProjection, event_publisher now has {len(self.event_publisher._projections)} projections")
 
     async def close(self) -> None:
         if self._pool:

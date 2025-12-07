@@ -1,7 +1,10 @@
+import logging
 from typing import List, Type
 import json
 
 import asyncpg
+
+logger = logging.getLogger(__name__)
 
 from src.domain.events import (
     DomainEvent,
@@ -30,18 +33,23 @@ class DocumentProjection(Projection):
         ]
 
     async def handle(self, event: DomainEvent) -> None:
-        if isinstance(event, DocumentUploaded):
-            await self._handle_uploaded(event)
-        elif isinstance(event, DocumentConverted):
-            await self._handle_converted(event)
-        elif isinstance(event, AnalysisStarted):
-            await self._handle_analysis_started(event)
-        elif isinstance(event, AnalysisCompleted):
-            await self._handle_analysis_completed(event)
-        elif isinstance(event, AnalysisFailed):
-            await self._handle_analysis_failed(event)
-        elif isinstance(event, DocumentExported):
-            await self._handle_exported(event)
+        logger.info(f"DocumentProjection handling event: {event.event_type}, aggregate_id: {event.aggregate_id}")
+        try:
+            if isinstance(event, DocumentUploaded):
+                await self._handle_uploaded(event)
+            elif isinstance(event, DocumentConverted):
+                await self._handle_converted(event)
+            elif isinstance(event, AnalysisStarted):
+                await self._handle_analysis_started(event)
+            elif isinstance(event, AnalysisCompleted):
+                await self._handle_analysis_completed(event)
+            elif isinstance(event, AnalysisFailed):
+                await self._handle_analysis_failed(event)
+            elif isinstance(event, DocumentExported):
+                await self._handle_exported(event)
+            logger.info(f"DocumentProjection successfully handled event: {event.event_type}")
+        except Exception as e:
+            logger.exception(f"DocumentProjection failed to handle event {event.event_type}: {e}")
 
     async def _handle_uploaded(self, event: DocumentUploaded) -> None:
         async with self._pool.acquire() as conn:

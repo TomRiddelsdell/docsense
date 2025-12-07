@@ -93,11 +93,13 @@ def add_exception_handlers(app: FastAPI) -> None:
     async def general_exception_handler(
         request: Request, exc: Exception
     ) -> JSONResponse:
-        logger.exception("Unhandled exception: %s", exc)
+        import traceback
+        tb = traceback.format_exc()
+        logger.error(f"Unhandled exception: {exc}\n{tb}")
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content={
                 "error": "internal_error",
-                "message": "An unexpected error occurred",
+                "message": f"An unexpected error occurred: {str(exc)}",
             },
         )

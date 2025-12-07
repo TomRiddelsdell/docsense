@@ -1,8 +1,11 @@
+import logging
 from typing import Optional
 from uuid import UUID, uuid4
 
 from .base import CommandHandler, CommandResult
 from src.domain.commands import UploadDocument, ExportDocument, DeleteDocument
+
+logger = logging.getLogger(__name__)
 from src.domain.aggregates.document import Document
 from src.domain.value_objects import DocumentId
 from src.domain.exceptions.document_exceptions import DocumentNotFound, InvalidDocumentFormat
@@ -23,41 +26,56 @@ class UploadDocumentHandler(CommandHandler[UploadDocument, DocumentId]):
         self._publisher = event_publisher
 
     async def handle(self, command: UploadDocument) -> DocumentId:
-        document_id = DocumentId.generate()
+        try:
+            document_id = DocumentId.generate()
+            logger.info(f"Starting document upload: {command.filename}")
 
-        document = Document.upload(
-            document_id=document_id.value,
-            filename=command.filename,
-            content=command.content,
-            original_format=command.content_type,
-            uploaded_by=command.uploaded_by
-        )
-
-        result = self._converters.convert_from_bytes(
-            command.content,
-            command.filename
-        )
-
-        if result.success:
-            document.convert(
-                markdown_content=result.markdown_content,
-                sections=[s.__dict__ if hasattr(s, '__dict__') else s for s in result.sections],
-                metadata=result.metadata.__dict__ if hasattr(result.metadata, '__dict__') else result.metadata,
-                conversion_warnings=getattr(result, 'warnings', [])
+            document = Document.upload(
+                document_id=document_id.value,
+                filename=command.filename,
+                content=command.content,
+                original_format=command.content_type,
+                uploaded_by=command.uploaded_by
             )
-        else:
-            raise InvalidDocumentFormat(
-                provided_format=command.content_type,
-                supported_formats=["pdf", "docx", "doc", "md", "markdown", "rst"]
+            logger.info(f"Document aggregate created: {document_id}")
+
+            result = self._converters.convert_from_bytes(
+                command.content,
+                command.filename
             )
+            logger.info(f"Conversion result: success={result.success}, errors={result.errors}")
 
-        await self._documents.save(document)
+            if result.success:
+                document.convert(
+                    markdown_content=result.markdown_content,
+                    sections=[s.__dict__ if hasattr(s, '__dict__') else s for s in result.sections],
+                    metadata=result.metadata.__dict__ if hasattr(result.metadata, '__dict__') else result.metadata,
+                    conversion_warnings=getattr(result, 'warnings', [])
+                )
+                logger.info("Document conversion applied")
+            else:
+                logger.error(f"Conversion failed: {result.errors}")
+                raise InvalidDocumentFormat(
+                    provided_format=command.content_type,
+                    supported_formats=["pdf", "docx", "doc", "md", "markdown", "rst"]
+                )
 
-        events = document.pending_events
-        if events:
-            await self._publisher.publish_all(events)
+            events = document.pending_events
+            logger.info(f"Captured {len(events)} pending events before save")
 
-        return document_id
+            logger.info("Saving document to repository...")
+            await self._documents.save(document)
+            logger.info("Document saved successfully")
+
+            if events:
+                logger.info(f"Publishing {len(events)} events")
+                await self._publisher.publish_all(events)
+                logger.info("Events published successfully")
+
+            return document_id
+        except Exception as e:
+            logger.exception(f"Error uploading document: {e}")
+            raise
 
 
 class ExportDocumentHandler(CommandHandler[ExportDocument, str]):
