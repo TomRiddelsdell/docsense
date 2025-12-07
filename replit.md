@@ -158,6 +158,7 @@ When making changes to this project, you MUST follow these conventions:
 
 | Date | Description | Change Log |
 |------|-------------|------------|
+| 2025-12-07 | Self-Containment Requirements | [Link](docs/changes/2025-12-07-self-containment-requirements.md) |
 | 2025-12-07 | Phase 6 Frontend Complete | [Link](docs/changes/2025-12-07-phase6-frontend-complete.md) |
 | 2025-12-07 | Phase 5 API Layer complete | [Link](docs/changes/2025-12-07-phase5-api-layer-complete.md) |
 | 2025-12-06 | Phase 4 AI Agent Integration complete | [Link](docs/changes/2025-12-06-phase4-ai-agent-integration.md) |
@@ -181,6 +182,7 @@ When making changes to this project, you MUST follow these conventions:
 - [ADR-005: Policy Repository System](docs/decisions/005-policy-repository-system.md)
 - [ADR-006: API-First Design](docs/decisions/006-api-first-design.md)
 - [ADR-007: Shadcn/ui Component Library](docs/decisions/007-shadcn-ui-component-library.md)
+- [ADR-009: Document Self-Containment Requirements](docs/decisions/009-document-self-containment-requirements.md)
 
 ### Other Documentation
 - [Implementation Plan](docs/IMPLEMENTATION_PLAN.md) - Complete roadmap to production

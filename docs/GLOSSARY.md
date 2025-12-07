@@ -205,6 +205,54 @@ A component that transforms input formats (Word, PDF, RST, Markdown) into the ca
 
 The maximum document size supported for analysis. Currently 100 pages.
 
+## Self-Containment Terms
+
+### Self-Containment
+
+The property of a document (or document set) being complete enough that an independent person can fully implement the described trading strategy using only the uploaded documentation, without requiring external references or making assumptions.
+
+### Self-Containment Score
+
+A numeric measure (0.0-1.0) indicating how well a document meets self-containment requirements. A score of 1.0 indicates full self-containment; lower scores indicate missing information.
+
+### Implementability Assessment
+
+An evaluation of whether a document provides sufficient information for independent implementation, including:
+- **can_implement_strategy**: Whether the trading strategy can be fully implemented
+- **can_calculate_index**: Whether index levels can be exactly reproduced
+- **blocking_issues_count**: Number of critical issues preventing implementation
+- **assessment_summary**: Narrative summary of implementation readiness
+
+### Missing Document
+
+A document, appendix, or attachment that is referenced within the analyzed document but not included in the submission. Missing documents are categorized by criticality (critical, high, medium).
+
+### Undefined Dependency
+
+An external system, data feed, vendor service, database, or API that is referenced in the document without full specification. Each undefined dependency lists the missing specifications needed for implementation.
+
+### Implementation Gap
+
+A specific piece of missing information that prevents complete implementation of the trading strategy or exact index calculation.
+
+### Issue Categories (Self-Containment)
+
+Categories used to classify self-containment issues:
+- **missing_reference**: External document referenced but not included
+- **undefined_parameter**: Parameter, threshold, or value mentioned but not defined
+- **incomplete_formula**: Formula or calculation missing components
+- **ambiguous_methodology**: Process described without implementation detail
+- **external_dependency**: Reliance on unspecified external system
+- **assumption_required**: Information requiring inference to understand
+- **inconsistent_content**: Conflicting information within/across documents
+- **missing_governance**: Governance process not fully documented
+- **data_source_unspecified**: Data source without full specification
+- **compliance_gap**: Regulatory or policy compliance issue
+
+### Zero Tolerance Policy
+
+The principle that document analysis will flag ANY content requiring inference or assumption, with no implicit understanding of market conventions, industry standards, or "obvious" values permitted.
+
 ## Integration Terms
 
 ### API-First
