@@ -30,7 +30,7 @@ class ClaudeProvider(AIProvider):
         "claude-opus-4-5",
     ]
     DEFAULT_MODEL = "claude-sonnet-4-5"
-    REQUEST_TIMEOUT = 120
+    REQUEST_TIMEOUT = 240
 
     def __init__(self, rate_limiter: RateLimiter | None = None):
         self._rate_limiter = rate_limiter
@@ -182,6 +182,7 @@ class ClaudeProvider(AIProvider):
             messages=messages,
             max_tokens=max_tokens,
             timeout=self.REQUEST_TIMEOUT,
+            num_retries=2,
         )
         
         return response
@@ -287,7 +288,57 @@ class ClaudeProvider(AIProvider):
         if brace_count == 0 and end_idx > start_idx:
             return text[start_idx:end_idx + 1]
         
-        return text[start_idx:]
+        json_text = text[start_idx:]
+        json_text = self._repair_truncated_json(json_text)
+        return json_text
+
+    def _repair_truncated_json(self, text: str) -> str:
+        if not text:
+            return "{}"
+        
+        try:
+            json.loads(text)
+            return text
+        except json.JSONDecodeError:
+            pass
+        
+        in_string = False
+        escape_next = False
+        brace_count = 0
+        bracket_count = 0
+        
+        for char in text:
+            if escape_next:
+                escape_next = False
+                continue
+            if char == "\\":
+                escape_next = True
+                continue
+            if char == '"' and not escape_next:
+                in_string = not in_string
+                continue
+            if in_string:
+                continue
+            if char == "{":
+                brace_count += 1
+            elif char == "}":
+                brace_count -= 1
+            elif char == "[":
+                bracket_count += 1
+            elif char == "]":
+                bracket_count -= 1
+        
+        if in_string:
+            text = text + '"'
+        
+        text = text + "]" * bracket_count
+        text = text + "}" * brace_count
+        
+        try:
+            json.loads(text)
+            return text
+        except json.JSONDecodeError:
+            return "{}"
 
     def _policy_rule_to_dict(self, rule: PolicyRule) -> dict[str, Any]:
         return {
