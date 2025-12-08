@@ -258,6 +258,10 @@ class ClaudeProvider(AIProvider):
     def _extract_json(self, text: str) -> str:
         text = text.strip()
         
+        # Log first 500 chars of raw response to understand format
+        logger.info(f"_extract_json: First 500 chars: {text[:500]}")
+        logger.info(f"_extract_json: Last 500 chars: {text[-500:]}")
+        
         # Try to find JSON in code blocks first (most reliable)
         import re
         
@@ -265,44 +269,51 @@ class ClaudeProvider(AIProvider):
         json_block_match = re.search(r'```json\s*([\s\S]*?)```', text)
         if json_block_match:
             json_text = json_block_match.group(1).strip()
-            logger.debug(f"Found JSON in code block, length: {len(json_text)}")
+            logger.info(f"Found JSON in code block, length: {len(json_text)}")
             try:
                 json.loads(json_text)
                 return json_text
-            except json.JSONDecodeError:
-                logger.debug("JSON code block parse failed, trying repair")
+            except json.JSONDecodeError as e:
+                logger.info(f"JSON code block parse failed: {e}, trying repair")
                 repaired = self._repair_truncated_json(json_text)
                 try:
                     json.loads(repaired)
                     return repaired
                 except json.JSONDecodeError:
                     pass
+        else:
+            logger.info("No ```json block found")
         
         # Look for ``` ... ``` blocks (without json marker)
         code_block_match = re.search(r'```\s*([\s\S]*?)```', text)
         if code_block_match:
             block_text = code_block_match.group(1).strip()
+            logger.info(f"Found code block, starts with: {block_text[:100] if block_text else 'empty'}")
             if block_text.startswith('{'):
-                logger.debug(f"Found JSON in unmarked code block, length: {len(block_text)}")
+                logger.info(f"Found JSON in unmarked code block, length: {len(block_text)}")
                 try:
                     json.loads(block_text)
                     return block_text
-                except json.JSONDecodeError:
+                except json.JSONDecodeError as e:
+                    logger.info(f"Unmarked code block JSON parse failed: {e}")
                     repaired = self._repair_truncated_json(block_text)
                     try:
                         json.loads(repaired)
                         return repaired
                     except json.JSONDecodeError:
                         pass
+        else:
+            logger.info("No code block found at all")
         
         # Fall back to finding JSON object directly in text
         # Look for the LAST occurrence of {"issues" which is likely the complete JSON
         issues_match = re.search(r'\{[^{}]*"issues"\s*:', text)
         if issues_match:
             start_idx = issues_match.start()
-            logger.debug(f"Found 'issues' key at position {start_idx}")
+            logger.info(f"Found 'issues' key at position {start_idx}")
         else:
             start_idx = text.find("{")
+            logger.info(f"No 'issues' key found, first brace at: {start_idx}")
         
         if start_idx == -1:
             logger.warning("No JSON object found in response")
