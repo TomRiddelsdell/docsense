@@ -35,13 +35,15 @@ class ClaudeProvider(AIProvider):
 
     def __init__(self, rate_limiter: RateLimiter | None = None):
         self._rate_limiter = rate_limiter
-        api_key = os.environ.get("AI_INTEGRATIONS_ANTHROPIC_API_KEY")
-        base_url = os.environ.get("AI_INTEGRATIONS_ANTHROPIC_BASE_URL")
         
-        self._client = Anthropic(
-            api_key=api_key,
-            base_url=base_url
-        )
+        api_key = os.environ.get("ANTHROPIC_API_KEY")
+        if api_key:
+            self._client = Anthropic(api_key=api_key)
+        else:
+            api_key = os.environ.get("AI_INTEGRATIONS_ANTHROPIC_API_KEY")
+            base_url = os.environ.get("AI_INTEGRATIONS_ANTHROPIC_BASE_URL")
+            self._client = Anthropic(api_key=api_key, base_url=base_url)
+        
         self._analysis_prompt = DocumentAnalysisPrompt()
         self._suggestion_prompt = SuggestionGenerationPrompt()
 
