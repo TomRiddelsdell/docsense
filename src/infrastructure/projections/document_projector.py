@@ -141,6 +141,7 @@ class DocumentProjection(Projection):
             )
 
     async def _handle_analysis_completed(self, event: AnalysisCompleted) -> None:
+        from uuid import uuid4
         async with self._pool.acquire() as conn:
             await conn.execute(
                 """
@@ -168,6 +169,29 @@ class DocumentProjection(Projection):
                 event.aggregate_id,
                 event.findings_count
             )
+            
+            for finding in event.findings:
+                finding_id = finding.get('id') or str(uuid4())
+                await conn.execute(
+                    """
+                    INSERT INTO feedback_views
+                    (id, document_id, section_id, status, category, severity,
+                     original_text, suggestion, explanation, confidence_score,
+                     policy_reference, created_at)
+                    VALUES ($1, $2, $3, 'pending', $4, $5, $6, $7, $8, $9, $10, NOW())
+                    ON CONFLICT (id) DO NOTHING
+                    """,
+                    finding_id if isinstance(finding_id, str) and len(finding_id) == 36 else str(uuid4()),
+                    event.aggregate_id,
+                    finding.get('location', ''),
+                    finding.get('category', 'improvement'),
+                    finding.get('severity', 'medium'),
+                    finding.get('original_text', ''),
+                    finding.get('description', ''),
+                    finding.get('title', ''),
+                    finding.get('confidence', 0.7),
+                    finding.get('rule_id', '')
+                )
 
     async def _handle_analysis_failed(self, event: AnalysisFailed) -> None:
         async with self._pool.acquire() as conn:

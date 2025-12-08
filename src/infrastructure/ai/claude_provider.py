@@ -1,10 +1,13 @@
 import asyncio
 import json
+import logging
 import os
 import time
 from typing import Any
 
 import litellm
+
+logger = logging.getLogger(__name__)
 
 from .base import (
     AIProvider,
@@ -107,8 +110,15 @@ class ClaudeProvider(AIProvider):
             if message.choices and len(message.choices) > 0:
                 result_text = message.choices[0].message.content or ""
             
+            logger.info(f"Raw AI response length: {len(result_text)}")
+            logger.debug(f"Raw AI response (first 2000 chars): {result_text[:2000]}")
+            
             result_text = self._extract_json(result_text)
+            logger.info(f"Extracted JSON length: {len(result_text)}")
+            logger.debug(f"Extracted JSON (first 2000 chars): {result_text[:2000]}")
+            
             result_data = json.loads(result_text or "{}")
+            logger.info(f"Parsed issues count: {len(result_data.get('issues', []))}")
             
             issues = self._parse_issues(result_data.get("issues", []))
             suggestions = []
