@@ -35,14 +35,18 @@ class ClaudeProvider(AIProvider):
     def __init__(self, rate_limiter: RateLimiter | None = None):
         self._rate_limiter = rate_limiter
         
-        api_key = os.environ.get("ANTHROPIC_API_KEY")
-        if not api_key:
+        base_url = os.environ.get("AI_INTEGRATIONS_ANTHROPIC_BASE_URL")
+        if base_url:
+            os.environ["ANTHROPIC_BASE_URL"] = base_url
             api_key = os.environ.get("AI_INTEGRATIONS_ANTHROPIC_API_KEY")
-        
-        if api_key:
-            os.environ["ANTHROPIC_API_KEY"] = api_key
-        
-        self._base_url = os.environ.get("AI_INTEGRATIONS_ANTHROPIC_BASE_URL")
+            if api_key:
+                os.environ["ANTHROPIC_API_KEY"] = api_key
+        else:
+            api_key = os.environ.get("ANTHROPIC_API_KEY")
+            if not api_key:
+                api_key = os.environ.get("AI_INTEGRATIONS_ANTHROPIC_API_KEY")
+                if api_key:
+                    os.environ["ANTHROPIC_API_KEY"] = api_key
         
         self._analysis_prompt = DocumentAnalysisPrompt()
         self._suggestion_prompt = SuggestionGenerationPrompt()
@@ -159,6 +163,13 @@ class ClaudeProvider(AIProvider):
         user_prompt: str,
         max_tokens: int,
     ):
+        base_url = os.environ.get("AI_INTEGRATIONS_ANTHROPIC_BASE_URL")
+        if base_url:
+            os.environ["ANTHROPIC_BASE_URL"] = base_url
+            api_key = os.environ.get("AI_INTEGRATIONS_ANTHROPIC_API_KEY")
+            if api_key:
+                os.environ["ANTHROPIC_API_KEY"] = api_key
+        
         litellm_model = f"anthropic/{model}"
         
         messages = [
@@ -166,16 +177,12 @@ class ClaudeProvider(AIProvider):
             {"role": "user", "content": user_prompt}
         ]
         
-        kwargs = {
-            "model": litellm_model,
-            "messages": messages,
-            "max_tokens": max_tokens,
-        }
-        
-        if self._base_url:
-            kwargs["api_base"] = self._base_url
-        
-        response = litellm.completion(**kwargs)
+        response = litellm.completion(
+            model=litellm_model,
+            messages=messages,
+            max_tokens=max_tokens,
+            timeout=self.REQUEST_TIMEOUT,
+        )
         
         return response
 
