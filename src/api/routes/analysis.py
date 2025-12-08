@@ -61,6 +61,8 @@ async def start_analysis(
     start_handler=Depends(get_start_analysis_handler),
     document_handler=Depends(get_document_by_id_handler),
 ):
+    from uuid import uuid4
+    
     query = GetDocumentById(document_id=document_id)
     document = await document_handler.handle(query)
 
@@ -70,19 +72,17 @@ async def start_analysis(
             detail=f"Document with ID {document_id} not found",
         )
 
-    if document.policy_repository_id is None:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Document must be assigned to a policy repository before analysis",
-        )
+    policy_repository_id = document.policy_repository_id
+    if policy_repository_id is None:
+        policy_repository_id = uuid4()
 
-    model_provider = request.model_provider if request else "gemini"
+    model_provider = request.model_provider if request else "anthropic"
     focus_areas = request.focus_areas if request else None
 
     command = StartAnalysis(
         document_id=document_id,
-        policy_repository_id=document.policy_repository_id,
-        ai_model=model_provider or "gemini",
+        policy_repository_id=policy_repository_id,
+        ai_model=model_provider or "anthropic",
         initiated_by="anonymous",
     )
 
