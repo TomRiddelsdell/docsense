@@ -11,11 +11,43 @@ from src.api.dependencies import (
     get_start_analysis_handler,
     get_cancel_analysis_handler,
     get_document_by_id_handler,
+    get_container,
 )
 from src.domain.commands import StartAnalysis, CancelAnalysis
+from src.domain.exceptions.document_exceptions import DocumentNotFound, InvalidDocumentState
 from src.application.queries.document_queries import GetDocumentById
 
 router = APIRouter()
+
+
+@router.post("/documents/{document_id}/reset", status_code=status.HTTP_200_OK)
+async def reset_document_for_retry(
+    document_id: UUID,
+):
+    container = await get_container()
+    
+    document = await container.document_repository.get(document_id)
+    if document is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Document with ID {document_id} not found",
+        )
+
+    try:
+        document.reset_for_retry(reset_by="user")
+    except InvalidDocumentState as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
+
+    events = list(document.pending_events)
+    await container.document_repository.save(document)
+
+    if events:
+        await container.event_publisher.publish_all(events)
+    
+    return {"message": "Document reset successfully", "document_id": str(document_id), "new_status": "converted"}
 
 
 @router.post(

@@ -212,10 +212,12 @@ async def get_delete_document_handler() -> DeleteDocumentHandler:
 
 async def get_start_analysis_handler() -> StartAnalysisHandler:
     container = await get_container()
+    from src.infrastructure.ai.provider_factory import ProviderFactory
     return StartAnalysisHandler(
         document_repository=container.document_repository,
         policy_repository=container.policy_repository,
         event_publisher=container.event_publisher,
+        provider_factory=ProviderFactory(),
     )
 
 

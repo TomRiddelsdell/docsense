@@ -20,9 +20,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { FileText, Upload, Search, ChevronLeft, ChevronRight, FolderOpen } from 'lucide-react';
+import { FileText, Upload, Search, ChevronLeft, ChevronRight, FolderOpen, RefreshCw } from 'lucide-react';
 import { useDocuments } from '@/hooks/useDocuments';
 import { cn } from '@/lib/utils';
+import api from '@/lib/api';
+import { useQueryClient } from '@tanstack/react-query';
 
 const statusColors: Record<string, string> = {
   pending: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200',
@@ -31,12 +33,15 @@ const statusColors: Record<string, string> = {
   analyzing: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
   analyzed: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
   exported: 'bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200',
+  failed: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
 };
 
 export default function DocumentListPage() {
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState<string>('all');
   const [search, setSearch] = useState('');
+  const [retryingId, setRetryingId] = useState<string | null>(null);
+  const queryClient = useQueryClient();
   
   const { data, isLoading, isError, error } = useDocuments({
     page,
@@ -58,6 +63,18 @@ export default function DocumentListPage() {
 
   const formatFileType = (format: string): string => {
     return format.replace('application/', '').replace('text/', '').toUpperCase();
+  };
+
+  const handleRetry = async (docId: string) => {
+    setRetryingId(docId);
+    try {
+      await api.post(`/documents/${docId}/reset`);
+      await queryClient.invalidateQueries({ queryKey: ['documents'] });
+    } catch (err) {
+      console.error('Failed to reset document:', err);
+    } finally {
+      setRetryingId(null);
+    }
   };
 
   const totalPages = data ? Math.ceil(data.total / 10) : 1;
@@ -192,9 +209,23 @@ export default function DocumentListPage() {
                         {formatDate(doc.created_at)}
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button variant="ghost" size="sm" asChild>
-                          <Link to={`/documents/${doc.id}`}>View</Link>
-                        </Button>
+                        <div className="flex items-center justify-end gap-2">
+                          {(doc.status === 'analyzing' || doc.status === 'failed') && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleRetry(doc.id)}
+                              disabled={retryingId === doc.id}
+                              className="gap-1"
+                            >
+                              <RefreshCw className={cn("h-3 w-3", retryingId === doc.id && "animate-spin")} />
+                              {retryingId === doc.id ? 'Resetting...' : 'Retry'}
+                            </Button>
+                          )}
+                          <Button variant="ghost" size="sm" asChild>
+                            <Link to={`/documents/${doc.id}`}>View</Link>
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}

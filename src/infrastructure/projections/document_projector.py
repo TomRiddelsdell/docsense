@@ -15,6 +15,7 @@ from src.domain.events import (
     AnalysisStarted,
     AnalysisCompleted,
     AnalysisFailed,
+    AnalysisReset,
 )
 from src.infrastructure.projections.base import Projection
 
@@ -42,6 +43,7 @@ class DocumentProjection(Projection):
             AnalysisStarted,
             AnalysisCompleted,
             AnalysisFailed,
+            AnalysisReset,
         ]
 
     async def handle(self, event: DomainEvent) -> None:
@@ -57,6 +59,8 @@ class DocumentProjection(Projection):
                 await self._handle_analysis_completed(event)
             elif isinstance(event, AnalysisFailed):
                 await self._handle_analysis_failed(event)
+            elif isinstance(event, AnalysisReset):
+                await self._handle_analysis_reset(event)
             elif isinstance(event, DocumentExported):
                 await self._handle_exported(event)
             logger.info(f"DocumentProjection successfully handled event: {event.event_type}")
@@ -170,7 +174,7 @@ class DocumentProjection(Projection):
             await conn.execute(
                 """
                 UPDATE document_views
-                SET status = 'converted', updated_at = NOW()
+                SET status = 'failed', updated_at = NOW()
                 WHERE id = $1
                 """,
                 event.aggregate_id
@@ -185,6 +189,17 @@ class DocumentProjection(Projection):
                 """,
                 event.aggregate_id,
                 event.error_message
+            )
+
+    async def _handle_analysis_reset(self, event: AnalysisReset) -> None:
+        async with self._pool.acquire() as conn:
+            await conn.execute(
+                """
+                UPDATE document_views
+                SET status = 'converted', updated_at = NOW()
+                WHERE id = $1
+                """,
+                event.aggregate_id
             )
 
     async def _handle_exported(self, event: DocumentExported) -> None:

@@ -8,6 +8,7 @@ from .analysis_events import (
     AnalysisStarted,
     AnalysisCompleted,
     AnalysisFailed,
+    AnalysisReset,
 )
 from .feedback_events import (
     FeedbackSessionCreated,
@@ -30,6 +31,7 @@ __all__ = [
     "AnalysisStarted",
     "AnalysisCompleted",
     "AnalysisFailed",
+    "AnalysisReset",
     "FeedbackSessionCreated",
     "FeedbackGenerated",
     "ChangeAccepted",

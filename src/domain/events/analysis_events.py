@@ -28,3 +28,10 @@ class AnalysisFailed(DomainEvent):
     error_code: str = ""
     retryable: bool = False
     aggregate_type: str = field(default="Document")
+
+
+@dataclass(frozen=True)
+class AnalysisReset(DomainEvent):
+    reset_by: str = ""
+    previous_status: str = ""
+    aggregate_type: str = field(default="Document")

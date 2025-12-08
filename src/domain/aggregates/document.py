@@ -12,6 +12,7 @@ from src.domain.events.analysis_events import (
     AnalysisStarted,
     AnalysisCompleted,
     AnalysisFailed,
+    AnalysisReset,
 )
 from src.domain.value_objects import DocumentStatus, VersionNumber
 from src.domain.exceptions.document_exceptions import InvalidDocumentState
@@ -113,11 +114,11 @@ class Document(Aggregate):
     ) -> None:
         if self._status == DocumentStatus.ANALYZING:
             raise AnalysisInProgress(document_id=self._id)
-        if self._status not in (DocumentStatus.CONVERTED, DocumentStatus.ANALYZED, DocumentStatus.EXPORTED):
+        if self._status not in (DocumentStatus.CONVERTED, DocumentStatus.ANALYZED, DocumentStatus.EXPORTED, DocumentStatus.FAILED):
             raise InvalidDocumentState(
                 document_id=self._id,
                 current_status=self._status.value,
-                required_status=f"{DocumentStatus.CONVERTED.value}, {DocumentStatus.ANALYZED.value}, or {DocumentStatus.EXPORTED.value}",
+                required_status=f"{DocumentStatus.CONVERTED.value}, {DocumentStatus.ANALYZED.value}, {DocumentStatus.EXPORTED.value}, or {DocumentStatus.FAILED.value}",
                 operation="start_analysis"
             )
         self._apply_event(
@@ -145,6 +146,42 @@ class Document(Aggregate):
                 compliance_score=compliance_score,
                 findings=findings,
                 processing_time_ms=processing_time_ms,
+            )
+        )
+
+    def fail_analysis(
+        self,
+        reason: str,
+        error_code: str = "",
+        retryable: bool = True,
+    ) -> None:
+        if self._status != DocumentStatus.ANALYZING:
+            raise AnalysisNotStarted(document_id=self._id)
+        self._apply_event(
+            AnalysisFailed(
+                aggregate_id=self._id,
+                error_message=reason,
+                error_code=error_code,
+                retryable=retryable,
+            )
+        )
+
+    def reset_for_retry(
+        self,
+        reset_by: str = "system",
+    ) -> None:
+        if self._status not in (DocumentStatus.ANALYZING, DocumentStatus.FAILED):
+            raise InvalidDocumentState(
+                document_id=self._id,
+                current_status=self._status.value,
+                required_status=f"{DocumentStatus.ANALYZING.value} or {DocumentStatus.FAILED.value}",
+                operation="reset_for_retry"
+            )
+        self._apply_event(
+            AnalysisReset(
+                aggregate_id=self._id,
+                reset_by=reset_by,
+                previous_status=self._status.value,
             )
         )
 
@@ -186,6 +223,10 @@ class Document(Aggregate):
             self._compliance_score = event.compliance_score
             self._findings = event.findings
             self._status = DocumentStatus.ANALYZED
+        elif isinstance(event, AnalysisFailed):
+            self._status = DocumentStatus.FAILED
+        elif isinstance(event, AnalysisReset):
+            self._status = DocumentStatus.CONVERTED
         elif isinstance(event, DocumentExported):
             self._status = DocumentStatus.EXPORTED
             self._current_version = self._current_version.increment_patch()
