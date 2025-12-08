@@ -27,7 +27,12 @@ class TestProviderFactory:
         with patch.dict('os.environ', {
             'AI_INTEGRATIONS_GEMINI_API_KEY': 'test-key',
             'AI_INTEGRATIONS_GEMINI_BASE_URL': 'https://test.api',
-        }):
+            'ANTHROPIC_API_KEY': '',
+            'AI_INTEGRATIONS_ANTHROPIC_API_KEY': '',
+            'OPENAI_API_KEY': '',
+            'AI_INTEGRATIONS_OPENAI_API_KEY': '',
+        }, clear=False):
+            factory.clear_cache()
             provider = factory.get_default_provider()
             assert provider.provider_type == ProviderType.GEMINI
 

@@ -10,9 +10,9 @@ if TYPE_CHECKING:
     from .claude_provider import ClaudeProvider
 
 API_KEY_ENV_VARS = {
-    ProviderType.CLAUDE: "AI_INTEGRATIONS_ANTHROPIC_API_KEY",
-    ProviderType.GEMINI: "AI_INTEGRATIONS_GEMINI_API_KEY",
-    ProviderType.OPENAI: "AI_INTEGRATIONS_OPENAI_API_KEY",
+    ProviderType.CLAUDE: ["ANTHROPIC_API_KEY", "AI_INTEGRATIONS_ANTHROPIC_API_KEY"],
+    ProviderType.GEMINI: ["GEMINI_API_KEY", "AI_INTEGRATIONS_GEMINI_API_KEY"],
+    ProviderType.OPENAI: ["OPENAI_API_KEY", "AI_INTEGRATIONS_OPENAI_API_KEY"],
 }
 
 PROVIDER_PRIORITY = [ProviderType.CLAUDE, ProviderType.GEMINI, ProviderType.OPENAI]
@@ -26,10 +26,11 @@ class ProviderFactory:
         self._rate_limiters: dict[ProviderType, RateLimiter] = {}
 
     def is_provider_configured(self, provider_type: ProviderType) -> bool:
-        env_var = API_KEY_ENV_VARS.get(provider_type)
-        if not env_var:
-            return False
-        return bool(os.environ.get(env_var))
+        env_vars = API_KEY_ENV_VARS.get(provider_type, [])
+        for env_var in env_vars:
+            if os.environ.get(env_var):
+                return True
+        return False
 
     def get_configured_providers(self) -> list[ProviderType]:
         return [p for p in PROVIDER_PRIORITY if self.is_provider_configured(p)]

@@ -1,11 +1,10 @@
 import asyncio
 import json
 import os
-import re
 import time
 from typing import Any
 
-from anthropic import Anthropic
+import litellm
 
 from .base import (
     AIProvider,
@@ -36,12 +35,13 @@ class ClaudeProvider(AIProvider):
         self._rate_limiter = rate_limiter
         
         api_key = os.environ.get("ANTHROPIC_API_KEY")
-        if api_key:
-            self._client = Anthropic(api_key=api_key)
-        else:
+        if not api_key:
             api_key = os.environ.get("AI_INTEGRATIONS_ANTHROPIC_API_KEY")
-            base_url = os.environ.get("AI_INTEGRATIONS_ANTHROPIC_BASE_URL")
-            self._client = Anthropic(api_key=api_key, base_url=base_url)
+        
+        if api_key:
+            os.environ["ANTHROPIC_API_KEY"] = api_key
+        
+        self._base_url = os.environ.get("AI_INTEGRATIONS_ANTHROPIC_BASE_URL")
         
         self._analysis_prompt = DocumentAnalysisPrompt()
         self._suggestion_prompt = SuggestionGenerationPrompt()
@@ -99,8 +99,8 @@ class ClaudeProvider(AIProvider):
             processing_time = int((time.time() - start_time) * 1000)
             
             result_text = ""
-            if message.content and message.content[0].type == "text":
-                result_text = message.content[0].text
+            if message.choices and len(message.choices) > 0:
+                result_text = message.choices[0].message.content or ""
             
             result_text = self._extract_json(result_text)
             result_data = json.loads(result_text or "{}")
@@ -113,7 +113,7 @@ class ClaudeProvider(AIProvider):
             
             token_count = 0
             if message.usage:
-                token_count = message.usage.input_tokens + message.usage.output_tokens
+                token_count = (message.usage.prompt_tokens or 0) + (message.usage.completion_tokens or 0)
             
             return AnalysisResult(
                 success=True,
@@ -158,12 +158,25 @@ class ClaudeProvider(AIProvider):
         user_prompt: str,
         max_tokens: int,
     ):
-        return self._client.messages.create(
-            model=model,
-            max_tokens=max_tokens,
-            system=system_prompt,
-            messages=[{"role": "user", "content": user_prompt}]
-        )
+        litellm_model = f"anthropic/{model}"
+        
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt}
+        ]
+        
+        kwargs = {
+            "model": litellm_model,
+            "messages": messages,
+            "max_tokens": max_tokens,
+        }
+        
+        if self._base_url:
+            kwargs["api_base"] = self._base_url
+        
+        response = litellm.completion(**kwargs)
+        
+        return response
 
     async def generate_suggestion(
         self,
@@ -196,8 +209,8 @@ class ClaudeProvider(AIProvider):
             )
             
             result_text = ""
-            if message.content and message.content[0].type == "text":
-                result_text = message.content[0].text
+            if message.choices and len(message.choices) > 0:
+                result_text = message.choices[0].message.content or ""
             
             result_text = self._extract_json(result_text)
             result_data = json.loads(result_text or "{}")
@@ -215,9 +228,10 @@ class ClaudeProvider(AIProvider):
 
     async def is_available(self) -> bool:
         try:
-            api_key = os.environ.get("AI_INTEGRATIONS_ANTHROPIC_API_KEY")
-            base_url = os.environ.get("AI_INTEGRATIONS_ANTHROPIC_BASE_URL")
-            return bool(api_key and base_url)
+            api_key = os.environ.get("ANTHROPIC_API_KEY")
+            if not api_key:
+                api_key = os.environ.get("AI_INTEGRATIONS_ANTHROPIC_API_KEY")
+            return bool(api_key)
         except Exception:
             return False
 
