@@ -253,6 +253,35 @@ Categories used to classify self-containment issues:
 
 The principle that document analysis will flag ANY content requiring inference or assumption, with no implicit understanding of market conventions, industry standards, or "obvious" values permitted.
 
+## Document Group Terms
+
+### Document Group
+
+A named collection of related documents that are analyzed together as a single unit for comprehensive self-containment validation. Groups enable cross-document reference checking and combined analysis.
+
+### Primary Document
+
+The main document within a Document Group, typically the core methodology or strategy document that references supporting materials (appendices, manuals, frameworks).
+
+### Member Document
+
+A document that belongs to a Document Group. Documents can belong to multiple groups (useful for shared appendices or common reference materials).
+
+### Group Analysis
+
+The process of analyzing all documents in a group together by concatenating their content and checking cross-document references. Group analysis validates that all referenced materials within the group are present and that the combined documentation is self-contained.
+
+### Group Completeness Status
+
+The state of a Document Group relative to self-containment:
+- **PENDING**: Group not yet analyzed
+- **COMPLETE**: All cross-document references resolve within the group
+- **INCOMPLETE**: Some referenced documents are missing from the group
+
+### Cross-Document Reference
+
+A reference in one document to content in another document (e.g., "See Appendix A" or "as defined in the Governance Framework"). Group analysis validates that these references resolve to actual documents within the group.
+
 ## Integration Terms
 
 ### API-First

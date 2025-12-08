@@ -183,6 +183,7 @@ When making changes to this project, you MUST follow these conventions:
 - [ADR-006: API-First Design](docs/decisions/006-api-first-design.md)
 - [ADR-007: Shadcn/ui Component Library](docs/decisions/007-shadcn-ui-component-library.md)
 - [ADR-009: Document Self-Containment Requirements](docs/decisions/009-document-self-containment-requirements.md)
+- [ADR-010: Document Group Multi-Document Analysis](docs/decisions/010-document-group-multi-document-analysis.md) (Proposed)
 
 ### Other Documentation
 - [Implementation Plan](docs/IMPLEMENTATION_PLAN.md) - Complete roadmap to production

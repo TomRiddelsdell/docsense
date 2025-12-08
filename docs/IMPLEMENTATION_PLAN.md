@@ -2062,4 +2062,137 @@ Week 16-18: [Production Hardening] ───────────────
 
 ---
 
+## Future Phases
+
+### Phase 9: Document Group Support (Multi-Document Analysis)
+
+**Duration**: 2-3 weeks  
+**Goal**: Enable analysis of multiple related documents together for comprehensive self-containment validation
+
+**Reference**: [ADR-010: Document Group for Multi-Document Analysis](decisions/010-document-group-multi-document-analysis.md)
+
+#### 9.1 Domain Layer Extensions
+
+**Files to Create**:
+```
+src/domain/aggregates/document_group.py      # DocumentGroup aggregate
+src/domain/events/document_group_events.py   # Group-related events
+src/domain/commands/document_group_commands.py # Group commands
+src/domain/value_objects/group_status.py     # Group completeness status
+```
+
+**Domain Events**:
+- `DocumentGroupCreated` - Group initialized
+- `DocumentAddedToGroup` - Document assigned to group
+- `DocumentRemovedFromGroup` - Document removed from group
+- `PrimaryDocumentSet` - Main document designated
+- `GroupAnalysisStarted` - Combined analysis initiated
+- `GroupAnalysisCompleted` - Analysis results available
+- `GroupCompletenessChanged` - Status updated based on reference validation
+
+**Commands**:
+- `CreateDocumentGroup` - Create a new group
+- `AddDocumentToGroup` - Assign document to group
+- `RemoveDocumentFromGroup` - Remove document from group
+- `SetPrimaryDocument` - Designate main document
+- `AnalyzeDocumentGroup` - Trigger combined analysis
+
+#### 9.2 Infrastructure Layer Extensions
+
+**Files to Create**:
+```
+src/infrastructure/repositories/document_group_repository.py
+src/infrastructure/projections/document_group_projector.py
+src/infrastructure/queries/document_group_queries.py
+```
+
+**Combined Content Preparation**:
+```python
+def prepare_group_content(group: DocumentGroup, documents: List[Document]) -> str:
+    """Concatenate documents with clear separators for AI analysis."""
+    parts = []
+    for doc in documents:
+        is_primary = doc.id == group.primary_document_id
+        header = f"=== DOCUMENT: {doc.filename}"
+        if is_primary:
+            header += " (PRIMARY)"
+        header += " ==="
+        parts.append(f"{header}\n\n{doc.markdown_content}")
+    return "\n\n".join(parts)
+```
+
+#### 9.3 Application Layer Extensions
+
+**Files to Create**:
+```
+src/application/commands/document_group_handlers.py
+src/application/queries/document_group_queries.py
+```
+
+#### 9.4 API Layer Extensions
+
+**New Endpoints**:
+```
+POST   /api/v1/document-groups                    Create group
+GET    /api/v1/document-groups                    List groups
+GET    /api/v1/document-groups/{id}               Get group details
+PUT    /api/v1/document-groups/{id}               Update group metadata
+DELETE /api/v1/document-groups/{id}               Delete group
+
+POST   /api/v1/document-groups/{id}/documents     Add document to group
+DELETE /api/v1/document-groups/{id}/documents/{docId}  Remove document
+PUT    /api/v1/document-groups/{id}/primary       Set primary document
+
+POST   /api/v1/document-groups/{id}/analyze       Start group analysis
+GET    /api/v1/document-groups/{id}/analysis      Get analysis results
+```
+
+**Files to Create**:
+```
+src/api/routes/document_groups.py
+src/api/schemas/document_groups.py
+```
+
+#### 9.5 AI Prompt Updates
+
+Update document analysis prompt to handle multi-document context:
+- Recognize document separators in concatenated content
+- Track cross-document references
+- Validate that references to appendices/attachments resolve within the group
+- Produce group-level self-containment score
+
+#### 9.6 Frontend Extensions
+
+**New Pages**:
+```
+client/src/pages/DocumentGroupsPage.tsx      # List all groups
+client/src/pages/DocumentGroupDetailPage.tsx # Group management and analysis
+```
+
+**New Components**:
+```
+client/src/components/DocumentGroupCard.tsx   # Group summary card
+client/src/components/GroupDocumentList.tsx   # Documents in group with drag-drop
+client/src/components/GroupAnalysisResults.tsx # Combined analysis view
+```
+
+**Features**:
+- Group creation and management
+- Drag-and-drop document assignment
+- Visual completeness indicator
+- Group analysis trigger and results display
+
+#### 9.7 Completion Criteria
+
+- [ ] DocumentGroup aggregate with event sourcing
+- [ ] CRUD API for document groups
+- [ ] Document assignment/removal within groups
+- [ ] Combined content preparation for AI analysis
+- [ ] Cross-document reference validation
+- [ ] Group-level self-containment scoring
+- [ ] Frontend group management UI
+- [ ] E2E tests for group workflows
+
+---
+
 *This plan should be reviewed and updated as implementation progresses. Each phase completion should trigger an update to this document reflecting lessons learned and any scope adjustments.*
