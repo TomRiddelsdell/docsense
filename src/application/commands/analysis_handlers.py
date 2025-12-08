@@ -64,19 +64,32 @@ class StartAnalysisHandler(CommandHandler[StartAnalysis, UUID]):
                 for p in policy_repo.policies
             ]
 
-            engine = AnalysisEngine(provider_factory=self._provider_factory)
+            from src.infrastructure.ai.base import ProviderType
+            
+            provider_type = ProviderType.CLAUDE
+            if command.ai_model:
+                try:
+                    provider_type = ProviderType(command.ai_model)
+                except ValueError:
+                    provider_type = ProviderType.CLAUDE
+            
+            engine = AnalysisEngine(
+                provider_factory=self._provider_factory,
+                default_provider=provider_type,
+            )
             
             options = AnalysisOptions(
                 include_suggestions=True,
                 max_issues=50,
             )
             
-            logger.info(f"Starting AI analysis for document {command.document_id}")
+            logger.info(f"Starting AI analysis for document {command.document_id} with provider {provider_type.value}")
             result = await engine.analyze(
                 document_id=command.document_id,
                 document_content=document.markdown_content,
                 policy_rules=policy_rules,
                 options=options,
+                provider_type=provider_type,
             )
             logger.info(f"Analysis completed: success={result.success}, issues={result.total_issues}")
 

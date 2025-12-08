@@ -76,13 +76,13 @@ async def start_analysis(
     if policy_repository_id is None:
         policy_repository_id = uuid4()
 
-    model_provider = request.model_provider if request else "anthropic"
+    model_provider = request.model_provider if request else "claude"
     focus_areas = request.focus_areas if request else None
 
     command = StartAnalysis(
         document_id=document_id,
         policy_repository_id=policy_repository_id,
-        ai_model=model_provider or "anthropic",
+        ai_model=model_provider or "claude",
         initiated_by="anonymous",
     )
 
