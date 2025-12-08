@@ -1,0 +1,528 @@
+```json
+{
+    "issues": [
+        {
+            "rule_id": "complete_parameter_values",
+            "severity": "critical",
+            "category": "undefined_parameter",
+            "title": "Market Capitalization Minimum Threshold Not Defined",
+            "description": "Section 2 states stocks must have 'market capitalization above the minimum threshold' but does not specify this threshold value. An independent implementer cannot determine which stocks qualify without this exact numeric value (e.g., USD 5 billion, USD 10 billion, etc.). This completely blocks the eligibility screening process.",
+            "location": "Section 2. Eligibility Criteria, bullet point 1",
+            "original_text": "Market capitalization above the minimum threshold",
+            "confidence": 1.0
+        },
+        {
+            "rule_id": "complete_parameter_values",
+            "severity": "critical",
+            "category": "undefined_parameter",
+            "title": "Liquidity Threshold Not Specified",
+            "description": "Section 2 requires 'average daily trading volume above the liquidity threshold' but does not define this threshold. Without the exact value (e.g., 1 million shares, USD 10 million notional), the time period for averaging (e.g., 3-month ADTV), or the currency, independent implementation is impossible. This is a blocking issue for stock eligibility determination.",
+            "location": "Section 2. Eligibility Criteria, bullet point 2",
+            "original_text": "Average daily trading volume above the liquidity threshold",
+            "confidence": 1.0
+        },
+        {
+            "rule_id": "complete_parameter_values",
+            "severity": "critical",
+            "category": "undefined_parameter",
+            "title": "ESG Minimum Score Threshold Undefined",
+            "description": "Section 2 states ESG score must be 'above the minimum acceptable level' and Section 3 mentions it 'excludes approximately the bottom quartile' but provides no exact numeric threshold. An implementer cannot determine if the threshold is 25, 30, or any other specific value. The word 'approximately' introduces further ambiguity. This blocks stock selection entirely.",
+            "location": "Section 2. Eligibility Criteria, bullet point 3 and Section 3. ESG Scoring, paragraph 2",
+            "original_text": "ESG score above the minimum acceptable level; The minimum score threshold is set at a level that excludes approximately the bottom quartile of stocks",
+            "confidence": 1.0
+        },
+        {
+            "rule_id": "data_source_specification",
+            "severity": "critical",
+            "category": "external_dependency",
+            "title": "ESG Data Provider Not Specified",
+            "description": "Section 3 references 'a leading third-party provider' for ESG scores but does not name the provider (e.g., MSCI, Sustainalytics, Refinitiv). Different providers use different methodologies and produce different scores for the same company. Without knowing the exact provider, data feed identifier, API endpoint, and data refresh schedule, exact index replication is impossible.",
+            "location": "Section 3. ESG Scoring, paragraph 1",
+            "original_text": "ESG scores are obtained from a leading third-party provider",
+            "confidence": 1.0
+        },
+        {
+            "rule_id": "complete_index_calculation_formula",
+            "severity": "critical",
+            "category": "incomplete_formula",
+            "title": "ESG Tilt Formula Not Provided",
+            "description": "Section 4 states 'ESG tilt = Applied based on relative ESG score' but provides no mathematical formula. An implementer cannot calculate the exact weight adjustment without knowing if it's linear, exponential, z-score based, or another method. The formula, coefficients, and calculation steps are completely missing, making exact index level calculation impossible.",
+            "location": "Section 4. Weighting Scheme, bullet point 2",
+            "original_text": "ESG tilt = Applied based on relative ESG score",
+            "confidence": 1.0
+        },
+        {
+            "rule_id": "complete_parameter_values",
+            "severity": "critical",
+            "category": "undefined_parameter",
+            "title": "Maximum Single Stock Weight Cap Not Specified",
+            "description": "Section 4 states 'The maximum weight for any single stock is capped at an appropriate level' but does not specify this level. Without the exact percentage (e.g., 5%, 8%, 10%), weight calculation and normalization cannot be performed correctly. The term 'appropriate' is completely subjective and blocks implementation.",
+            "location": "Section 4. Weighting Scheme, paragraph 2",
+            "original_text": "The maximum weight for any single stock is capped at an appropriate level",
+            "confidence": 1.0
+        },
+        {
+            "rule_id": "complete_parameter_values",
+            "severity": "critical",
+            "category": "undefined_parameter",
+            "title": "Rebalancing Frequency Not Defined",
+            "description": "Section 5 states 'The index is rebalanced periodically' without specifying if this is monthly, quarterly, semi-annually, or annually. The rebalancing frequency directly affects index composition, turnover, and performance. An implementer cannot know when to execute rebalancing without this critical parameter.",
+            "location": "Section 5. Rebalancing, paragraph 1",
+            "original_text": "The index is rebalanced periodically",
+            "confidence": 1.0
+        },
+        {
+            "rule_id": "complete_parameter_values",
+            "severity": "critical",
+            "category": "ambiguous_methodology",
+            "title": "Buffer Rules Not Specified",
+            "description": "Section 5 mentions 'buffer rules' for additions and deletions but provides no details on what these rules are. Buffer rules typically involve rank thresholds or score differences, but without the exact methodology (e.g., 'must rank top 90 to add, must fall below 110 to delete'), implementation is impossible.",
+            "location": "Section 5. Rebalancing, paragraph 2",
+            "original_text": "Additions and deletions are subject to buffer rules to reduce unnecessary turnover",
+            "confidence": 1.0
+        },
+        {
+            "rule_id": "data_source_specification",
+            "severity": "critical",
+            "category": "missing_reference",
+            "title": "Exclusion List Not Provided",
+            "description": "Section 2 requires stocks to not be 'on the exclusion list' but this list is not included in the documentation. An implementer has no way to know which specific companies are excluded. This is a critical missing reference that completely blocks eligibility determination.",
+            "location": "Section 2. Eligibility Criteria, bullet point 4",
+            "original_text": "Not on the exclusion list",
+            "confidence": 1.0
+        },
+        {
+            "rule_id": "complete_parameter_values",
+            "severity": "critical",
+            "category": "undefined_parameter",
+            "title": "Sector Weight Constraints Not Quantified",
+            "description": "Section 8 states 'Sector weights are constrained relative to the parent index' but does not specify the constraint bounds (e.g., ±5%, ±3%, or other limits). Without exact over/underweight limits per sector, portfolio construction and optimization cannot be performed correctly.",
+            "location": "Section 8. Risk Controls, sentence 1",
+            "original_text": "Sector weights are constrained relative to the parent index",
+            "confidence": 1.0
+        },
+        {
+            "rule_id": "complete_parameter_values",
+            "severity": "critical",
+            "category": "undefined_parameter",
+            "title": "Tracking Error Budget Not Specified",
+            "description": "Section 8 mentions 'The tracking error budget is managed appropriately' but does not provide the target tracking error level (e.g., 1%, 2%, 3% ex-ante tracking error). This is essential for portfolio optimization and risk management. The word 'appropriately' provides no actionable guidance.",
+            "location": "Section 8. Risk Controls, sentence 2",
+            "original_text": "The tracking error budget is managed appropriately",
+            "confidence": 1.0
+        },
+        {
+            "rule_id": "data_source_specification",
+            "severity": "critical",
+            "category": "external_dependency",
+            "title": "Parent Index Not Identified",
+            "description": "The document repeatedly references 'the parent index' (in sections about tracking error, sector constraints, and risk characteristics) but never identifies which index this is (e.g., S&P 500, MSCI World, Russell 1000). Without knowing the parent index, sector classifications, constituent universe, and benchmark weights cannot be determined.",
+            "location": "Section 1. Index Objective and Section 8. Risk Controls",
+            "original_text": "maintaining similar risk characteristics to the parent index; Sector weights are constrained relative to the parent index",
+            "confidence": 1.0
+        },
+        {
+            "rule_id": "complete_index_calculation_formula",
+            "severity": "critical",
+            "category": "incomplete_formula",
+            "title": "Index Level Calculation Formula Missing",
+            "description": "The document provides no formula for calculating the index level itself. There is no specification of whether it is price return or total return, the base date and base level, divisor methodology, or the exact calculation formula. An implementer cannot calculate any index value without this fundamental information.",
+            "location": "Entire document - no section on index calculation",
+            "original_text": "[Missing - no index calculation methodology provided]",
+            "confidence": 1.0
+        },
+        {
+            "rule_id": "data_source_specification",
+            "severity": "critical",
+            "category": "data_source_unspecified",
+            "title": "Market Capitalization Data Source Not Specified",
+            "description": "Market capitalization is used for both eligibility screening and weighting, but the document does not specify the data source, whether to use float-adjusted or total market cap, the currency, or the timing of the data (close of business, real-time, etc.). Different sources provide different values, making exact replication impossible.",
+            "location": "Section 2. Eligibility Criteria and Section 4. Weighting Scheme",
+            "original_text": "Market capitalization above the minimum threshold; Base weight = Market cap weight",
+            "confidence": 0.95
+        },
+        {
+            "rule_id": "complete_parameter_values",
+            "severity": "critical",
+            "category": "ambiguous_methodology",
+            "title": "Controversial Weapons Definition Missing",
+            "description": "Section 6 excludes 'controversial weapons (as commonly defined)' but does not provide the actual definition. Different organizations define controversial weapons differently (e.g., cluster munitions, landmines, nuclear weapons, biological weapons). Without the exact list and involvement thresholds, this exclusion cannot be applied consistently.",
+            "location": "Section 6. Exclusions, bullet point 1",
+            "original_text": "Controversial weapons (as commonly defined)",
+            "confidence": 1.0
+        },
+        {
+            "rule_id": "data_source_specification",
+            "severity": "critical",
+            "category": "external_dependency",
+            "title": "UN Global Compact Failure Determination Not Specified",
+            "description": "Section 6 excludes companies 'failing UN Global Compact principles' but does not specify how this determination is made, which data provider assesses this (e.g., UN Global Compact Office, third-party ESG provider), what constitutes 'failing', or the data refresh frequency. Implementation is impossible without these specifications.",
+            "location": "Section 6. Exclusions, bullet point 2",
+            "original_text": "Companies failing UN Global Compact principles",
+            "confidence": 0.95
+        },
+        {
+            "rule_id": "complete_parameter_values",
+            "severity": "critical",
+            "category": "undefined_parameter",
+            "title": "Excluded Activities and Thresholds Not Defined",
+            "description": "Section 6 references 'companies with significant exposure to excluded activities' but does not list which activities are excluded (e.g., tobacco, thermal coal, oil sands) or define 'significant exposure' (e.g., >5% revenue, >10% revenue). This exclusion criterion cannot be applied without these details.",
+            "location": "Section 6. Exclusions, bullet point 3",
+            "original_text": "Companies with significant exposure to excluded activities",
+            "confidence": 1.0
+        },
+        {
+            "rule_id": "complete_index_calculation_formula",
+            "severity": "critical",
+            "category": "ambiguous_methodology",
+            "title": "Weight Normalization Process Not Documented",
+            "description": "After applying ESG tilts, concentration caps, and sector constraints, weights must be normalized to sum to 100%. The document does not specify the normalization methodology, the order of constraint application, or how conflicts between constraints are resolved. This is essential for exact index level calculation.",
+            "location": "Section 4. Weighting Scheme",
+            "original_text": "[Missing - no normalization process described]",
+            "confidence": 0.95
+        },
+        {
+            "rule_id": "complete_index_calculation_formula",
+            "severity": "high",
+            "category": "ambiguous_methodology",
+            "title": "Corporate Actions Methodology Unspecified",
+            "description": "Section 7 states corporate actions are handled 'in a manner consistent with general market practice' but provides no specific methodology for splits, dividends, spin-offs, mergers, or delistings. Different 'market practices' exist, and without exact rules, index calculation will diverge from the intended methodology.",
+            "location": "Section 7. Corporate Actions",
+            "original_text": "Corporate actions are handled in a manner consistent with general market practice for equity indices",
+            "confidence": 0.95
+        },
+        {
+            "rule_id": "data_source_specification",
+            "severity": "high",
+            "category": "data_source_unspecified",
+            "title": "Trading Volume Data Source Not Specified",
+            "description": "Section 2 requires minimum average daily trading volume but does not specify the data source (e.g., Bloomberg, exchange data, consolidated tape), whether to use primary exchange or all venues, how to handle multi-listed securities, or the currency for volume calculation.",
+            "location": "Section 2. Eligibility Criteria, bullet point 2",
+            "original_text": "Average daily trading volume above the liquidity threshold",
+            "confidence": 0.90
+        },
+        {
+            "rule_id": "complete_parameter_values",
+            "severity": "high",
+            "category": "undefined_parameter",
+            "title": "Rebalancing Effective Date and Time Not Specified",
+            "description": "Section 5 mentions rebalancing but does not specify the effective date (e.g., close of last business day of quarter), effective time (e.g., close of trading), or announcement lead time. These details affect index calculation and are necessary for implementation.",
+            "location": "Section 5. Rebalancing",
+            "original_text": "The index is rebalanced periodically",
+            "confidence": 0.90
+        },
+        {
+            "rule_id": "data_source_specification",
+            "severity": "high",
+            "category": "data_source_unspecified",
+            "title": "Sector Classification System Not Specified",
+            "description": "Section 8 references sector weights but does not specify which classification system is used (e.g., GICS, ICB, TRBC). Different classification systems assign companies to different sectors, which would result in different constraint applications and portfolio compositions.",
+            "location": "Section 8. Risk Controls",
+            "original_text": "Sector weights are constrained relative to the parent index",
+            "confidence": 0.95
+        },
+        {
+            "rule_id": "complete_parameter_values",
+            "severity": "high",
+            "category": "undefined_parameter",
+            "title": "Base Date and Base Level Not Specified",
+            "description": "Every index requires a base date and base level (e.g., 1000 on January 1, 2020) for calculating index values over time. This fundamental information is completely missing, making it impossible to calculate the actual index level at any point in time.",
+            "location": "Entire document - missing from all sections",
+            "original_text": "[Missing - no base date or base level specified]",
+            "confidence": 1.0
+        },
+        {
+            "rule_id": "complete_index_calculation_formula",
+            "severity": "high",
+            "category": "incomplete_formula",
+            "title": "Dividend Treatment Not Specified",
+            "description": "The document does not specify whether this is a price return or total return index, how dividends are treated (if at all), dividend reinvestment timing, or withholding tax treatment. This fundamentally affects index calculation and performance.",
+            "location": "Entire document - missing from all sections",
+            "original_text": "[Missing - no dividend treatment methodology]",
+            "confidence": 1.0
+        },
+        {
+            "rule_id": "complete_parameter_values",
+            "severity": "high",
+            "category": "undefined_parameter",
+            "title": "Currency and FX Conversion Not Specified",
+            "description": "The document does not specify the index calculation currency, how multi-currency constituents are handled, which FX rates to use, the timing of FX conversion, or the data source for FX rates. This is essential for calculating index levels when constituents trade in different currencies.",
+            "location": "Entire document - missing from all sections",
+            "original_text": "[Missing - no currency or FX methodology]",
+            "confidence": 0.95
+        },
+        {
+            "rule_id": "missing_governance",
+            "severity": "high",
+            "category": "missing_governance",
+            "title": "Index Governance and Oversight Committee Not Defined",
+            "description": "The document does not specify who oversees the index, how governance decisions are made, who has authority to interpret rules, or how disputes are resolved. This is critical for operational implementation and compliance with index regulation standards.",
+            "location": "Entire document - missing governance section",
+            "original_text": "[Missing - no governance structure documented]",
+            "confidence": 0.90
+        },
+        {
+            "rule_id": "missing_governance",
+            "severity": "high",
+            "category": "missing_governance",
+            "title": "Methodology Change Process Not Documented",
+            "description": "There is no documented process for how methodology changes are proposed, reviewed, approved, announced, or implemented. Regulatory standards for indices typically require transparent methodology change processes.",
+            "location": "Entire document - missing methodology change procedures",
+            "original_text": "[Missing - no methodology change process]",
+            "confidence": 0.90
+        },
+        {
+            "rule_id": "complete_parameter_values",
+            "severity": "high",
+            "category": "undefined_parameter",
+            "title": "Concentration Limits Application Order Not Specified",
+            "description": "Section 4 mentions that 'concentration limits apply' but does not specify whether these are applied before or after ESG tilts, how they interact with sector constraints, or the iterative process if multiple constraints bind simultaneously.",
+            "location": "Section 4. Weighting Scheme, bullet point 3",
+            "original_text": "Concentration limits apply",
+            "confidence": 0.85
+        },
+        {
+            "rule_id": "complete_parameter_values",
+            "severity": "high",
+            "category": "ambiguous_methodology",
+            "title": "Relative ESG Score Calculation Not Defined",
+            "description": "Section 4 refers to 'relative ESG score' for applying the tilt but does not define 'relative to what' - the universe, the parent index, the sector, or another benchmark. The calculation methodology for this relative score is not provided.",
+            "location": "Section 4. Weighting Scheme, bullet point 2",
+            "original_text": "ESG tilt = Applied based on relative ESG score",
+            "confidence": 0.90
+        },
+        {
+            "rule_id": "data_source_specification",
+            "severity": "high",
+            "category": "data_source_unspecified",
+            "title": "Pricing Source for Index Calculation Not Specified",
+            "description": "The document does not specify the source for constituent stock prices (e.g., primary exchange closing price, consolidated close, VWAP), the timing (official close, last trade), or how to handle pricing errors or missing prices.",
+            "location": "Entire document - missing pricing specifications",
+            "original_text": "[Missing - no pricing source methodology]",
+            "confidence": 0.95
+        },
+        {
+            "rule_id": "complete_parameter_values",
+            "severity": "medium",
+            "category": "undefined_parameter",
+            "title": "Shares Outstanding Data Source and Type Not Specified",
+            "description": "Market capitalization calculation requires shares outstanding, but the document does not specify whether to use total shares, float-adjusted shares, or another measure, nor the data source for shares outstanding information.",
+            "location": "Section 4. Weighting Scheme",
+            "original_text": "Base weight = Market cap weight",
+            "confidence": 0.85
+        },
+        {
+            "rule_id": "complete_parameter_values",
+            "severity": "medium",
+            "category": "ambiguous_methodology",
+            "title": "Eligibility Review Timing Not Specified",
+            "description": "While Section 5 mentions rebalancing frequency, it does not specify when eligibility criteria are reviewed - is it at each rebalancing, more frequently for delistings, or on another schedule? This affects when stocks enter and exit the index.",
+            "location": "Section 2. Eligibility Criteria and Section 5. Rebalancing",
+            "original_text": "[Missing - no eligibility review timing specified]",
+            "confidence": 0.80
+        },
+        {
+            "rule_id": "complete_parameter_values",
+            "severity": "medium",
+            "category": "undefined_parameter",
+            "title": "ESG Score Refresh Frequency Not Specified",
+            "description": "Section 3 mentions ESG scores from a provider but does not specify how frequently these scores are updated (e.g., monthly, quarterly, annually) or which score is used at rebalancing (most recent, as-of specific date).",
+            "location": "Section 3. ESG Scoring",
+            "original_text": "ESG scores are obtained from a leading third-party provider",
+            "confidence": 0.85
+        },
+        {
+            "rule_id": "complete_parameter_values",
+            "severity": "medium",
+            "category": "ambiguous_methodology",
+            "title": "Fast Exit Rules Not Documented",
+            "description": "The document does not specify how stocks are removed between rebalancing dates due to delistings, bankruptcy, falling below minimum thresholds, or other urgent circumstances. Fast exit/entry rules are important for index management.",
+            "location": "Entire document - missing fast exit provisions",
+            "original_text": "[Missing - no fast exit rules]",
+            "confidence": 0.80
+        },
+        {
+            "rule_id": "complete_parameter_values",
+            "severity": "medium",
+            "category": "undefined_parameter",
+            "title": "Treatment of IPOs and New Listings Not Specified",
+            "description": "The document does not specify how newly listed companies (IPOs, spinoffs) are evaluated for inclusion, whether they are added between rebalancing dates, or what seasoning period (if any) applies before eligibility.",
+            "location": "Entire document - missing IPO treatment",
+            "original_text": "[Missing - no IPO or new listing rules]",
+            "confidence": 0.80
+        },
+        {
+            "rule_id": "complete_parameter_values",
+            "severity": "medium",
+            "category": "ambiguous_methodology",
+            "title": "Handling of Multiple Share Classes Not Specified",
+            "description": "The document does not specify how companies with multiple share classes are handled - are all classes eligible, only one class, or are they aggregated? This affects both eligibility and weighting calculations.",
+            "location": "Entire document - missing multiple share class rules",
+            "original_text": "[Missing - no multiple share class methodology]",
+            "confidence": 0.85
+        },
+        {
+            "rule_id": "compliance_gap",
+            "severity": "medium",
+            "category": "compliance_gap",
+            "title": "No Disclaimer or Risk Disclosure",
+            "description": "The document lacks standard disclaimers about index use, limitations of ESG data, backward-looking nature of ESG scores, and risks of the strategy. Regulatory standards typically require appropriate risk disclosures for index products.",
+            "location": "Entire document - missing disclaimer section",
+            "original_text": "[Missing - no disclaimers or risk disclosures]",
+            "confidence": 0.85
+        },
+        {
+            "rule_id": "missing_governance",
+            "severity": "medium",
+            "category": "missing_governance",
+            "title": "Error Correction Policy Not Documented",
+            "description": "The document does not specify how calculation errors are detected, the process for correcting errors, whether corrections are retroactive, or how stakeholders are notified of corrections. This is important for operational integrity.",
+            "location": "Entire document - missing error correction procedures",
+            "original_text": "[Missing - no error correction policy]",
+            "confidence": 0.80
+        },
+        {
+            "rule_id": "complete_parameter_values",
+            "severity": "medium",
+            "category": "undefined_parameter",
+            "title": "Reconstitution vs. Rebalancing Timing Not Clarified",
+            "description": "The document uses the term 'rebalancing' but does not clarify whether this includes both reconstitution (adding/removing stocks) and reweighting, or if these occur on different schedules, which is common in index methodology.",
+            "location": "Section 5. Rebalancing",
+            "original_text": "The index is rebalanced periodically",
+            "confidence": 0.75
+        },
+        {
+            "rule_id": "data_source_specification",
+            "severity": "medium",
+            "category": "data_source_unspecified",
+            "title": "Holiday and Non-Trading Day Treatment Not Specified",
+            "description": "The document does not specify which calendar is used for rebalancing dates, how holidays are handled, or what happens when a scheduled rebalancing date falls on a non-trading day in any constituent market.",
+            "location": "Entire document - missing holiday calendar specifications",
+            "original_text": "[Missing - no holiday calendar treatment]",
+            "confidence": 0.80
+        },
+        {
+            "rule_id": "complete_index_calculation_formula",
+            "severity": "medium",
+            "category": "incomplete_formula",
+            "title": "Index Calculation Frequency Not Specified",
+            "description": "The document does not specify how frequently the index level is calculated (e.g., real-time, end-of-day, once per day) or the publication schedule for index values.",
+            "location": "Entire document - missing calculation frequency",
+            "original_text": "[Missing - no index calculation frequency]",
+            "confidence": 0.85
+        },
+        {
+            "rule_id": "complete_parameter_values",
+            "severity": "medium",
+            "category": "undefined_parameter",
+            "title": "Minimum Number of Constituents Not Specified",
+            "description": "The document does not specify if there is a minimum number of constituents required for the index, or what happens if the number of eligible stocks falls below a viable threshold due to strict screening criteria.",
+            "location": "Entire document - missing minimum constituent rules",
+            "original_text": "[Missing - no minimum constituent count]",
+            "confidence": 0.75
+        },
+        {
+            "rule_id": "missing_governance",
+            "severity": "medium",
+            "category": "missing_governance",
+            "title": "Data Provider Failure Contingency Not Documented",
+            "description": "The document does not specify what happens if the ESG data provider becomes unavailable, changes methodology, or discontinues service. Contingency procedures for data provider failure are important for business continuity.",
+            "location": "Section 3. ESG Scoring",
+            "original_text": "[Missing - no data provider contingency plan]",
+            "confidence": 0.80
+        },
+        {
+            "rule_id": "complete_parameter_values",
+            "severity": "low",
+            "category": "ambiguous_methodology",
+            "title": "Historical Backtest Data and Inception Date Not Provided",
+            "description": "The document does not specify when the index methodology was first implemented, whether there is a live calculation history, or if backtested data exists. This information is relevant for users evaluating the index.",
+            "location": "Entire document - missing inception and history information",
+            "original_text": "[Missing - no inception date or historical data information]",
+            "confidence": 0.70
+        },
+        {
+            "rule_id": "compliance_gap",
+            "severity": "low",
+            "category": "compliance_gap",
+            "title": "Index Identifier (Ticker/ISIN) Not Provided",
+            "description": "The document does not provide any index identifiers such as ticker symbol, Bloomberg code, ISIN, or other standard identifiers that would be used to reference this index in markets and systems.",
+            "location": "Entire document - missing index identifiers",
+            "original_text": "[Missing - no index ticker or identifiers]",
+            "confidence": 0.75
+        },
+        {
+            "rule_id": "complete_parameter_values",
+            "severity": "low",
+            "category": "undefined_parameter",
+            "title": "Geographic or Market Scope Not Defined",
+            "description": "While the document references a parent index, it does not explicitly state the geographic scope (e.g., US, Global, Developed Markets) or which exchanges/markets are included in the eligible universe.",
+            "location": "Section 1. Index Objective",
+            "original_text": "[Missing - no explicit geographic scope]",
+            "confidence": 0.70
+        },
+        {
+            "rule_id": "missing_governance",
+            "severity": "low",
+            "category": "missing_governance",
+            "title": "Index Calculation Agent Not Identified",
+            "description": "The document does not specify which entity is responsible for calculating and publishing the index, which is relevant for accountability and operational inquiries.",
+            "location": "Entire document - missing calculation agent information",
+            "original_text": "[Missing - no calculation agent identified]",
+            "confidence": 0.75
+        },
+        {
+            "rule_id": "complete_parameter_values",
+            "severity": "low",
+            "category": "ambiguous_methodology",
+            "title": "Constituent Count or Target Not Specified",
+            "description": "The document does not specify if there is a target number of constituents (e.g., 'approximately 100 stocks') or if the count is purely determined by eligibility criteria. This affects understanding of index concentration.",
+            "location": "Entire document - missing constituent count information",
+            "original_text": "[Missing - no target constituent count]",
+            "confidence": 0.65
+        },
+        {
+            "rule_id": "compliance_gap",
+            "severity": "info",
+            "category": "compliance_gap",
+            "title": "Version Control and Document History Not Included",
+            "description": "The document does not include version numbers, revision dates, or a change log. This is important for tracking methodology updates and ensuring users reference the current version.",
+            "location": "Entire document - missing version control",
+            "original_text": "[Missing - no version or revision information]",
+            "confidence": 0.70
+        }
+    ],
+    "missing_documents": [
+        {
+            "referenced_name": "Exclusion List",
+            "reference_location": "Section 2. Eligibility Criteria, bullet point 4",
+            "purpose": "Complete list of companies that are explicitly excluded from index eligibility",
+            "criticality": "critical"
+        },
+        {
+            "referenced_name": "Parent Index Specification",
+            "reference_location": "Section 1. Index Objective and Section 8. Risk Controls",
+            "purpose": "Identification of the parent index used for comparison, sector constraints, and risk characteristics",
+            "criticality": "critical"
+        },
+        {
+            "referenced_name": "ESG Provider Methodology Document",
+            "reference_location": "Section 3. ESG Scoring",
+            "purpose": "Full specification of the ESG scoring methodology, provider identity, and data access details",
+            "criticality": "critical"
+        },
+        {
+            "referenced_name": "Buffer Rules Specification",
+            "reference_location": "Section 5. Rebalancing",
+            "purpose": "Detailed rules for addition and deletion buffers including specific thresholds and ranking requirements",
+            "criticality": "critical"
+        },
+        {
+            "referenced_name": "Controversial Weapons Definition Document",
+            "reference_location": "Section 6. Exclusions",
+            "purpose": "Precise definition of controversial weapons categories and involvement thresholds",
+            "criticality": "critical"
+        },
+        {
+            "referenced_name": "Excluded Activities List and Thresholds",
+            "reference_location

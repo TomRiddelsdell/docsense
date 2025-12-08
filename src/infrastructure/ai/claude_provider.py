@@ -286,7 +286,7 @@ class ClaudeProvider(AIProvider):
         json_block_match = re.search(r'```json\s*([\s\S]*?)```', text)
         if json_block_match:
             json_text = json_block_match.group(1).strip()
-            logger.info(f"Found JSON in code block, length: {len(json_text)}")
+            logger.info(f"Found JSON in complete code block, length: {len(json_text)}")
             try:
                 json.loads(json_text)
                 return json_text
@@ -299,7 +299,20 @@ class ClaudeProvider(AIProvider):
                 except json.JSONDecodeError:
                     pass
         else:
-            logger.info("No ```json block found")
+            # Check if response starts with ```json but is truncated (no closing ```)
+            if text.startswith('```json'):
+                logger.info("Response starts with ```json but no closing ``` - likely truncated")
+                json_text = text[7:].strip()  # Skip "```json"
+                logger.info(f"Attempting to repair truncated JSON, length: {len(json_text)}")
+                repaired = self._repair_truncated_json(json_text)
+                try:
+                    json.loads(repaired)
+                    logger.info(f"Successfully repaired truncated JSON, length: {len(repaired)}")
+                    return repaired
+                except json.JSONDecodeError as e:
+                    logger.info(f"Truncated JSON repair failed: {e}")
+            else:
+                logger.info("No ```json block found")
         
         # Look for ``` ... ``` blocks (without json marker)
         code_block_match = re.search(r'```\s*([\s\S]*?)```', text)
@@ -383,6 +396,86 @@ class ClaudeProvider(AIProvider):
         except json.JSONDecodeError:
             pass
         
+        # Find the last complete object by looking for the last "}," or "}\n" pattern
+        # that represents a complete array element
+        last_complete_pos = -1
+        
+        # Track positions of complete objects in arrays
+        in_string = False
+        escape_next = False
+        brace_depth = 0
+        bracket_depth = 0
+        
+        for i, char in enumerate(text):
+            if escape_next:
+                escape_next = False
+                continue
+            if char == "\\":
+                escape_next = True
+                continue
+            if char == '"' and not escape_next:
+                in_string = not in_string
+                continue
+            if in_string:
+                continue
+            if char == "{":
+                brace_depth += 1
+            elif char == "}":
+                brace_depth -= 1
+                # Check if this closes an object inside an array (depth > 0)
+                if brace_depth >= 1 and bracket_depth >= 1:
+                    # Check if followed by comma or whitespace (complete object)
+                    if i + 1 < len(text):
+                        next_char = text[i + 1]
+                        if next_char in ',\n\r\t ':
+                            last_complete_pos = i + 1
+            elif char == "[":
+                bracket_depth += 1
+            elif char == "]":
+                bracket_depth -= 1
+        
+        # If we found a complete object, truncate there and close properly
+        if last_complete_pos > 0:
+            truncated = text[:last_complete_pos].rstrip().rstrip(',')
+            
+            # Count remaining open brackets/braces
+            in_string = False
+            escape_next = False
+            open_braces = 0
+            open_brackets = 0
+            
+            for char in truncated:
+                if escape_next:
+                    escape_next = False
+                    continue
+                if char == "\\":
+                    escape_next = True
+                    continue
+                if char == '"' and not escape_next:
+                    in_string = not in_string
+                    continue
+                if in_string:
+                    continue
+                if char == "{":
+                    open_braces += 1
+                elif char == "}":
+                    open_braces -= 1
+                elif char == "[":
+                    open_brackets += 1
+                elif char == "]":
+                    open_brackets -= 1
+            
+            # Close the remaining structures
+            repaired = truncated + "]" * open_brackets + "}" * open_braces
+            
+            try:
+                json.loads(repaired)
+                logger.info(f"Repaired JSON by truncating to last complete object at pos {last_complete_pos}")
+                return repaired
+            except json.JSONDecodeError as e:
+                logger.info(f"Truncation repair failed: {e}")
+        
+        # Fallback: simple bracket closing
         in_string = False
         escape_next = False
         brace_count = 0
