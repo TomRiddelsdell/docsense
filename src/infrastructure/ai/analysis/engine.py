@@ -75,6 +75,12 @@ class AnalysisEngine:
                 "issues_found": len(analysis_result.issues) if analysis_result.issues else 0,
                 "suggestions_count": len(analysis_result.suggestions) if analysis_result.suggestions else 0,
             })
+            if analysis_result.raw_response:
+                log.info("ai_response", "Raw AI model response:", {
+                    "response": analysis_result.raw_response[:4000] if len(analysis_result.raw_response) > 4000 else analysis_result.raw_response,
+                    "truncated": len(analysis_result.raw_response) > 4000,
+                    "total_length": len(analysis_result.raw_response),
+                })
             if analysis_result.issues:
                 for i, issue in enumerate(analysis_result.issues[:5]):
                     log.debug("analysis", f"Issue {i+1}: {issue.title if hasattr(issue, 'title') else str(issue)[:100]}", {

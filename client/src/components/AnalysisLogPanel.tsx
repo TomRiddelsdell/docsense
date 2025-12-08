@@ -120,13 +120,25 @@ export default function AnalysisLogPanel({ documentId }: { documentId: string })
           ) : (
             <div className="font-mono text-xs space-y-1">
               {data.entries.map((entry) => (
-                <div key={entry.id} className="flex gap-2 text-slate-300">
-                  <span className="text-slate-500 shrink-0">{formatTime(entry.timestamp)}</span>
-                  <span className={cn('shrink-0', levelColors[entry.level])}>
-                    [{entry.level.toUpperCase().padEnd(7)}]
-                  </span>
-                  <span className="text-slate-400 shrink-0">[{entry.stage}]</span>
-                  <span className="text-slate-200">{entry.message}</span>
+                <div key={entry.id} className="text-slate-300">
+                  <div className="flex gap-2">
+                    <span className="text-slate-500 shrink-0">{formatTime(entry.timestamp)}</span>
+                    <span className={cn('shrink-0', levelColors[entry.level])}>
+                      [{entry.level.toUpperCase().padEnd(7)}]
+                    </span>
+                    <span className="text-slate-400 shrink-0">[{entry.stage}]</span>
+                    <span className="text-slate-200">{entry.message}</span>
+                  </div>
+                  {entry.details && entry.stage === 'ai_response' && (entry.details as { response?: string }).response && (
+                    <div className="ml-8 mt-1 mb-2 p-2 bg-slate-900 rounded border border-slate-700 whitespace-pre-wrap break-words max-h-96 overflow-y-auto">
+                      <span className="text-emerald-400">{String((entry.details as { response?: string }).response)}</span>
+                      {(entry.details as { truncated?: boolean }).truncated && (
+                        <div className="text-yellow-400 mt-2 text-[10px]">
+                          [Response truncated - showing {String((entry.details as { response?: string }).response).length} of {(entry.details as { total_length?: number }).total_length} characters]
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               ))}
               {data.status === 'in_progress' && (

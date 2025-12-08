@@ -106,14 +106,14 @@ class ClaudeProvider(AIProvider):
             
             processing_time = int((time.time() - start_time) * 1000)
             
-            result_text = ""
+            raw_response = ""
             if message.choices and len(message.choices) > 0:
-                result_text = message.choices[0].message.content or ""
+                raw_response = message.choices[0].message.content or ""
             
-            logger.info(f"Raw AI response length: {len(result_text)}")
-            logger.debug(f"Raw AI response (first 2000 chars): {result_text[:2000]}")
+            logger.info(f"Raw AI response length: {len(raw_response)}")
+            logger.debug(f"Raw AI response (first 2000 chars): {raw_response[:2000]}")
             
-            result_text = self._extract_json(result_text)
+            result_text = self._extract_json(raw_response)
             logger.info(f"Extracted JSON length: {len(result_text)}")
             logger.debug(f"Extracted JSON (first 2000 chars): {result_text[:2000]}")
             
@@ -138,6 +138,7 @@ class ClaudeProvider(AIProvider):
                 processing_time_ms=processing_time,
                 model_used=model,
                 token_count=token_count,
+                raw_response=raw_response,
             )
             
         except asyncio.TimeoutError:

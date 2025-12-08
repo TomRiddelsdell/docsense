@@ -167,6 +167,7 @@ class AnalysisResult:
     model_used: str
     token_count: int = 0
     errors: list[str] = field(default_factory=list)
+    raw_response: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         return {
