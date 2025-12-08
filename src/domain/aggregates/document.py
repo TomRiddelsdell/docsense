@@ -22,6 +22,9 @@ from src.domain.exceptions.analysis_exceptions import AnalysisInProgress, Analys
 class Document(Aggregate):
     def __init__(self, document_id: UUID):
         super().__init__(document_id)
+        self._init_state()
+
+    def _init_state(self) -> None:
         self._filename: str = ""
         self._original_format: str = ""
         self._markdown_content: str = ""
