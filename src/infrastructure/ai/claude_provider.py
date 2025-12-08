@@ -258,19 +258,57 @@ class ClaudeProvider(AIProvider):
     def _extract_json(self, text: str) -> str:
         text = text.strip()
         
-        if text.startswith("```json"):
-            text = text[7:]
-        elif text.startswith("```"):
-            text = text[3:]
-        if "```" in text:
-            text = text.split("```")[0]
+        # Try to find JSON in code blocks first (most reliable)
+        import re
         
-        text = text.strip()
+        # Look for ```json ... ``` blocks anywhere in the text
+        json_block_match = re.search(r'```json\s*([\s\S]*?)```', text)
+        if json_block_match:
+            json_text = json_block_match.group(1).strip()
+            logger.debug(f"Found JSON in code block, length: {len(json_text)}")
+            try:
+                json.loads(json_text)
+                return json_text
+            except json.JSONDecodeError:
+                logger.debug("JSON code block parse failed, trying repair")
+                repaired = self._repair_truncated_json(json_text)
+                try:
+                    json.loads(repaired)
+                    return repaired
+                except json.JSONDecodeError:
+                    pass
         
-        start_idx = text.find("{")
+        # Look for ``` ... ``` blocks (without json marker)
+        code_block_match = re.search(r'```\s*([\s\S]*?)```', text)
+        if code_block_match:
+            block_text = code_block_match.group(1).strip()
+            if block_text.startswith('{'):
+                logger.debug(f"Found JSON in unmarked code block, length: {len(block_text)}")
+                try:
+                    json.loads(block_text)
+                    return block_text
+                except json.JSONDecodeError:
+                    repaired = self._repair_truncated_json(block_text)
+                    try:
+                        json.loads(repaired)
+                        return repaired
+                    except json.JSONDecodeError:
+                        pass
+        
+        # Fall back to finding JSON object directly in text
+        # Look for the LAST occurrence of {"issues" which is likely the complete JSON
+        issues_match = re.search(r'\{[^{}]*"issues"\s*:', text)
+        if issues_match:
+            start_idx = issues_match.start()
+            logger.debug(f"Found 'issues' key at position {start_idx}")
+        else:
+            start_idx = text.find("{")
+        
         if start_idx == -1:
+            logger.warning("No JSON object found in response")
             return "{}"
         
+        # Extract balanced JSON from start_idx
         brace_count = 0
         end_idx = start_idx
         in_string = False
@@ -297,9 +335,13 @@ class ClaudeProvider(AIProvider):
                     break
         
         if brace_count == 0 and end_idx > start_idx:
-            return text[start_idx:end_idx + 1]
+            extracted = text[start_idx:end_idx + 1]
+            logger.debug(f"Extracted balanced JSON, length: {len(extracted)}")
+            return extracted
         
+        # If braces not balanced, try to repair
         json_text = text[start_idx:]
+        logger.debug(f"Braces unbalanced (count={brace_count}), attempting repair")
         json_text = self._repair_truncated_json(json_text)
         return json_text
 
