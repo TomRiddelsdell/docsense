@@ -1,6 +1,7 @@
 import asyncio
 import json
 import os
+import re
 import time
 from typing import Any
 
@@ -25,11 +26,11 @@ from .prompts.suggestion_generation import SuggestionGenerationPrompt
 class ClaudeProvider(AIProvider):
     
     AVAILABLE_MODELS = [
-        "claude-sonnet-4-5",
-        "claude-opus-4-5",
-        "claude-haiku-4-5",
+        "claude-sonnet-4-20250514",
+        "claude-3-5-sonnet-20241022",
+        "claude-3-5-haiku-20241022",
     ]
-    DEFAULT_MODEL = "claude-sonnet-4-5"
+    DEFAULT_MODEL = "claude-sonnet-4-20250514"
     REQUEST_TIMEOUT = 120
 
     def __init__(self, rate_limiter: RateLimiter | None = None):
@@ -221,13 +222,49 @@ class ClaudeProvider(AIProvider):
 
     def _extract_json(self, text: str) -> str:
         text = text.strip()
+        
         if text.startswith("```json"):
             text = text[7:]
         elif text.startswith("```"):
             text = text[3:]
-        if text.endswith("```"):
-            text = text[:-3]
-        return text.strip()
+        if "```" in text:
+            text = text.split("```")[0]
+        
+        text = text.strip()
+        
+        start_idx = text.find("{")
+        if start_idx == -1:
+            return "{}"
+        
+        brace_count = 0
+        end_idx = start_idx
+        in_string = False
+        escape_next = False
+        
+        for i, char in enumerate(text[start_idx:], start=start_idx):
+            if escape_next:
+                escape_next = False
+                continue
+            if char == "\\":
+                escape_next = True
+                continue
+            if char == '"' and not escape_next:
+                in_string = not in_string
+                continue
+            if in_string:
+                continue
+            if char == "{":
+                brace_count += 1
+            elif char == "}":
+                brace_count -= 1
+                if brace_count == 0:
+                    end_idx = i
+                    break
+        
+        if brace_count == 0 and end_idx > start_idx:
+            return text[start_idx:end_idx + 1]
+        
+        return text[start_idx:]
 
     def _policy_rule_to_dict(self, rule: PolicyRule) -> dict[str, Any]:
         return {
