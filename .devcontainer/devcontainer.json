@@ -1,0 +1,196 @@
+{
+	"name": "Portfolio Platform - Event-Sourced Microservices",
+	"build": {
+		"dockerfile": "Dockerfile"
+	},
+	"features": {
+		"ghcr.io/devcontainers/features/java:1": {
+			"version": "24",
+			"jdkDistro": "ms"
+		},
+		"ghcr.io/devcontainers/features/aws-cli:1": {},
+		"ghcr.io/devcontainers/features/terraform:1": {
+			"version": "latest"
+		},
+		"ghcr.io/devcontainers/features/docker-outside-of-docker:1": {}
+	},
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				// Essential Development
+				"github.copilot",
+				"github.copilot-chat",
+				// TypeScript/JavaScript
+				"ms-vscode.vscode-typescript-next",
+				"esbenp.prettier-vscode",
+				"dbaeumer.vscode-eslint",
+				// React/Next.js Frontend
+				"bradlc.vscode-tailwindcss",
+				"formulahendry.auto-rename-tag",
+				"christian-kohler.path-intellisense",
+				// Testing
+				"ms-playwright.playwright",
+				"vitest.explorer",
+				// Database/SQL
+				"ms-mssql.mssql",
+				"mtxr.sqltools",
+				"mtxr.sqltools-driver-pg",
+				"cweijan.vscode-postgresql-client2",
+				// Infrastructure & DevOps
+				"hashicorp.terraform",
+				"ms-azuretools.vscode-docker",
+				"ms-azuretools.vscode-azureresourcegroups",
+				// Cloudflare Workers (Wrangler CLI Support)
+				"cloudflare.vscode-cloudflare-workers",
+				// Environment & Secrets Management
+				"ms-vscode.dotenv",
+				"johnpapa.vscode-peacock",
+				// Apache Kafka & Event Streaming
+				"jeppeandersen.vscode-kafka",
+				// Git/Version Control
+				"mhutchie.git-graph",
+				"github.vscode-pull-request-github",
+				"eamodio.gitlens",
+				// Documentation
+				"yzhang.markdown-all-in-one",
+				"davidanson.vscode-markdownlint",
+				"bierner.markdown-mermaid",
+				// Utilities & Quality
+				"ms-vscode.vscode-json",
+				"redhat.vscode-yaml",
+				"ms-vscode.hexdump",
+				"streetsidesoftware.code-spell-checker",
+				// Enhanced Development Experience
+				"bradlc.vscode-tailwindcss",
+				"usernamehw.errorlens",
+				"ms-vscode.vscode-thunder-client",
+				"rangav.vscode-thunder-client",
+				"humao.rest-client",
+				"ms-vscode.vscode-npm-script-explorer",
+				"formulahendry.auto-close-tag",
+				"ms-vsliveshare.vsliveshare",
+				"github.vscode-github-actions",
+				"doppler.doppler-vscode",
+				"anthropic.claude-code"
+			],
+			"settings": {
+				"terminal.integrated.defaultProfile.linux": "bash",
+				"typescript.preferences.useAliasesForRenames": false,
+				"eslint.workingDirectories": [
+					"packages",
+					"services",
+					"apps"
+				],
+				"github.copilot.chat.terminal.autoApprove": [
+					// Default safe commands
+					"echo *",
+					"ls *",
+					"cat *",
+					"pwd",
+					"whoami",
+					"date",
+					"which *",
+					"head *",
+					"tail *",
+					"grep *",
+					"find *",
+					"wc *",
+					"sort *",
+					"uniq *",
+					"tree *",
+					"git status",
+					"git log *",
+					"git diff *",
+					"git show *",
+					"git branch *",
+					"npm list *",
+					"npm view *",
+					"node --version",
+					"npm --version",
+					"tsc --version",
+					// Additional curl GET commands
+					"curl -s*",
+					"curl --silent*",
+					"curl -L*",
+					"curl --location*",
+					"curl -X GET*",
+					"curl --request GET*"
+				],
+				"amazonQ.mcp.servers": {
+					"github": {
+						"command": "npx",
+						"args": [
+							"-y",
+							"@modelcontextprotocol/server-github@latest"
+						],
+						"env": {
+							"GITHUB_PERSONAL_ACCESS_TOKEN": "${env:GITHUB_TOKEN}"
+						}
+					},
+					"neon": {
+						"command": "npx",
+						"args": [
+							"-y",
+							"@neondatabase/mcp-server-neon@latest"
+						],
+						"env": {
+							"NEON_API_KEY": "${env:NEON_API_KEY}"
+						}
+					},
+					"aws-cli": {
+						"command": "npx",
+						"args": [
+							"-y",
+							"@modelcontextprotocol/server-aws-cli@latest"
+						],
+						"env": {
+							"AWS_ACCESS_KEY_ID": "${env:AWS_ACCESS_KEY_ID}",
+							"AWS_SECRET_ACCESS_KEY": "${env:AWS_SECRET_ACCESS_KEY}",
+							"AWS_DEFAULT_REGION": "${env:AWS_DEFAULT_REGION}"
+						}
+					}
+				}
+			}
+		}
+	},
+	"forwardPorts": [
+		3000,
+		3001,
+		5000,
+		8080,
+		9090
+	],
+	"postCreateCommand": "bash .devcontainer/setup-optimized.sh",
+	"updateContentCommand": "bash .devcontainer/setup-optimized.sh",
+	"postStartCommand": "bash .devcontainer/setup-optimized.sh",
+	"workspaceFolder": "/workspaces",
+	"workspaceMount": "source=${localWorkspaceFolder},target=/workspaces,type=bind",
+	"remoteUser": "codespace",
+	"containerEnv": {
+		// Essential environment variables
+		"NODE_ENV": "development",
+		
+		// Doppler token for secrets management (from host)
+		"DOPPLER_TOKEN": "${localEnv:DOPPLER_TOKEN}",
+		
+		// User identity from host machine (non-sensitive)
+		"DEV_EMAIL": "${localEnv:DEV_EMAIL}",
+		"DEV_USER_NAME": "${localEnv:DEV_USER_NAME}",
+		
+		// Map host identity to all service-specific variables
+		"CLOUDFLARE_EMAIL": "${localEnv:DEV_EMAIL}",
+		"NEON_EMAIL": "${localEnv:DEV_EMAIL}",
+		"CONFLUENT_EMAIL": "${localEnv:DEV_EMAIL}",
+		"GIT_USER_EMAIL": "${localEnv:DEV_EMAIL}",
+		"GIT_USER_NAME": "${localEnv:DEV_USER_NAME}"
+		
+		// All API keys, tokens, and secrets will come from Doppler
+		// Use: doppler secrets set NEON_API_KEY="..." 
+		// Use: doppler secrets set CLOUDFLARE_API_KEY="..."
+		// Use: doppler secrets set GITHUB_TOKEN="..."
+		// Use: doppler secrets set AWS_ACCESS_KEY_ID="..."
+		// Use: doppler secrets set AWS_SECRET_ACCESS_KEY="..."
+		// Use: doppler secrets set CONFLUENT_CLOUD_API_KEY="..."
+		// Use: doppler secrets set CONFLUENT_CLOUD_API_SECRET="..."
+	}
+}
