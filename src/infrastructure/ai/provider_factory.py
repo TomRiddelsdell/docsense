@@ -1,3 +1,4 @@
+import os
 from typing import TYPE_CHECKING
 
 from .base import AIProvider, ProviderType
@@ -8,6 +9,14 @@ if TYPE_CHECKING:
     from .openai_provider import OpenAIProvider
     from .claude_provider import ClaudeProvider
 
+API_KEY_ENV_VARS = {
+    ProviderType.CLAUDE: "AI_INTEGRATIONS_ANTHROPIC_API_KEY",
+    ProviderType.GEMINI: "AI_INTEGRATIONS_GEMINI_API_KEY",
+    ProviderType.OPENAI: "AI_INTEGRATIONS_OPENAI_API_KEY",
+}
+
+PROVIDER_PRIORITY = [ProviderType.CLAUDE, ProviderType.GEMINI, ProviderType.OPENAI]
+
 
 class ProviderFactory:
 
@@ -16,7 +25,28 @@ class ProviderFactory:
         self._instances: dict[ProviderType, AIProvider] = {}
         self._rate_limiters: dict[ProviderType, RateLimiter] = {}
 
+    def is_provider_configured(self, provider_type: ProviderType) -> bool:
+        env_var = API_KEY_ENV_VARS.get(provider_type)
+        if not env_var:
+            return False
+        return bool(os.environ.get(env_var))
+
+    def get_configured_providers(self) -> list[ProviderType]:
+        return [p for p in PROVIDER_PRIORITY if self.is_provider_configured(p)]
+
     def get_provider(self, provider_type: ProviderType) -> AIProvider:
+        if not self.is_provider_configured(provider_type):
+            configured = self.get_configured_providers()
+            if configured:
+                raise ValueError(
+                    f"Provider '{provider_type.value}' is not configured (missing API key). "
+                    f"Available providers: {[p.value for p in configured]}"
+                )
+            else:
+                raise ValueError(
+                    f"Provider '{provider_type.value}' is not configured (missing API key). "
+                    f"No providers are configured. Please set an API key for at least one provider."
+                )
         if provider_type not in self._instances:
             self._instances[provider_type] = self._create_provider(provider_type)
         return self._instances[provider_type]
@@ -42,7 +72,13 @@ class ProviderFactory:
             raise ValueError(f"Unknown provider type: {provider_type}")
 
     def get_default_provider(self) -> AIProvider:
-        return self.get_provider(ProviderType.GEMINI)
+        configured = self.get_configured_providers()
+        if not configured:
+            raise ValueError(
+                "No AI providers are configured. Please set an API key for at least one provider: "
+                f"{[p.value for p in PROVIDER_PRIORITY]}"
+            )
+        return self.get_provider(configured[0])
 
     async def get_available_providers(self) -> list[ProviderType]:
         available = []
