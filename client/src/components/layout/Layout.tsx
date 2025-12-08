@@ -24,13 +24,14 @@ export default function Layout() {
             {navItems.map((item) => {
               const isActive = location.pathname === item.href || 
                 (item.href !== '/' && location.pathname.startsWith(item.href));
+              const isExactMatch = location.pathname === item.href;
               return (
                 <Button
                   key={item.href}
                   variant={isActive ? 'default' : 'ghost'}
                   size="sm"
                   asChild
-                  className={cn('gap-1 sm:gap-2 px-2 sm:px-4', isActive && 'pointer-events-none')}
+                  className={cn('gap-1 sm:gap-2 px-2 sm:px-4', isExactMatch && 'pointer-events-none')}
                 >
                   <Link to={item.href}>
                     <item.icon className="h-5 w-5" />
