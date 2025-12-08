@@ -15,6 +15,10 @@ from src.domain.exceptions.feedback_exceptions import (
     FeedbackNotFound,
     ChangeAlreadyProcessed,
 )
+from src.domain.exceptions.analysis_exceptions import (
+    AnalysisInProgress,
+    AnalysisNotStarted,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -103,6 +107,31 @@ def add_exception_handlers(app: FastAPI) -> None:
             content={
                 "error": "conflict",
                 "message": f"Change with ID {exc.feedback_id} has already been processed",
+            },
+        )
+
+    @app.exception_handler(AnalysisInProgress)
+    async def analysis_in_progress_handler(
+        request: Request, exc: AnalysisInProgress
+    ) -> JSONResponse:
+        return JSONResponse(
+            status_code=status.HTTP_409_CONFLICT,
+            content={
+                "error": "analysis_in_progress",
+                "message": str(exc),
+                "detail": "The document is currently being analyzed. Please wait or reset the analysis.",
+            },
+        )
+
+    @app.exception_handler(AnalysisNotStarted)
+    async def analysis_not_started_handler(
+        request: Request, exc: AnalysisNotStarted
+    ) -> JSONResponse:
+        return JSONResponse(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content={
+                "error": "analysis_not_started",
+                "message": str(exc),
             },
         )
 
