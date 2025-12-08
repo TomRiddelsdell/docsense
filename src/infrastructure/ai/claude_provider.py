@@ -25,10 +25,11 @@ from .prompts.suggestion_generation import SuggestionGenerationPrompt
 class ClaudeProvider(AIProvider):
     
     AVAILABLE_MODELS = [
-        "claude-sonnet-4-20250514",
-        "claude-3-haiku-20240307",
+        "claude-sonnet-4-5",
+        "claude-haiku-4-5",
+        "claude-opus-4-5",
     ]
-    DEFAULT_MODEL = "claude-sonnet-4-20250514"
+    DEFAULT_MODEL = "claude-sonnet-4-5"
     REQUEST_TIMEOUT = 120
 
     def __init__(self, rate_limiter: RateLimiter | None = None):
