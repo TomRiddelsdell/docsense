@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -5,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import {
   Table,
   TableBody,
@@ -131,8 +133,9 @@ export default function DocumentDetailPage() {
   const { id, tab } = useParams<{ id: string; tab?: string }>();
   const navigate = useNavigate();
   const currentTab = tab || 'issues';
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
 
-  const { data: document, isLoading: docLoading, isError: docError } = useDocument(id);
+  const { data: document, isLoading: docLoading, isError: docError, refetch } = useDocument(id);
   const { data: feedbackData, isLoading: feedbackLoading } = useDocumentFeedback(id);
   const analyzeMutation = useAnalyzeDocument();
   const acceptMutation = useAcceptFeedback();
@@ -144,7 +147,16 @@ export default function DocumentDetailPage() {
 
   const handleAnalyze = async () => {
     if (!id) return;
-    await analyzeMutation.mutateAsync({ documentId: id });
+    setAnalysisError(null);
+    try {
+      await analyzeMutation.mutateAsync({ documentId: id });
+      await refetch();
+    } catch (err) {
+      const errorMessage = err instanceof Error 
+        ? err.message 
+        : 'Analysis failed. Please try again.';
+      setAnalysisError(errorMessage);
+    }
   };
 
   const formatDate = (dateStr: string) => {
@@ -235,6 +247,14 @@ export default function DocumentDetailPage() {
 
         {document.description && (
           <p className="text-muted-foreground mt-4">{document.description}</p>
+        )}
+
+        {analysisError && (
+          <Alert variant="destructive" className="mt-4">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Analysis Failed</AlertTitle>
+            <AlertDescription>{analysisError}</AlertDescription>
+          </Alert>
         )}
 
       </div>
