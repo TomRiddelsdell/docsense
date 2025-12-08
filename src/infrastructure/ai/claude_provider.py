@@ -3,11 +3,15 @@ import json
 import logging
 import os
 import time
+from datetime import datetime
+from pathlib import Path
 from typing import Any
 
 import litellm
 
 logger = logging.getLogger(__name__)
+
+AI_RESPONSES_DIR = Path("data/ai_responses")
 
 from .base import (
     AIProvider,
@@ -112,6 +116,8 @@ class ClaudeProvider(AIProvider):
             
             logger.info(f"Raw AI response length: {len(raw_response)}")
             logger.debug(f"Raw AI response (first 2000 chars): {raw_response[:2000]}")
+            
+            self._save_ai_response(raw_response, model, "document_analysis")
             
             result_text = self._extract_json(raw_response)
             logger.info(f"Extracted JSON length: {len(result_text)}")
@@ -254,6 +260,17 @@ class ClaudeProvider(AIProvider):
             return bool(api_key)
         except Exception:
             return False
+
+    def _save_ai_response(self, response: str, model: str, operation: str) -> None:
+        try:
+            AI_RESPONSES_DIR.mkdir(parents=True, exist_ok=True)
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"{operation}_{model}_{timestamp}.txt"
+            filepath = AI_RESPONSES_DIR / filename
+            filepath.write_text(response)
+            logger.info(f"Saved AI response to: {filepath}")
+        except Exception as e:
+            logger.error(f"Failed to save AI response: {e}")
 
     def _extract_json(self, text: str) -> str:
         text = text.strip()
