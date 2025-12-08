@@ -7,7 +7,7 @@ An AI-powered application that analyzes trading algorithm documentation and prov
 ### Tech Stack
 - **Backend**: Python with FastAPI
 - **Architecture**: Domain-Driven Design (DDD) with Event Sourcing and CQRS
-- **AI Agent**: Google Agent Development Kit
+- **AI Provider**: LiteLLM with Claude (Anthropic) - multi-model support
 - **Database**: PostgreSQL (for event store and read models)
 - **Frontend**: React with TypeScript, Shadcn/ui, Tailwind CSS
 
@@ -158,6 +158,7 @@ When making changes to this project, you MUST follow these conventions:
 
 | Date | Description | Change Log |
 |------|-------------|------------|
+| 2025-12-08 | AI Provider Implementation Fix | [Link](docs/changes/2025-12-08-ai-provider-implementation.md) |
 | 2025-12-07 | Self-Containment Requirements | [Link](docs/changes/2025-12-07-self-containment-requirements.md) |
 | 2025-12-07 | Phase 6 Frontend Complete | [Link](docs/changes/2025-12-07-phase6-frontend-complete.md) |
 | 2025-12-07 | Phase 5 API Layer complete | [Link](docs/changes/2025-12-07-phase5-api-layer-complete.md) |
@@ -184,6 +185,7 @@ When making changes to this project, you MUST follow these conventions:
 - [ADR-007: Shadcn/ui Component Library](docs/decisions/007-shadcn-ui-component-library.md)
 - [ADR-009: Document Self-Containment Requirements](docs/decisions/009-document-self-containment-requirements.md)
 - [ADR-010: Document Group Multi-Document Analysis](docs/decisions/010-document-group-multi-document-analysis.md) (Proposed)
+- [ADR-011: AI Provider Implementation](docs/decisions/011-ai-provider-implementation.md)
 
 ### Other Documentation
 - [Implementation Plan](docs/IMPLEMENTATION_PLAN.md) - Complete roadmap to production
