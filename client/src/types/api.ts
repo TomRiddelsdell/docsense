@@ -2,7 +2,7 @@ export interface DocumentSummary {
   id: string;
   title: string;
   description: string | null;
-  status: 'pending' | 'uploaded' | 'converted' | 'analyzing' | 'analyzed' | 'exported';
+  status: 'pending' | 'uploaded' | 'converted' | 'analyzing' | 'analyzed' | 'exported' | 'failed';
   original_format: string;
   policy_repository: string | null;
   compliance_status: 'pending' | 'compliant' | 'partial' | 'non_compliant';
