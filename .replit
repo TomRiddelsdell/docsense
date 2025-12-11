@@ -43,7 +43,7 @@ outputType = "console"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "uvicorn src.api.main:app --host 0.0.0.0 --port 8000"
+args = "doppler run -- uvicorn src.api.main:app --host 0.0.0.0 --port 8000"
 waitForPort = 8000
 
 [[workflows.workflow]]
@@ -69,11 +69,3 @@ externalPort = 3000
 [[ports]]
 localPort = 8000
 externalPort = 8000
-
-[[ports]]
-localPort = 44459
-externalPort = 3001
-
-[[ports]]
-localPort = 45729
-externalPort = 3002
