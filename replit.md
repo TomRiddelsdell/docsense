@@ -8,6 +8,7 @@ An AI-powered application that analyzes trading algorithm documentation and prov
 - **Backend**: Python with FastAPI
 - **Architecture**: Domain-Driven Design (DDD) with Event Sourcing and CQRS
 - **AI Provider**: LiteLLM with Claude (Anthropic) - multi-model support
+- **Secrets**: Doppler (centralized secrets management)
 - **Database**: PostgreSQL (for event store and read models)
 - **Frontend**: React with TypeScript, Shadcn/ui, Tailwind CSS
 
@@ -158,6 +159,7 @@ When making changes to this project, you MUST follow these conventions:
 
 | Date | Description | Change Log |
 |------|-------------|------------|
+| 2025-12-11 | Doppler Secrets Management | [Link](docs/changes/2025-12-11-doppler-secrets-management.md) |
 | 2025-12-08 | AI Provider Implementation Fix | [Link](docs/changes/2025-12-08-ai-provider-implementation.md) |
 | 2025-12-07 | Self-Containment Requirements | [Link](docs/changes/2025-12-07-self-containment-requirements.md) |
 | 2025-12-07 | Phase 6 Frontend Complete | [Link](docs/changes/2025-12-07-phase6-frontend-complete.md) |
@@ -186,6 +188,7 @@ When making changes to this project, you MUST follow these conventions:
 - [ADR-009: Document Self-Containment Requirements](docs/decisions/009-document-self-containment-requirements.md)
 - [ADR-010: Document Group Multi-Document Analysis](docs/decisions/010-document-group-multi-document-analysis.md) (Proposed)
 - [ADR-011: AI Provider Implementation](docs/decisions/011-ai-provider-implementation.md)
+- [ADR-012: Doppler Secrets Management](docs/decisions/012-doppler-secrets-management.md)
 
 ### Other Documentation
 - [Implementation Plan](docs/IMPLEMENTATION_PLAN.md) - Complete roadmap to production

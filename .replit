@@ -43,28 +43,24 @@ outputType = "console"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "doppler run --project docsense --config dev -- uvicorn src.api.main:app --host 0.0.0.0 --port 8000"
+args = "doppler run --project docsense --config dev --preserve-env -- uvicorn src.api.main:app --host 0.0.0.0 --port 8000"
 waitForPort = 8000
 
 [[workflows.workflow]]
 name = "Frontend"
 author = "agent"
 
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "cd client && npm run dev"
-waitForPort = 5000
-
 [workflows.workflow.metadata]
 outputType = "webview"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "doppler run --project docsense --config dev --preserve-env -- bash -c \"cd client && npm run dev\""
+waitForPort = 5000
 
 [[ports]]
 localPort = 5000
 externalPort = 80
-
-[[ports]]
-localPort = 5001
-externalPort = 3000
 
 [[ports]]
 localPort = 8000
