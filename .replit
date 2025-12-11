@@ -43,7 +43,7 @@ outputType = "console"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "doppler run -- uvicorn src.api.main:app --host 0.0.0.0 --port 8000"
+args = "doppler run --project docsense --config dev -- uvicorn src.api.main:app --host 0.0.0.0 --port 8000"
 waitForPort = 8000
 
 [[workflows.workflow]]
