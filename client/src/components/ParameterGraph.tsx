@@ -15,8 +15,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { GitBranch, AlertCircle } from 'lucide-react';
-import { useDocumentParameters } from '@/hooks/useDocuments';
-import type { Parameter } from '@/types/api';
+import { useDocumentParameters, useDocumentSemanticIR } from '@/hooks/useDocuments';
+import type { Parameter, FormulaReference } from '@/types/api';
 
 interface ParameterGraphProps {
   documentId: string;
@@ -110,21 +110,89 @@ function createNodesAndEdges(parameters: Parameter[]): { nodes: Node[]; edges: E
   return { nodes, edges };
 }
 
+function createNodesFromFormulae(formulae: FormulaReference[]): { nodes: Node[]; edges: Edge[] } {
+  const nodes: Node[] = [];
+  const edges: Edge[] = [];
+
+  // Create a map of formula IDs
+  const formulaMap = new Map<string, FormulaReference>();
+  formulae.forEach((f) => formulaMap.set(f.id, f));
+
+  // Layout formulas in a hierarchical way
+  formulae.forEach((formula, idx) => {
+    const xPos = 50 + (idx % 4) * 280;
+    const yPos = 50 + Math.floor(idx / 4) * 150;
+
+    nodes.push({
+      id: formula.id,
+      type: 'default',
+      position: { x: xPos, y: yPos },
+      data: {
+        label: (
+          <div className="text-left p-2">
+            <div className="font-semibold text-sm">{formula.name || formula.id}</div>
+            {formula.variables.length > 0 && (
+              <div className="text-xs text-gray-500 mt-1">
+                Variables: {formula.variables.slice(0, 3).join(', ')}
+                {formula.variables.length > 3 && '...'}
+              </div>
+            )}
+          </div>
+        ),
+      },
+      style: {
+        background: 'white',
+        border: '2px solid #3b82f6',
+        borderRadius: '8px',
+        padding: '8px',
+        minWidth: '200px',
+      },
+    });
+
+    // Create edges based on dependencies
+    formula.dependencies.forEach((depId) => {
+      if (formulaMap.has(depId)) {
+        edges.push({
+          id: `${depId}-${formula.id}`,
+          source: depId,
+          target: formula.id,
+          type: ConnectionLineType.SmoothStep,
+          animated: true,
+          markerEnd: {
+            type: MarkerType.ArrowClosed,
+            color: '#3b82f6',
+          },
+          style: { stroke: '#3b82f6', strokeWidth: 2 },
+        });
+      }
+    });
+  });
+
+  return { nodes, edges };
+}
+
 export default function ParameterGraph({ documentId }: ParameterGraphProps) {
   const { data, isLoading, isError, refetch } = useDocumentParameters(documentId);
+  const { data: semanticIR, isLoading: irLoading } = useDocumentSemanticIR(documentId);
 
   const { initialNodes, initialEdges } = useMemo(() => {
+    // Try to use semantic IR for formulas first, fall back to parameters
+    if (semanticIR?.formulae && semanticIR.formulae.length > 0) {
+      const { nodes, edges } = createNodesFromFormulae(semanticIR.formulae);
+      return { initialNodes: nodes, initialEdges: edges };
+    }
+
     if (!data?.parameters) {
       return { initialNodes: [], initialEdges: [] };
     }
     const { nodes, edges } = createNodesAndEdges(data.parameters);
     return { initialNodes: nodes, initialEdges: edges };
-  }, [data?.parameters]);
+  }, [data?.parameters, semanticIR]);
 
   const [nodes, , onNodesChange] = useNodesState(initialNodes);
   const [edges, , onEdgesChange] = useEdgesState(initialEdges);
 
-  if (isLoading) {
+  if (isLoading || irLoading) {
     return (
       <Card>
         <CardHeader>
@@ -163,7 +231,7 @@ export default function ParameterGraph({ documentId }: ParameterGraphProps) {
     );
   }
 
-  if (!data?.parameters || data.parameters.length === 0) {
+  if ((!data?.parameters || data.parameters.length === 0) && (!semanticIR?.formulae || semanticIR.formulae.length === 0)) {
     return (
       <Card>
         <CardHeader>
@@ -193,7 +261,9 @@ export default function ParameterGraph({ documentId }: ParameterGraphProps) {
           <div>
             <CardTitle>Parameter Graph</CardTitle>
             <CardDescription>
-              {data.total} parameters extracted from the document
+              {semanticIR?.formulae
+                ? `${semanticIR.formulae.length} formulas with dependencies`
+                : `${data?.total || 0} parameters extracted from the document`}
             </CardDescription>
           </div>
           <div className="flex gap-2 flex-wrap">

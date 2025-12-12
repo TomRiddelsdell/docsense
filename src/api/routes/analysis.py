@@ -62,7 +62,8 @@ async def start_analysis(
     document_handler=Depends(get_document_by_id_handler),
 ):
     from uuid import uuid4
-    
+    from src.domain.aggregates.policy_repository import PolicyRepository as PolicyRepoAggregate
+
     query = GetDocumentById(document_id=document_id)
     document = await document_handler.handle(query)
 
@@ -72,9 +73,24 @@ async def start_analysis(
             detail=f"Document with ID {document_id} not found",
         )
 
+    # Get or create default policy repository
     policy_repository_id = document.policy_repository_id
     if policy_repository_id is None:
+        # Create a default empty policy repository
+        container = await get_container()
         policy_repository_id = uuid4()
+        default_policy_repo = PolicyRepoAggregate.create(
+            repository_id=policy_repository_id,
+            name="Default Policy Repository",
+            description="Default empty policy repository for analysis",
+            created_by="system"
+        )
+        await container.policy_repository.save(default_policy_repo)
+
+        # Publish events
+        events = list(default_policy_repo.pending_events)
+        if events:
+            await container.event_publisher.publish_all(events)
 
     model_provider = request.model_provider if request else "claude"
     focus_areas = request.focus_areas if request else None
@@ -87,9 +103,9 @@ async def start_analysis(
     )
 
     await start_handler.handle(command)
-    
+
     updated_doc = await document_handler.handle(query)
-    
+
     from datetime import datetime, timezone
     return AnalysisSessionResponse(
         document_id=document_id,

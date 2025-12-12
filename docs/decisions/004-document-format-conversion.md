@@ -98,6 +98,17 @@ def calculate_signal():
 - Original files stored encrypted
 - Converted text may still contain sensitive content
 
+## Evolution
+
+This ADR has been extended by subsequent decisions:
+
+- **ADR-013**: Enhanced formula handling with LaTeX preservation
+- **ADR-014**: Semantic Intermediate Representation for structured entity extraction
+
+The evolution maintains the Markdown output format while adding a semantic layer that captures structured entities (formulas, definitions, tables, cross-references) separately from the rendered Markdown, enabling programmatic validation and AI-optimized processing.
+
 ## Related ADRs
 - [ADR-003: Multi-Model AI Support](003-multi-model-ai-support.md)
 - [ADR-005: Policy Repository System](005-policy-repository-system.md)
+- [ADR-013: LaTeX Formula Preservation](013-latex-formula-preservation.md)
+- [ADR-014: Semantic Intermediate Representation](014-semantic-intermediate-representation.md)

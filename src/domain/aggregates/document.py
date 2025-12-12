@@ -7,6 +7,9 @@ from src.domain.events.document_events import (
     DocumentUploaded,
     DocumentConverted,
     DocumentExported,
+    SemanticIRCurationStarted,
+    SemanticIRCurated,
+    SemanticIRCurationFailed,
 )
 from src.domain.events.analysis_events import (
     AnalysisStarted,
@@ -188,6 +191,55 @@ class Document(Aggregate):
             )
         )
 
+    def start_ir_curation(
+        self,
+        provider_type: str = "claude",
+    ) -> None:
+        """Start AI curation of semantic IR."""
+        if self._status != DocumentStatus.CONVERTED:
+            raise InvalidDocumentState(
+                document_id=self._id,
+                current_status=self._status.value,
+                required_status=DocumentStatus.CONVERTED.value,
+                operation="start_ir_curation"
+            )
+        self._apply_event(
+            SemanticIRCurationStarted(
+                aggregate_id=self._id,
+                provider_type=provider_type,
+            )
+        )
+
+    def complete_ir_curation(
+        self,
+        definitions_added: int,
+        definitions_removed: int,
+        validation_issues_found: int,
+        curation_metadata: Dict[str, Any],
+    ) -> None:
+        """Complete AI curation of semantic IR."""
+        self._apply_event(
+            SemanticIRCurated(
+                aggregate_id=self._id,
+                definitions_added=definitions_added,
+                definitions_removed=definitions_removed,
+                validation_issues_found=validation_issues_found,
+                curation_metadata=curation_metadata,
+            )
+        )
+
+    def fail_ir_curation(
+        self,
+        error_message: str,
+    ) -> None:
+        """Mark AI curation as failed."""
+        self._apply_event(
+            SemanticIRCurationFailed(
+                aggregate_id=self._id,
+                error_message=error_message,
+            )
+        )
+
     def export(
         self,
         export_format: str,
@@ -233,3 +285,12 @@ class Document(Aggregate):
         elif isinstance(event, DocumentExported):
             self._status = DocumentStatus.EXPORTED
             self._current_version = self._current_version.increment_patch()
+        elif isinstance(event, SemanticIRCurationStarted):
+            # Curation happens in background, status remains CONVERTED
+            pass
+        elif isinstance(event, SemanticIRCurated):
+            # Curation complete, status remains CONVERTED
+            pass
+        elif isinstance(event, SemanticIRCurationFailed):
+            # Curation failed, status remains CONVERTED
+            pass

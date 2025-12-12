@@ -3,6 +3,7 @@ from .document_commands import (
     UploadDocument,
     ExportDocument,
     DeleteDocument,
+    CurateSemanticIR,
 )
 from .analysis_commands import (
     StartAnalysis,
@@ -24,6 +25,7 @@ __all__ = [
     "UploadDocument",
     "ExportDocument",
     "DeleteDocument",
+    "CurateSemanticIR",
     "StartAnalysis",
     "CancelAnalysis",
     "AcceptChange",

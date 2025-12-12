@@ -2195,4 +2195,1079 @@ client/src/components/GroupAnalysisResults.tsx # Combined analysis view
 
 ---
 
+## Phase 10: Semantic Intermediate Representation (IR)
+
+**Duration**: 6-8 weeks  
+**Goal**: Implement semantic extraction and structured representation for enhanced document analysis  
+**ADR Reference**: [ADR-014: Semantic Intermediate Representation](decisions/014-semantic-intermediate-representation.md)
+
+### Overview
+
+This phase implements a **Semantic Intermediate Representation (IR)** layer that extracts structured semantic content from documents before AI analysis. This enables:
+
+1. **Complete semantic preservation** - Definitions, formulas, tables, cross-references
+2. **Programmatic validation** - Detect issues before expensive AI calls
+3. **Enhanced LLM input** - Structured, enriched text for better AI reasoning
+4. **Multi-format formula support** - LaTeX, MathML, and plain-text representations
+
+### 10.1 Domain Layer: IR Value Objects
+
+**Duration**: 1 week
+
+**Files to Create**:
+```
+src/domain/value_objects/
+├── semantic_ir/
+│   ├── __init__.py
+│   ├── document_ir.py          # Core DocumentIR aggregate
+│   ├── term_definition.py      # TermDefinition value object
+│   ├── formula_reference.py    # FormulaReference value object
+│   ├── table_data.py           # TableData value object
+│   ├── cross_reference.py      # CrossReference value object
+│   ├── ir_section.py           # Enhanced section with semantic type
+│   ├── ir_metadata.py          # Extended metadata
+│   └── validation_issue.py     # ValidationIssue for pre-validation
+```
+
+**Core Data Structures**:
+
+```python
+# document_ir.py
+from dataclasses import dataclass, field
+from typing import List, Dict, Any, Optional
+from enum import Enum
+
+class SectionType(Enum):
+    NARRATIVE = "narrative"
+    DEFINITION = "definition"
+    FORMULA = "formula"
+    TABLE = "table"
+    CODE = "code"
+    GLOSSARY = "glossary"
+    ANNEX = "annex"
+    UNKNOWN = "unknown"
+
+@dataclass
+class IRSection:
+    """Enhanced section with semantic classification."""
+    id: str
+    title: str
+    content: str
+    level: int
+    section_type: SectionType
+    parent_id: Optional[str] = None
+    start_line: Optional[int] = None
+    end_line: Optional[int] = None
+
+@dataclass
+class TermDefinition:
+    """A defined term within the document."""
+    id: str
+    term: str
+    definition: str
+    section_id: str
+    aliases: List[str] = field(default_factory=list)
+    first_occurrence_line: int = 0
+    
+    def matches(self, text: str) -> bool:
+        """Check if text matches this term or any alias."""
+        normalized = text.lower().strip()
+        if self.term.lower() == normalized:
+            return True
+        return any(alias.lower() == normalized for alias in self.aliases)
+
+@dataclass
+class FormulaReference:
+    """A mathematical formula with dependency tracking."""
+    id: str
+    name: Optional[str]  # e.g., "AssetLongTermVol"
+    latex: str
+    mathml: Optional[str]
+    plain_text: str
+    variables: List[str]
+    dependencies: List[str]  # IDs of other formulas or terms
+    section_id: str
+    line_number: Optional[int] = None
+    
+    def get_undefined_variables(self, defined_terms: List[str]) -> List[str]:
+        """Return variables not in the defined terms list."""
+        defined_lower = {t.lower() for t in defined_terms}
+        return [v for v in self.variables if v.lower() not in defined_lower]
+
+@dataclass
+class TableData:
+    """Structured table representation."""
+    id: str
+    title: Optional[str]
+    headers: List[str]
+    rows: List[List[str]]
+    column_types: List[str]  # "text", "numeric", "formula", "mixed"
+    section_id: str
+    
+    @property
+    def row_count(self) -> int:
+        return len(self.rows)
+    
+    @property
+    def column_count(self) -> int:
+        return len(self.headers) if self.headers else 0
+
+@dataclass
+class CrossReference:
+    """Internal document reference."""
+    id: str
+    source_id: str
+    source_type: str  # "section", "formula", "table", "definition"
+    target_id: str
+    target_type: str
+    reference_text: str
+    resolved: bool = False
+
+class ValidationSeverity(Enum):
+    ERROR = "error"
+    WARNING = "warning"
+    INFO = "info"
+
+class ValidationType(Enum):
+    DUPLICATE_DEFINITION = "duplicate_definition"
+    UNDEFINED_VARIABLE = "undefined_variable"
+    CIRCULAR_DEPENDENCY = "circular_dependency"
+    MISSING_REFERENCE = "missing_reference"
+    AMBIGUOUS_TERM = "ambiguous_term"
+    INCOMPLETE_FORMULA = "incomplete_formula"
+
+@dataclass
+class ValidationIssue:
+    """Pre-validation issue detected programmatically."""
+    id: str
+    issue_type: ValidationType
+    severity: ValidationSeverity
+    message: str
+    location: str
+    related_ids: List[str] = field(default_factory=list)
+    suggestion: Optional[str] = None
+
+@dataclass
+class DocumentIR:
+    """Semantic Intermediate Representation for document analysis."""
+    document_id: str
+    title: str
+    original_format: str
+    sections: List[IRSection]
+    definitions: List[TermDefinition]
+    formulae: List[FormulaReference]
+    tables: List[TableData]
+    cross_references: List[CrossReference]
+    metadata: Dict[str, Any]
+    raw_markdown: str
+    validation_issues: List[ValidationIssue] = field(default_factory=list)
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Serialize to JSON-compatible dictionary."""
+        return {
+            "document_id": self.document_id,
+            "title": self.title,
+            "original_format": self.original_format,
+            "sections": [asdict(s) for s in self.sections],
+            "definitions": [asdict(d) for d in self.definitions],
+            "formulae": [asdict(f) for f in self.formulae],
+            "tables": [asdict(t) for t in self.tables],
+            "cross_references": [asdict(c) for c in self.cross_references],
+            "metadata": self.metadata,
+            "validation_issues": [asdict(v) for v in self.validation_issues],
+        }
+    
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any], raw_markdown: str) -> "DocumentIR":
+        """Deserialize from dictionary."""
+        ...
+    
+    def get_all_defined_terms(self) -> List[str]:
+        """Get all terms defined in the document."""
+        terms = [d.term for d in self.definitions]
+        for d in self.definitions:
+            terms.extend(d.aliases)
+        return terms
+    
+    def find_definition(self, term: str) -> Optional[TermDefinition]:
+        """Find definition by term or alias."""
+        for d in self.definitions:
+            if d.matches(term):
+                return d
+        return None
+```
+
+**Completion Criteria**:
+- [ ] All IR value objects implemented with validation
+- [ ] Serialization/deserialization working
+- [ ] Unit tests for all value objects
+- [ ] Type hints and docstrings complete
+
+---
+
+### 10.2 Infrastructure Layer: Semantic Extractors
+
+**Duration**: 2 weeks
+
+**Files to Create**:
+```
+src/infrastructure/extractors/
+├── __init__.py
+├── base.py                     # Base extractor interface
+├── definition_extractor.py     # Pattern-based term extraction
+├── formula_extractor.py        # Formula parsing and dependency analysis
+├── table_extractor.py          # Enhanced table extraction
+├── reference_extractor.py      # Cross-reference detection
+├── section_classifier.py       # Section type classification
+└── ir_builder.py               # Orchestrates extraction into DocumentIR
+```
+
+#### 10.2.1 Definition Extractor
+
+```python
+# definition_extractor.py
+import re
+from typing import List, Tuple
+from dataclasses import dataclass
+
+@dataclass
+class ExtractionPattern:
+    name: str
+    pattern: str
+    term_group: int
+    definition_group: int
+    flags: int = re.MULTILINE | re.DOTALL
+
+class DefinitionExtractor:
+    """Extract term definitions from document text."""
+    
+    PATTERNS = [
+        ExtractionPattern(
+            "quoted_means",
+            r'"([^"]+)"\s+means\s+(.+?)(?=\n\n|"[^"]+" means|\Z)',
+            1, 2
+        ),
+        ExtractionPattern(
+            "quoted_refers_to", 
+            r'"([^"]+)"\s+(?:refers to|shall mean|is defined as)\s+(.+?)(?=\n\n|\Z)',
+            1, 2
+        ),
+        ExtractionPattern(
+            "parenthetical_definition",
+            r'\((?:the\s+)?"([^"]+)"\)\s*[,.]?\s*(.+?)(?=\n\n|\Z)',
+            1, 2
+        ),
+        ExtractionPattern(
+            "glossary_colon",
+            r'^([A-Z][a-zA-Z\s]{2,30}):\s+(.+?)(?=\n[A-Z]|\n\n|\Z)',
+            1, 2, re.MULTILINE
+        ),
+        ExtractionPattern(
+            "glossary_dash",
+            r'^([A-Z][a-zA-Z\s]{2,30})\s+[–-]\s+(.+?)(?=\n[A-Z]|\n\n|\Z)',
+            1, 2, re.MULTILINE
+        ),
+    ]
+    
+    def extract(self, text: str, section_id: str = "") -> List[TermDefinition]:
+        """Extract all definitions from text."""
+        definitions = []
+        seen_terms = set()
+        
+        for pattern in self.PATTERNS:
+            matches = re.finditer(pattern.pattern, text, pattern.flags)
+            for match in matches:
+                term = match.group(pattern.term_group).strip()
+                definition = match.group(pattern.definition_group).strip()
+                
+                # Avoid duplicates
+                term_key = term.lower()
+                if term_key in seen_terms:
+                    continue
+                seen_terms.add(term_key)
+                
+                # Clean up definition
+                definition = self._clean_definition(definition)
+                
+                if len(term) > 2 and len(definition) > 10:
+                    definitions.append(TermDefinition(
+                        id=f"def-{len(definitions)+1}",
+                        term=term,
+                        definition=definition,
+                        section_id=section_id,
+                        aliases=self._extract_aliases(definition),
+                        first_occurrence_line=text[:match.start()].count('\n') + 1
+                    ))
+        
+        return definitions
+    
+    def _clean_definition(self, text: str) -> str:
+        """Clean up extracted definition text."""
+        # Remove trailing punctuation artifacts
+        text = re.sub(r'\s+', ' ', text).strip()
+        text = text.rstrip('.')
+        return text
+    
+    def _extract_aliases(self, definition: str) -> List[str]:
+        """Extract aliases mentioned in the definition."""
+        aliases = []
+        # Pattern: "also known as X" or "(X)"
+        alias_patterns = [
+            r'also (?:known|referred to) as ["\']?([^"\',.]+)["\']?',
+            r'\((?:the\s+)?["\']([^"\']+)["\']\)',
+        ]
+        for pattern in alias_patterns:
+            for match in re.finditer(pattern, definition, re.IGNORECASE):
+                aliases.append(match.group(1).strip())
+        return aliases
+```
+
+#### 10.2.2 Formula Extractor
+
+```python
+# formula_extractor.py
+import re
+from typing import List, Set
+
+class FormulaExtractor:
+    """Extract and analyze mathematical formulas."""
+    
+    # Common mathematical variable patterns
+    VARIABLE_PATTERN = r'([A-Za-z][A-Za-z0-9_]*(?:_{[^}]+})?)'
+    
+    # LaTeX command patterns to ignore as variables
+    LATEX_COMMANDS = {
+        'sqrt', 'frac', 'sum', 'prod', 'int', 'partial',
+        'alpha', 'beta', 'gamma', 'delta', 'epsilon', 'theta',
+        'lambda', 'mu', 'pi', 'sigma', 'tau', 'phi', 'omega',
+        'times', 'div', 'pm', 'leq', 'geq', 'neq', 'approx',
+        'infty', 'ast', 'ln', 'log', 'exp', 'sin', 'cos', 'tan',
+    }
+    
+    def extract_from_latex(self, latex: str, formula_id: str, 
+                           section_id: str) -> FormulaReference:
+        """Extract formula details from LaTeX string."""
+        variables = self._extract_variables(latex)
+        name = self._extract_formula_name(latex)
+        
+        return FormulaReference(
+            id=formula_id,
+            name=name,
+            latex=latex,
+            mathml=None,  # Can be generated later
+            plain_text=self._latex_to_plain(latex),
+            variables=list(variables),
+            dependencies=[],  # Resolved in second pass
+            section_id=section_id
+        )
+    
+    def _extract_variables(self, latex: str) -> Set[str]:
+        """Extract variable names from LaTeX formula."""
+        variables = set()
+        
+        # Find all potential variables
+        for match in re.finditer(self.VARIABLE_PATTERN, latex):
+            var = match.group(1)
+            # Filter out LaTeX commands
+            base_var = var.split('_')[0].lower()
+            if base_var not in self.LATEX_COMMANDS:
+                variables.add(var)
+        
+        return variables
+    
+    def _extract_formula_name(self, latex: str) -> Optional[str]:
+        """Extract the name of the formula if present (LHS of equation)."""
+        # Pattern: Name = ... or Name_{subscript} = ...
+        match = re.match(r'^([A-Za-z][A-Za-z0-9_]*(?:_{[^}]+})?)\s*=', latex)
+        if match:
+            return match.group(1)
+        return None
+    
+    def _latex_to_plain(self, latex: str) -> str:
+        """Convert LaTeX to plain text representation."""
+        plain = latex
+        # Remove common LaTeX commands
+        plain = re.sub(r'\\(sqrt|frac|sum|prod|int)', r'\1', plain)
+        plain = re.sub(r'\\([a-z]+)', r'\1', plain)
+        plain = re.sub(r'[{}]', '', plain)
+        plain = re.sub(r'_', '_', plain)
+        plain = re.sub(r'\^', '^', plain)
+        return plain.strip()
+    
+    def resolve_dependencies(self, formulas: List[FormulaReference],
+                            definitions: List[TermDefinition]) -> None:
+        """Resolve formula dependencies (modifies formulas in place)."""
+        formula_names = {f.name: f.id for f in formulas if f.name}
+        term_names = {d.term: d.id for d in definitions}
+        
+        for formula in formulas:
+            deps = []
+            for var in formula.variables:
+                # Check if variable is another formula
+                if var in formula_names and formula_names[var] != formula.id:
+                    deps.append(formula_names[var])
+                # Check if variable is a defined term
+                elif var in term_names:
+                    deps.append(term_names[var])
+            formula.dependencies = deps
+```
+
+#### 10.2.3 IR Builder
+
+```python
+# ir_builder.py
+from typing import List
+
+class IRBuilder:
+    """Orchestrates semantic extraction into DocumentIR."""
+    
+    def __init__(self):
+        self.definition_extractor = DefinitionExtractor()
+        self.formula_extractor = FormulaExtractor()
+        self.table_extractor = TableExtractor()
+        self.reference_extractor = ReferenceExtractor()
+        self.section_classifier = SectionClassifier()
+    
+    def build(self, conversion_result: ConversionResult, 
+              document_id: str) -> DocumentIR:
+        """Build DocumentIR from conversion result."""
+        
+        # 1. Classify sections
+        sections = self._build_sections(conversion_result.sections)
+        
+        # 2. Extract definitions
+        definitions = []
+        for section in sections:
+            section_defs = self.definition_extractor.extract(
+                section.content, section.id
+            )
+            definitions.extend(section_defs)
+        
+        # 3. Extract formulas from LaTeX blocks
+        formulae = self._extract_formulas(
+            conversion_result.markdown_content, sections
+        )
+        
+        # 4. Extract tables
+        tables = self.table_extractor.extract(
+            conversion_result.markdown_content, sections
+        )
+        
+        # 5. Resolve formula dependencies
+        self.formula_extractor.resolve_dependencies(formulae, definitions)
+        
+        # 6. Extract cross-references
+        cross_refs = self.reference_extractor.extract(
+            conversion_result.markdown_content,
+            sections, definitions, formulae, tables
+        )
+        
+        # 7. Build IR
+        ir = DocumentIR(
+            document_id=document_id,
+            title=conversion_result.metadata.title or "",
+            original_format=conversion_result.metadata.original_format.value,
+            sections=sections,
+            definitions=definitions,
+            formulae=formulae,
+            tables=tables,
+            cross_references=cross_refs,
+            metadata=conversion_result.metadata.__dict__,
+            raw_markdown=conversion_result.markdown_content
+        )
+        
+        # 8. Run validation
+        ir.validation_issues = self._validate(ir)
+        
+        return ir
+    
+    def _validate(self, ir: DocumentIR) -> List[ValidationIssue]:
+        """Run programmatic validation checks."""
+        issues = []
+        issues.extend(self._check_duplicate_definitions(ir))
+        issues.extend(self._check_undefined_variables(ir))
+        issues.extend(self._check_circular_dependencies(ir))
+        issues.extend(self._check_unresolved_references(ir))
+        return issues
+```
+
+**Completion Criteria**:
+- [ ] Definition extractor with 80%+ accuracy on test documents
+- [ ] Formula extractor with variable and dependency detection
+- [ ] Table extractor with header and type detection
+- [ ] Cross-reference detection and resolution
+- [ ] Section classifier for semantic types
+- [ ] IR builder orchestrating all extractors
+- [ ] Integration tests with real documents
+
+---
+
+### 10.3 Infrastructure Layer: Enhanced Word Converter
+
+**Duration**: 1 week
+
+**Files to Modify**:
+```
+src/infrastructure/converters/word_converter.py  # Add OMML extraction
+```
+
+**Files to Create**:
+```
+src/infrastructure/converters/omml/
+├── __init__.py
+├── omml_parser.py              # Parse OMML XML
+├── omml_to_latex.py            # OMML to LaTeX conversion
+└── omml_to_mathml.py           # OMML to MathML conversion
+```
+
+**Implementation**:
+
+```python
+# word_converter.py (enhanced)
+from lxml import etree
+from .omml.omml_to_latex import omml_to_latex
+from .omml.omml_to_mathml import omml_to_mathml
+
+class WordConverter(DocumentConverter):
+    
+    OMML_NS = "{http://schemas.openxmlformats.org/officeDocument/2006/math}"
+    
+    def convert_from_bytes(self, content: bytes, filename: str) -> ConversionResult:
+        # ... existing code ...
+        
+        # Extract OMML formulas
+        formulas = self._extract_omml_formulas(doc)
+        
+        # Insert LaTeX formulas into markdown at correct positions
+        markdown_content = self._insert_formulas(markdown_content, formulas)
+        
+        # ... rest of existing code ...
+    
+    def _extract_omml_formulas(self, doc) -> List[Dict]:
+        """Extract Office Math Markup Language equations."""
+        formulas = []
+        
+        for para in doc.paragraphs:
+            para_xml = para._element
+            for omath in para_xml.iter(f'{self.OMML_NS}oMath'):
+                omml_str = etree.tostring(omath, encoding='unicode')
+                
+                try:
+                    latex = omml_to_latex(omml_str)
+                    mathml = omml_to_mathml(omml_str)
+                except Exception as e:
+                    latex = self._omml_to_text_fallback(omath)
+                    mathml = None
+                
+                formulas.append({
+                    'latex': latex,
+                    'mathml': mathml,
+                    'paragraph_index': doc.paragraphs.index(para),
+                    'omml': omml_str
+                })
+        
+        return formulas
+    
+    def _insert_formulas(self, markdown: str, formulas: List[Dict]) -> str:
+        """Insert LaTeX formulas into markdown."""
+        for formula in formulas:
+            if formula['latex']:
+                # Wrap in $$ for display math
+                latex_block = f"\n$$\n{formula['latex']}\n$$\n"
+                # Insert at appropriate location
+                # (implementation depends on paragraph tracking)
+        return markdown
+```
+
+**Dependencies to Add**:
+```toml
+# pyproject.toml
+latex2mathml = "^3.0"  # For MathML generation
+```
+
+**Completion Criteria**:
+- [ ] OMML detection in Word documents
+- [ ] OMML to LaTeX conversion working
+- [ ] OMML to MathML conversion working
+- [ ] Formulas inserted into markdown output
+- [ ] Tests with formula-heavy Word documents
+- [ ] Fallback for unconvertible formulas
+
+---
+
+### 10.4 Infrastructure Layer: Validation Service
+
+**Duration**: 1 week
+
+**Files to Create**:
+```
+src/infrastructure/validation/
+├── __init__.py
+├── document_validator.py       # Main validation orchestrator
+├── definition_validator.py     # Definition-specific checks
+├── formula_validator.py        # Formula-specific checks
+├── reference_validator.py      # Reference-specific checks
+└── dependency_analyzer.py      # Circular dependency detection
+```
+
+**Implementation**:
+
+```python
+# document_validator.py
+from typing import List, Set, Dict
+from collections import defaultdict
+
+class DocumentValidator:
+    """Programmatic validation of DocumentIR."""
+    
+    def validate(self, ir: DocumentIR) -> List[ValidationIssue]:
+        """Run all validation checks."""
+        issues = []
+        issues.extend(self._check_duplicate_definitions(ir))
+        issues.extend(self._check_undefined_variables(ir))
+        issues.extend(self._check_circular_dependencies(ir))
+        issues.extend(self._check_unresolved_references(ir))
+        issues.extend(self._check_incomplete_formulas(ir))
+        return issues
+    
+    def _check_duplicate_definitions(self, ir: DocumentIR) -> List[ValidationIssue]:
+        """Detect terms defined multiple times."""
+        issues = []
+        term_locations: Dict[str, List[TermDefinition]] = defaultdict(list)
+        
+        for defn in ir.definitions:
+            term_locations[defn.term.lower()].append(defn)
+            for alias in defn.aliases:
+                term_locations[alias.lower()].append(defn)
+        
+        for term, definitions in term_locations.items():
+            if len(definitions) > 1:
+                # Check if definitions conflict
+                unique_defs = set(d.definition for d in definitions)
+                if len(unique_defs) > 1:
+                    issues.append(ValidationIssue(
+                        id=f"dup-{term}",
+                        issue_type=ValidationType.DUPLICATE_DEFINITION,
+                        severity=ValidationSeverity.ERROR,
+                        message=f"Term '{term}' has conflicting definitions",
+                        location=", ".join(d.section_id for d in definitions),
+                        related_ids=[d.id for d in definitions],
+                        suggestion="Consolidate definitions or clarify distinctions"
+                    ))
+        
+        return issues
+    
+    def _check_undefined_variables(self, ir: DocumentIR) -> List[ValidationIssue]:
+        """Detect variables in formulas that aren't defined."""
+        issues = []
+        defined_terms = set(ir.get_all_defined_terms())
+        
+        for formula in ir.formulae:
+            undefined = formula.get_undefined_variables(list(defined_terms))
+            for var in undefined:
+                issues.append(ValidationIssue(
+                    id=f"undef-{formula.id}-{var}",
+                    issue_type=ValidationType.UNDEFINED_VARIABLE,
+                    severity=ValidationSeverity.WARNING,
+                    message=f"Variable '{var}' in {formula.name or formula.id} is not defined",
+                    location=formula.section_id,
+                    related_ids=[formula.id],
+                    suggestion=f"Add definition for '{var}' or reference external source"
+                ))
+        
+        return issues
+    
+    def _check_circular_dependencies(self, ir: DocumentIR) -> List[ValidationIssue]:
+        """Detect circular references in formula dependencies."""
+        issues = []
+        
+        # Build dependency graph
+        graph: Dict[str, Set[str]] = {}
+        for formula in ir.formulae:
+            graph[formula.id] = set(formula.dependencies)
+        
+        # Detect cycles using DFS
+        def find_cycle(node: str, path: List[str], visited: Set[str]) -> List[str]:
+            if node in path:
+                cycle_start = path.index(node)
+                return path[cycle_start:]
+            if node in visited:
+                return []
+            
+            visited.add(node)
+            path.append(node)
+            
+            for dep in graph.get(node, []):
+                cycle = find_cycle(dep, path.copy(), visited)
+                if cycle:
+                    return cycle
+            
+            return []
+        
+        visited: Set[str] = set()
+        for formula_id in graph:
+            cycle = find_cycle(formula_id, [], visited)
+            if cycle:
+                issues.append(ValidationIssue(
+                    id=f"cycle-{'-'.join(cycle)}",
+                    issue_type=ValidationType.CIRCULAR_DEPENDENCY,
+                    severity=ValidationSeverity.ERROR,
+                    message=f"Circular dependency detected: {' -> '.join(cycle)}",
+                    location="Multiple sections",
+                    related_ids=cycle,
+                    suggestion="Break circular reference by introducing intermediate term"
+                ))
+                break  # Report only first cycle
+        
+        return issues
+    
+    def _check_unresolved_references(self, ir: DocumentIR) -> List[ValidationIssue]:
+        """Detect references that don't resolve to existing elements."""
+        issues = []
+        
+        for ref in ir.cross_references:
+            if not ref.resolved:
+                issues.append(ValidationIssue(
+                    id=f"unres-{ref.id}",
+                    issue_type=ValidationType.MISSING_REFERENCE,
+                    severity=ValidationSeverity.WARNING,
+                    message=f"Reference to '{ref.reference_text}' cannot be resolved",
+                    location=ref.source_id,
+                    related_ids=[ref.source_id],
+                    suggestion=f"Add {ref.target_type} '{ref.reference_text}' or fix reference"
+                ))
+        
+        return issues
+```
+
+**Completion Criteria**:
+- [ ] Duplicate definition detection
+- [ ] Undefined variable detection
+- [ ] Circular dependency detection using graph analysis
+- [ ] Unresolved reference detection
+- [ ] Incomplete formula detection
+- [ ] Unit tests for all validators
+- [ ] Performance acceptable for 100-page documents
+
+---
+
+### 10.5 Application Layer: LLM-Ready Format Generator
+
+**Duration**: 1 week
+
+**Files to Create**:
+```
+src/application/services/
+├── llm_format_generator.py     # Generate LLM-optimized text
+└── ir_service.py               # IR building and caching service
+```
+
+**Implementation**:
+
+```python
+# llm_format_generator.py
+
+class LLMFormatGenerator:
+    """Generate LLM-optimized text from DocumentIR."""
+    
+    def generate(self, ir: DocumentIR, options: LLMFormatOptions = None) -> str:
+        """Generate flattened, structured text for LLM consumption."""
+        options = options or LLMFormatOptions()
+        parts = []
+        
+        # Header
+        parts.append(self._generate_header(ir))
+        
+        # Validation issues (if any)
+        if ir.validation_issues and options.include_validation:
+            parts.append(self._generate_validation_section(ir))
+        
+        # Definitions
+        if ir.definitions and options.include_definitions:
+            parts.append(self._generate_definitions_section(ir))
+        
+        # Formulae
+        if ir.formulae and options.include_formulae:
+            parts.append(self._generate_formulae_section(ir))
+        
+        # Tables
+        if ir.tables and options.include_tables:
+            parts.append(self._generate_tables_section(ir))
+        
+        # Main content
+        parts.append(self._generate_content_section(ir))
+        
+        return "\n\n".join(parts)
+    
+    def _generate_header(self, ir: DocumentIR) -> str:
+        return f"""=== DOCUMENT METADATA ===
+Title: {ir.title}
+Format: {ir.original_format.upper()}
+Sections: {len(ir.sections)}
+Definitions: {len(ir.definitions)}
+Formulas: {len(ir.formulae)}
+Tables: {len(ir.tables)}
+Validation Issues: {len(ir.validation_issues)}"""
+    
+    def _generate_validation_section(self, ir: DocumentIR) -> str:
+        lines = ["=== PRE-VALIDATION ISSUES ==="]
+        for issue in ir.validation_issues:
+            icon = "🔴" if issue.severity == ValidationSeverity.ERROR else "⚠️"
+            lines.append(f"{icon} {issue.issue_type.value}: {issue.message}")
+            lines.append(f"   Location: {issue.location}")
+            if issue.suggestion:
+                lines.append(f"   Suggestion: {issue.suggestion}")
+        return "\n".join(lines)
+    
+    def _generate_definitions_section(self, ir: DocumentIR) -> str:
+        lines = [f"=== DEFINITIONS ({len(ir.definitions)} terms) ==="]
+        for defn in ir.definitions:
+            lines.append(f"\nTERM: {defn.term}")
+            lines.append(f"Definition: {defn.definition}")
+            lines.append(f"Location: {defn.section_id}")
+            if defn.aliases:
+                lines.append(f"Aliases: {', '.join(defn.aliases)}")
+        return "\n".join(lines)
+    
+    def _generate_formulae_section(self, ir: DocumentIR) -> str:
+        lines = [f"=== FORMULAE ({len(ir.formulae)} formulas) ==="]
+        for formula in ir.formulae:
+            name = formula.name or formula.id
+            lines.append(f"\nFORMULA: {name}")
+            lines.append(f"LaTeX: {formula.latex}")
+            lines.append(f"Variables: {', '.join(formula.variables)}")
+            if formula.dependencies:
+                lines.append(f"Depends on: {', '.join(formula.dependencies)}")
+            lines.append(f"Location: {formula.section_id}")
+        return "\n".join(lines)
+    
+    def _generate_tables_section(self, ir: DocumentIR) -> str:
+        lines = [f"=== TABLES ({len(ir.tables)} tables) ==="]
+        for table in ir.tables:
+            title = table.title or table.id
+            lines.append(f"\nTABLE: {title}")
+            lines.append(f"Columns: {' | '.join(table.headers)}")
+            lines.append(f"Rows: {table.row_count}")
+            lines.append(f"Location: {table.section_id}")
+        return "\n".join(lines)
+    
+    def _generate_content_section(self, ir: DocumentIR) -> str:
+        lines = ["=== DOCUMENT CONTENT ==="]
+        for section in ir.sections:
+            prefix = "#" * section.level
+            lines.append(f"\n{prefix} {section.title}")
+            if section.section_type != SectionType.NARRATIVE:
+                lines.append(f"[Type: {section.section_type.value}]")
+            lines.append(section.content)
+        return "\n".join(lines)
+```
+
+**Completion Criteria**:
+- [ ] LLM format generator with all sections
+- [ ] Configurable output options
+- [ ] Chunking support for large documents
+- [ ] Integration with AI analysis pipeline
+- [ ] Tests verifying format quality
+
+---
+
+### 10.6 Integration: Update Analysis Pipeline
+
+**Duration**: 1 week
+
+**Files to Modify**:
+```
+src/application/commands/document_handlers.py  # Add IR generation
+src/application/commands/analysis_handlers.py  # Use IR for analysis
+src/domain/events/document_events.py           # Add IRGenerated event
+```
+
+**New Event**:
+
+```python
+@dataclass(frozen=True)
+class DocumentIRGenerated(DomainEvent):
+    """Event when semantic IR has been generated for a document."""
+    aggregate_type: str = field(default="Document")
+    definition_count: int = 0
+    formula_count: int = 0
+    table_count: int = 0
+    validation_issue_count: int = 0
+    ir_json: str = ""  # Serialized IR for event store
+```
+
+**Updated Upload Handler**:
+
+```python
+class UploadDocumentHandler(CommandHandler[UploadDocument, DocumentId]):
+    def __init__(
+        self,
+        document_repository: DocumentRepository,
+        converter_factory: ConverterFactory,
+        ir_builder: IRBuilder,  # NEW
+        event_publisher: EventPublisher
+    ):
+        ...
+        self._ir_builder = ir_builder
+    
+    async def handle(self, command: UploadDocument) -> DocumentId:
+        # ... existing conversion code ...
+        
+        if result.success:
+            # Generate Semantic IR
+            ir = self._ir_builder.build(result, str(document_id.value))
+            
+            document.convert(
+                markdown_content=result.markdown_content,
+                sections=[s.__dict__ for s in result.sections],
+                metadata=result.metadata.__dict__,
+                conversion_warnings=result.warnings
+            )
+            
+            # Store IR (as separate event or in document aggregate)
+            document.generate_ir(
+                definition_count=len(ir.definitions),
+                formula_count=len(ir.formulae),
+                table_count=len(ir.tables),
+                validation_issue_count=len(ir.validation_issues),
+                ir_json=json.dumps(ir.to_dict())
+            )
+```
+
+**Completion Criteria**:
+- [ ] IR generation integrated into upload pipeline
+- [ ] IR stored in event store
+- [ ] Analysis receives LLM-formatted text
+- [ ] Validation issues included in analysis context
+- [ ] E2E tests for complete flow
+
+---
+
+### 10.7 Frontend: Display Validation Results
+
+**Duration**: 1 week
+
+**Files to Create/Modify**:
+```
+client/src/components/ValidationIssues.tsx      # Display pre-validation issues
+client/src/components/DocumentIRSummary.tsx     # Show IR statistics
+client/src/types/ir.ts                          # TypeScript types for IR
+client/src/pages/DocumentDetailPage.tsx         # Add IR section
+```
+
+**New Components**:
+
+```tsx
+// ValidationIssues.tsx
+interface ValidationIssuesProps {
+  issues: ValidationIssue[];
+}
+
+export function ValidationIssues({ issues }: ValidationIssuesProps) {
+  const errors = issues.filter(i => i.severity === 'error');
+  const warnings = issues.filter(i => i.severity === 'warning');
+  
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Pre-Validation Results</CardTitle>
+        <CardDescription>
+          Issues detected automatically before AI analysis
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {errors.length > 0 && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>{errors.length} Error(s)</AlertTitle>
+            <AlertDescription>
+              <ul>
+                {errors.map(e => (
+                  <li key={e.id}>{e.message}</li>
+                ))}
+              </ul>
+            </AlertDescription>
+          </Alert>
+        )}
+        {warnings.length > 0 && (
+          <Alert>
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>{warnings.length} Warning(s)</AlertTitle>
+            <AlertDescription>
+              <ul>
+                {warnings.map(w => (
+                  <li key={w.id}>{w.message}</li>
+                ))}
+              </ul>
+            </AlertDescription>
+          </Alert>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+```
+
+**Completion Criteria**:
+- [ ] Validation issues displayed in document detail
+- [ ] IR statistics shown (definitions, formulas, tables)
+- [ ] Color-coded severity indicators
+- [ ] Links to affected sections
+- [ ] Responsive design
+
+---
+
+### 10.8 Testing & Documentation
+
+**Duration**: 1 week
+
+**Test Files to Create**:
+```
+tests/unit/domain/value_objects/test_document_ir.py
+tests/unit/infrastructure/extractors/test_definition_extractor.py
+tests/unit/infrastructure/extractors/test_formula_extractor.py
+tests/unit/infrastructure/extractors/test_ir_builder.py
+tests/unit/infrastructure/validation/test_document_validator.py
+tests/integration/test_ir_pipeline.py
+tests/fixtures/documents/formula_heavy.docx
+tests/fixtures/documents/definition_heavy.pdf
+```
+
+**Documentation to Create**:
+```
+docs/architecture/SEMANTIC_IR.md              # Architecture overview
+docs/api/ir-endpoints.yaml                    # OpenAPI additions
+```
+
+**Completion Criteria**:
+- [ ] 90%+ code coverage for IR components
+- [ ] Integration tests with real documents
+- [ ] Performance benchmarks (< 5s for 100-page doc)
+- [ ] Architecture documentation complete
+- [ ] API documentation updated
+
+---
+
+### 10.9 Phase 10 Completion Criteria
+
+- [ ] **Domain Layer**: All IR value objects implemented
+- [ ] **Extraction Layer**: Definition, formula, table, reference extractors working
+- [ ] **Word Enhancement**: OMML formula extraction functional
+- [ ] **Validation Layer**: Programmatic checks detecting 90%+ of issues
+- [ ] **LLM Format**: Structured text generator integrated
+- [ ] **Pipeline Integration**: IR generation in upload flow
+- [ ] **Frontend**: Validation results displayed
+- [ ] **Testing**: Comprehensive test coverage
+- [ ] **Documentation**: Architecture and API docs complete
+
+**Success Metrics**:
+- Formula preservation rate: 95%+ for Word documents
+- Definition extraction accuracy: 80%+ for standard patterns
+- Validation detection rate: 90%+ for circular dependencies
+- Processing time: < 5 seconds for 100-page documents
+- AI analysis relevance improvement: Measurable via user feedback
+
+---
+
 *This plan should be reviewed and updated as implementation progresses. Each phase completion should trigger an update to this document reflecting lessons learned and any scope adjustments.*
+

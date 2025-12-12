@@ -26,6 +26,22 @@ STATIC_DIR = Path(__file__).parent.parent.parent / "client" / "dist"
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+    # Validate configuration at startup
+    from src.infrastructure.config import validate_startup_config
+
+    environment = os.getenv("ENVIRONMENT", "development")
+    # In production, fail on configuration errors
+    # In development, only warn
+    fail_on_error = environment == "production"
+
+    try:
+        validate_startup_config(fail_on_error=fail_on_error)
+        logging.info("Configuration validation passed")
+    except Exception as e:
+        logging.error(f"Configuration validation failed: {e}")
+        if fail_on_error:
+            raise
+
     container = await Container.get_instance()
     yield
     await container.close()
@@ -39,11 +55,24 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
+    # CORS configuration from environment
+    cors_origins_str = os.getenv("CORS_ORIGINS", "http://localhost:5000")
+    cors_origins = [origin.strip() for origin in cors_origins_str.split(",")]
+
+    # In development, allow all origins if explicitly set to "*"
+    # In production, this should NEVER be "*"
+    if cors_origins == ["*"]:
+        logging.warning(
+            "CORS is configured to allow all origins. "
+            "This is a security risk in production. "
+            "Set CORS_ORIGINS environment variable to specific origins."
+        )
+
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
+        allow_origins=cors_origins,
         allow_credentials=True,
-        allow_methods=["*"],
+        allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH"],
         allow_headers=["*"],
     )
 

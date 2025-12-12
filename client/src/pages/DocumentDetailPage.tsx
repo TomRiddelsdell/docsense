@@ -1,5 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import remarkMath from 'remark-math';
+import rehypeRaw from 'rehype-raw';
+import rehypeKatex from 'rehype-katex';
+import 'katex/dist/katex.min.css';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -8,6 +15,12 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import {
   Table,
   TableBody,
   TableCell,
@@ -15,23 +28,29 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { 
-  FileText, 
-  ArrowLeft, 
-  Play, 
-  CheckCircle, 
-  XCircle, 
+import {
+  FileText,
+  ArrowLeft,
+  Play,
+  CheckCircle,
+  XCircle,
   AlertTriangle,
   MessageSquare,
   GitBranch,
   Clock,
   AlertCircle,
   Lightbulb,
+  ChevronDown,
+  ChevronRight,
+  Eye,
+  FileSearch,
+  X,
 } from 'lucide-react';
 import { useDocument, useDocumentFeedback, useAnalyzeDocument, useAcceptFeedback, useRejectFeedback } from '@/hooks/useDocuments';
 import ChatPanel from '@/components/ChatPanel';
 import ParameterGraph from '@/components/ParameterGraph';
 import AnalysisLogPanel from '@/components/AnalysisLogPanel';
+import SemanticIRPanel from '@/components/SemanticIRPanel';
 import { cn } from '@/lib/utils';
 import type { FeedbackItem } from '@/types/api';
 
@@ -64,68 +83,342 @@ const feedbackStatusColors: Record<string, string> = {
   rejected: 'bg-gray-100 text-gray-800',
 };
 
-function FeedbackRow({ 
-  item, 
+function FeedbackRow({
+  item,
   onAccept,
   onReject,
   isAccepting,
   isRejecting,
-}: { 
-  item: FeedbackItem; 
+  isExpanded,
+  onToggleExpand,
+  onShowInDocument,
+}: {
+  item: FeedbackItem;
   onAccept: () => void;
   onReject: () => void;
   isAccepting: boolean;
   isRejecting: boolean;
+  isExpanded: boolean;
+  onToggleExpand: () => void;
+  onShowInDocument: () => void;
 }) {
+  // Create a short summary from the description (first 60 chars)
+  const shortSummary = item.description && item.description.length > 60
+    ? item.description.substring(0, 60) + '...'
+    : (item.description || 'No description available');
+
   return (
-    <TableRow>
-      <TableCell>
-        <div className="flex items-center gap-2">
-          {severityIcons[item.severity]}
-          <Badge variant="secondary" className={cn('capitalize', severityColors[item.severity])}>
-            {item.severity}
+    <>
+      <TableRow
+        className="cursor-pointer hover:bg-muted/50"
+        onClick={onToggleExpand}
+      >
+        <TableCell>
+          <div className="flex items-center gap-2">
+            {isExpanded ? (
+              <ChevronDown className="h-4 w-4 text-muted-foreground" />
+            ) : (
+              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            )}
+            {severityIcons[item.severity]}
+            <Badge variant="secondary" className={cn('capitalize', severityColors[item.severity])}>
+              {item.severity}
+            </Badge>
+          </div>
+        </TableCell>
+        <TableCell>
+          <div className="flex items-center gap-2">
+            <div className="flex-1">
+              <p className="text-sm font-medium">{item.title}</p>
+              <p className="text-xs text-muted-foreground">{shortSummary}</p>
+            </div>
+            {item.original_text && (
+              <TooltipProvider>
+                <Tooltip delayDuration={200}>
+                  <TooltipTrigger asChild onClick={(e) => e.stopPropagation()}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0 shrink-0"
+                    >
+                      <Eye className="h-4 w-4 text-muted-foreground" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent
+                    side="left"
+                    className="max-w-md p-4"
+                    sideOffset={5}
+                  >
+                    <div className="space-y-2">
+                      <p className="text-xs font-semibold text-muted-foreground">Document Excerpt</p>
+                      <div className="bg-destructive/10 border border-destructive/20 rounded p-2 max-h-48 overflow-y-auto">
+                        <p className="text-sm font-mono whitespace-pre-wrap break-words">
+                          {item.original_text}
+                        </p>
+                      </div>
+                      {item.location && (
+                        <p className="text-xs text-muted-foreground italic">
+                          Location: {item.location}
+                        </p>
+                      )}
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+          </div>
+        </TableCell>
+        <TableCell className="hidden md:table-cell">
+          {item.location || '—'}
+        </TableCell>
+        <TableCell>
+          <Badge variant="secondary" className={cn('capitalize', feedbackStatusColors[item.status])}>
+            {item.status}
           </Badge>
-        </div>
-      </TableCell>
-      <TableCell>
-        <div>
-          <p className="font-medium">{item.title}</p>
-          <p className="text-sm text-muted-foreground line-clamp-2">{item.description}</p>
-        </div>
-      </TableCell>
-      <TableCell className="hidden md:table-cell">
-        {item.location || '—'}
-      </TableCell>
-      <TableCell>
-        <Badge variant="secondary" className={cn('capitalize', feedbackStatusColors[item.status])}>
-          {item.status}
-        </Badge>
-      </TableCell>
-      <TableCell className="text-right">
-        {item.status === 'pending' && (
+        </TableCell>
+        <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
           <div className="flex justify-end gap-2">
-            <Button 
-              size="sm" 
-              variant="outline"
-              onClick={onAccept}
-              disabled={isAccepting || isRejecting}
-            >
-              <CheckCircle className="h-4 w-4 mr-1" />
-              Accept
-            </Button>
-            <Button 
-              size="sm" 
-              variant="ghost"
-              onClick={onReject}
-              disabled={isAccepting || isRejecting}
-            >
-              <XCircle className="h-4 w-4 mr-1" />
-              Reject
+            {item.original_text && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={onShowInDocument}
+              >
+                <FileSearch className="h-4 w-4 mr-1" />
+                Show in Doc
+              </Button>
+            )}
+            {item.status === 'pending' && (
+              <>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={onAccept}
+                  disabled={isAccepting || isRejecting}
+                >
+                  <CheckCircle className="h-4 w-4 mr-1" />
+                  Accept
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={onReject}
+                  disabled={isAccepting || isRejecting}
+                >
+                  <XCircle className="h-4 w-4 mr-1" />
+                  Reject
+                </Button>
+              </>
+            )}
+          </div>
+        </TableCell>
+      </TableRow>
+      {isExpanded && (
+        <TableRow>
+          <TableCell colSpan={5} className="bg-muted/30">
+            <div className="p-4 space-y-4">
+              <div>
+                <h4 className="text-sm font-semibold mb-2">Full Description</h4>
+                <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                  {item.description || 'No description available'}
+                </p>
+              </div>
+
+              {item.original_text && (
+                <div>
+                  <h4 className="text-sm font-semibold mb-2">Original Text</h4>
+                  <div className="bg-destructive/10 border border-destructive/20 rounded-md p-3">
+                    <p className="text-sm font-mono whitespace-pre-wrap">{item.original_text}</p>
+                  </div>
+                </div>
+              )}
+
+              {item.suggested_text && (
+                <div>
+                  <h4 className="text-sm font-semibold mb-2">Suggested Text</h4>
+                  <div className="bg-green-500/10 border border-green-500/20 rounded-md p-3">
+                    <p className="text-sm font-mono whitespace-pre-wrap">{item.suggested_text}</p>
+                  </div>
+                </div>
+              )}
+
+              {item.policy_reference && (
+                <div>
+                  <h4 className="text-sm font-semibold mb-2">Policy Reference</h4>
+                  <Badge variant="outline" className="font-mono">
+                    {item.policy_reference}
+                  </Badge>
+                </div>
+              )}
+
+              {item.rejection_reason && (
+                <div>
+                  <h4 className="text-sm font-semibold mb-2">Rejection Reason</h4>
+                  <p className="text-sm text-muted-foreground italic">{item.rejection_reason}</p>
+                </div>
+              )}
+            </div>
+          </TableCell>
+        </TableRow>
+      )}
+    </>
+  );
+}
+
+function DocumentViewer({
+  markdown,
+  highlightText,
+  onClose,
+}: {
+  markdown: string | null;
+  highlightText: string | null;
+  onClose: () => void;
+}) {
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  if (!markdown) {
+    return (
+      <Card className="h-full">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle>Document Content</CardTitle>
+            <Button variant="ghost" size="sm" onClick={onClose}>
+              <X className="h-4 w-4" />
             </Button>
           </div>
+        </CardHeader>
+        <CardContent>
+          <p className="text-muted-foreground">No markdown content available</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Pre-process markdown to add highlight tags
+  const processedMarkdown = useMemo(() => {
+    if (!highlightText || !markdown) return markdown;
+
+    // Escape special regex characters
+    const escapedText = highlightText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+    // Try exact match first
+    const exactRegex = new RegExp(escapedText, 'g');
+    if (exactRegex.test(markdown)) {
+      console.log('Using exact match for highlighting');
+      return markdown.replace(
+        exactRegex,
+        `<mark id="highlighted-section" class="bg-yellow-300 dark:bg-yellow-700 px-2 py-1 rounded font-bold border-2 border-yellow-500 shadow-md">$&</mark>`
+      );
+    }
+
+    // Try normalized match (remove extra whitespace, newlines)
+    const normalizedHighlight = highlightText.replace(/\s+/g, ' ').trim();
+    const normalizedMarkdown = markdown.replace(/\s+/g, ' ');
+    const normalizedEscaped = normalizedHighlight.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const normalizedRegex = new RegExp(normalizedEscaped, 'g');
+
+    if (normalizedRegex.test(normalizedMarkdown)) {
+      console.log('Using normalized match for highlighting');
+      // Find the original text with its formatting
+      const match = normalizedRegex.exec(normalizedMarkdown);
+      if (match) {
+        const startIndex = match.index;
+        // Find corresponding position in original markdown
+        let charCount = 0;
+        let origIndex = 0;
+        for (let i = 0; i < markdown.length && charCount < startIndex; i++) {
+          if (!/\s/.test(markdown[i]) || normalizedMarkdown[charCount] === ' ') {
+            charCount++;
+          }
+          origIndex = i;
+        }
+
+        // Use a simpler approach: just mark the first occurrence we can find
+        const words = normalizedHighlight.split(/\s+/).slice(0, 5).join('\\s+');
+        const flexibleRegex = new RegExp(words, 'i');
+        return markdown.replace(
+          flexibleRegex,
+          `<mark id="highlighted-section" class="bg-yellow-300 dark:bg-yellow-700 px-2 py-1 rounded font-bold border-2 border-yellow-500 shadow-md">$&</mark>`
+        );
+      }
+    }
+
+    // Try partial match with first few words
+    const firstWords = highlightText.split(/\s+/).slice(0, 5).join('\\s+');
+    const partialRegex = new RegExp(firstWords.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+
+    console.log('Using partial match (first 5 words) for highlighting');
+    return markdown.replace(
+      partialRegex,
+      `<mark id="highlighted-section" class="bg-yellow-300 dark:bg-yellow-700 px-2 py-1 rounded font-bold border-2 border-yellow-500 shadow-md">$&</mark>`
+    );
+  }, [markdown, highlightText]);
+
+  // Scroll to highlighted section on mount
+  useEffect(() => {
+    if (highlightText && scrollContainerRef.current) {
+      // Use setTimeout to ensure content is rendered first
+      const timer = setTimeout(() => {
+        const container = scrollContainerRef.current;
+        const element = container?.querySelector('#highlighted-section');
+
+        console.log('DocumentViewer scroll effect:', {
+          hasHighlightText: !!highlightText,
+          hasContainer: !!container,
+          hasElement: !!element,
+          highlightTextPreview: highlightText?.substring(0, 50),
+        });
+
+        if (element && container) {
+          const elementTop = (element as HTMLElement).offsetTop;
+          const containerHeight = container.clientHeight;
+          const elementHeight = (element as HTMLElement).clientHeight;
+
+          // Calculate the scroll position to center the element
+          const scrollPosition = elementTop - (containerHeight / 2) + (elementHeight / 2);
+
+          console.log('Scrolling to position:', scrollPosition, 'elementTop:', elementTop);
+
+          container.scrollTo({
+            top: scrollPosition,
+            behavior: 'smooth'
+          });
+        }
+      }, 150);
+
+      return () => clearTimeout(timer);
+    }
+  }, [highlightText, processedMarkdown]);
+
+  return (
+    <Card className="flex flex-col h-[calc(100vh-8rem)]">
+      <CardHeader className="flex-shrink-0">
+        <div className="flex items-center justify-between">
+          <CardTitle>Document Content</CardTitle>
+          <Button variant="ghost" size="sm" onClick={onClose}>
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+        {highlightText && (
+          <CardDescription>
+            Highlighting: "{highlightText.substring(0, 60)}..."
+          </CardDescription>
         )}
-      </TableCell>
-    </TableRow>
+      </CardHeader>
+      <CardContent className="flex-1 min-h-0 p-0">
+        <div
+          ref={scrollContainerRef}
+          className="h-full overflow-y-auto border-t prose prose-sm dark:prose-invert max-w-none p-6"
+        >
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm, remarkMath]}
+            rehypePlugins={[rehypeRaw, rehypeKatex]}
+          >
+            {processedMarkdown}
+          </ReactMarkdown>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -134,12 +427,36 @@ export default function DocumentDetailPage() {
   const navigate = useNavigate();
   const currentTab = tab || 'issues';
   const [analysisError, setAnalysisError] = useState<string | null>(null);
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+  const [selectedFeedback, setSelectedFeedback] = useState<FeedbackItem | null>(null);
+  const [selectedSemanticItem, setSelectedSemanticItem] = useState<{text: string; type: string} | null>(null);
+  const [isPolling, setIsPolling] = useState(false);
 
   const { data: document, isLoading: docLoading, isError: docError, refetch } = useDocument(id);
   const { data: feedbackData, isLoading: feedbackLoading } = useDocumentFeedback(id);
   const analyzeMutation = useAnalyzeDocument();
   const acceptMutation = useAcceptFeedback();
   const rejectMutation = useRejectFeedback();
+
+  // Poll for document status when analyzing
+  useEffect(() => {
+    if (!isPolling || !id) return;
+
+    const interval = setInterval(async () => {
+      const result = await refetch();
+      const doc = result.data;
+
+      if (doc?.status === 'analyzed') {
+        setIsPolling(false);
+        toast.success('Analysis completed successfully!');
+      } else if (doc?.status === 'analysis_failed') {
+        setIsPolling(false);
+        toast.error('Analysis failed. Check the logs for details.');
+      }
+    }, 2000); // Poll every 2 seconds
+
+    return () => clearInterval(interval);
+  }, [isPolling, id, refetch]);
 
   const handleTabChange = (value: string) => {
     navigate(`/documents/${id}/${value}`);
@@ -148,15 +465,36 @@ export default function DocumentDetailPage() {
   const handleAnalyze = async () => {
     if (!id) return;
     setAnalysisError(null);
-    try {
-      await analyzeMutation.mutateAsync({ documentId: id });
-      await refetch();
-    } catch (err) {
-      const errorMessage = err instanceof Error 
-        ? err.message 
-        : 'Analysis failed. Please try again.';
-      setAnalysisError(errorMessage);
-    }
+
+    toast.promise(
+      analyzeMutation.mutateAsync({ documentId: id }).then(() => {
+        refetch();
+        setIsPolling(true);
+      }),
+      {
+        loading: 'Starting analysis...',
+        success: 'Analysis started successfully. Checking status...',
+        error: (err) => {
+          const errorMessage = err instanceof Error
+            ? err.message
+            : 'Analysis failed. Please try again.';
+          setAnalysisError(errorMessage);
+          return `Analysis failed: ${errorMessage}`;
+        },
+      }
+    );
+  };
+
+  const toggleRowExpansion = (itemId: string) => {
+    setExpandedRows(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(itemId)) {
+        newSet.delete(itemId);
+      } else {
+        newSet.add(itemId);
+      }
+      return newSet;
+    });
   };
 
   const formatDate = (dateStr: string) => {
@@ -278,6 +616,10 @@ export default function DocumentDetailPage() {
             <GitBranch className="h-4 w-4" />
             Graph
           </TabsTrigger>
+          <TabsTrigger value="semantic" className="gap-2">
+            <FileSearch className="h-4 w-4" />
+            Semantic IR
+          </TabsTrigger>
           <TabsTrigger value="logs" className="gap-2">
             <Clock className="h-4 w-4" />
             AI Logs
@@ -285,14 +627,16 @@ export default function DocumentDetailPage() {
         </TabsList>
 
         <TabsContent value="issues" className="mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Issue Blotter</CardTitle>
-              <CardDescription>
-                Review and respond to AI-generated feedback
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
+          <div className={cn("grid gap-6", selectedFeedback ? "grid-cols-2 items-start" : "grid-cols-1")}>
+            <Card className="overflow-visible">
+              <CardHeader>
+                <CardTitle>Issue Blotter</CardTitle>
+                <CardDescription>
+                  Review and respond to AI-generated feedback
+                  {selectedFeedback && " • Showing document preview"}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
               {feedbackLoading ? (
                 <div className="space-y-4">
                   {Array.from({ length: 3 }).map((_, i) => (
@@ -341,10 +685,31 @@ export default function DocumentDetailPage() {
                         <FeedbackRow
                           key={item.id}
                           item={item}
-                          onAccept={() => acceptMutation.mutate({ documentId: id!, feedbackId: item.id })}
-                          onReject={() => rejectMutation.mutate({ documentId: id!, feedbackId: item.id })}
+                          onAccept={() => {
+                            toast.promise(
+                              acceptMutation.mutateAsync({ documentId: id!, feedbackId: item.id }),
+                              {
+                                loading: 'Accepting feedback...',
+                                success: 'Feedback accepted successfully',
+                                error: (err) => `Failed to accept: ${err instanceof Error ? err.message : 'Unknown error'}`,
+                              }
+                            );
+                          }}
+                          onReject={() => {
+                            toast.promise(
+                              rejectMutation.mutateAsync({ documentId: id!, feedbackId: item.id }),
+                              {
+                                loading: 'Rejecting feedback...',
+                                success: 'Feedback rejected successfully',
+                                error: (err) => `Failed to reject: ${err instanceof Error ? err.message : 'Unknown error'}`,
+                              }
+                            );
+                          }}
                           isAccepting={acceptMutation.isPending}
                           isRejecting={rejectMutation.isPending}
+                          isExpanded={expandedRows.has(item.id)}
+                          onToggleExpand={() => toggleRowExpansion(item.id)}
+                          onShowInDocument={() => setSelectedFeedback(item)}
                         />
                       ))}
                     </TableBody>
@@ -353,6 +718,17 @@ export default function DocumentDetailPage() {
               )}
             </CardContent>
           </Card>
+
+          {selectedFeedback && (
+            <div className="sticky top-6">
+              <DocumentViewer
+                markdown={document.markdown_content}
+                highlightText={selectedFeedback.original_text}
+                onClose={() => setSelectedFeedback(null)}
+              />
+            </div>
+          )}
+          </div>
         </TabsContent>
 
         <TabsContent value="chat" className="mt-6">
@@ -361,6 +737,26 @@ export default function DocumentDetailPage() {
 
         <TabsContent value="graph" className="mt-6">
           <ParameterGraph documentId={id!} />
+        </TabsContent>
+
+        <TabsContent value="semantic" className="mt-6">
+          <div className={cn("grid gap-6", selectedSemanticItem ? "grid-cols-2 items-start" : "grid-cols-1")}>
+            <div>
+              <SemanticIRPanel
+                documentId={id!}
+                onSelectItem={(text, type) => setSelectedSemanticItem({text, type})}
+              />
+            </div>
+            {selectedSemanticItem && (
+              <div className="sticky top-6">
+                <DocumentViewer
+                  markdown={document?.markdown_content || null}
+                  highlightText={selectedSemanticItem.text}
+                  onClose={() => setSelectedSemanticItem(null)}
+                />
+              </div>
+            )}
+          </div>
         </TabsContent>
 
         <TabsContent value="logs" className="mt-6">

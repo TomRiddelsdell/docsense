@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@plugin "@tailwindcss/typography";
 
 @theme {
   --color-background: hsl(0 0% 100%);
@@ -33,4 +34,24 @@ body {
   margin: 0;
   min-height: 100vh;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Make prose text darker for better readability */
+.prose {
+  --tw-prose-body: rgb(17, 24, 39);
+  --tw-prose-headings: rgb(17, 24, 39);
+  --tw-prose-lead: rgb(55, 65, 81);
+  --tw-prose-links: rgb(37, 99, 235);
+  --tw-prose-bold: rgb(17, 24, 39);
+  --tw-prose-counters: rgb(107, 114, 128);
+  --tw-prose-bullets: rgb(107, 114, 128);
+  --tw-prose-hr: rgb(229, 231, 235);
+  --tw-prose-quotes: rgb(17, 24, 39);
+  --tw-prose-quote-borders: rgb(229, 231, 235);
+  --tw-prose-captions: rgb(107, 114, 128);
+  --tw-prose-code: rgb(17, 24, 39);
+  --tw-prose-pre-code: rgb(229, 231, 235);
+  --tw-prose-pre-bg: rgb(31, 41, 55);
+  --tw-prose-th-borders: rgb(209, 213, 219);
+  --tw-prose-td-borders: rgb(229, 231, 235);
 }

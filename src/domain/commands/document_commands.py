@@ -27,3 +27,10 @@ class DeleteDocument(Command):
     document_id: UUID = field(default=None)
     deleted_by: str = ""
     reason: str = ""
+
+
+@dataclass(frozen=True)
+class CurateSemanticIR(Command):
+    """Command to trigger AI curation of semantic IR."""
+    document_id: UUID = field(default=None)
+    provider_type: str = "claude"

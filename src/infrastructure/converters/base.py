@@ -1,8 +1,11 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional, TYPE_CHECKING
 from enum import Enum
+
+if TYPE_CHECKING:
+    from src.domain.value_objects.semantic_ir import DocumentIR
 
 
 class DocumentFormat(Enum):
@@ -43,6 +46,7 @@ class ConversionResult:
     metadata: DocumentMetadata
     errors: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
+    semantic_ir: Optional["DocumentIR"] = None  # Optional semantic IR
 
 
 class DocumentConverter(ABC):

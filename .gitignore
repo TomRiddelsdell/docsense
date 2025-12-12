@@ -1,0 +1,252 @@
+# Trading Algorithm Document Analyzer - Root .gitignore
+
+# ============================================================================
+# SECRETS AND CREDENTIALS (CRITICAL - NEVER COMMIT)
+# ============================================================================
+
+# Environment files
+.env
+.env.*
+!.env.example
+!.env.host-example
+*.env
+doppler.env
+
+# Doppler configuration
+doppler.yaml
+.doppler
+
+# AWS credentials
+.aws/
+*.pem
+*.key
+
+# SSH keys
+id_rsa
+id_rsa.pub
+*.ppk
+
+# Google Cloud credentials
+*-credentials.json
+*-key.json
+service-account*.json
+
+# API keys and tokens
+*secrets*
+*credentials*
+.secrets/
+
+# ============================================================================
+# PYTHON
+# ============================================================================
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.log
+.pytest_cache/
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+env.bak/
+venv.bak/
+.python-version
+
+# Poetry
+poetry.lock
+
+# Pyright
+.pyright/
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# ============================================================================
+# DATABASES
+# ============================================================================
+
+# SQLite
+*.db
+*.sqlite
+*.sqlite3
+
+# PostgreSQL
+*.sql.backup
+pg_data/
+
+# Database dumps
+*.dump
+*.sql.gz
+
+# ============================================================================
+# IDE AND EDITORS
+# ============================================================================
+
+# VSCode
+.vscode/
+*.code-workspace
+
+# PyCharm
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+*.swp
+*.swo
+*~
+
+# Emacs
+*~
+\#*\#
+.\#*
+
+# JetBrains
+.idea/
+*.iml
+out/
+
+# ============================================================================
+# OPERATING SYSTEM
+# ============================================================================
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+.directory
+.Trash-*
+
+# ============================================================================
+# DOCKER AND CONTAINERS
+# ============================================================================
+
+# Docker volumes
+docker-compose.override.yml
+
+# ============================================================================
+# LOGS AND TEMPORARY FILES
+# ============================================================================
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.bak
+*.swp
+
+# AI response debugging files (contains potentially sensitive document content)
+data/ai_responses/
+*.ai_response.txt
+
+# ============================================================================
+# PROJECT SPECIFIC
+# ============================================================================
+
+# Uploaded documents (may contain sensitive trading algorithms)
+uploads/
+documents/
+
+# Generated reports
+reports/
+
+# Local data
+data/local/
+
+# Test outputs
+test-results/
+.pytest_cache/
+
+# Backup files
+*.backup
+backup/
+
+# ============================================================================
+# FRONTEND (Node/React)
+# ============================================================================
+
+# See client/.gitignore for detailed frontend exclusions
+# This section covers root-level Node artifacts only
+
+node_modules/
+package-lock.json
+yarn.lock
+
+# ============================================================================
+# CI/CD
+# ============================================================================
+
+# GitHub Actions
+.github/workflows/*.yml.backup
+
+# Local CI testing
+.gitlab-ci-local/

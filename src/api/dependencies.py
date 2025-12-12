@@ -21,6 +21,8 @@ from src.infrastructure.converters.converter_factory import ConverterFactory
 from src.infrastructure.projections.document_projector import DocumentProjection
 from src.infrastructure.projections.policy_projector import PolicyProjection
 from src.application.services.event_publisher import InMemoryEventPublisher
+from src.application.event_handlers.semantic_curation_handler import SemanticCurationEventHandler
+from src.infrastructure.persistence.postgres_connection import PostgresConnection
 from src.application.commands.document_handlers import (
     UploadDocumentHandler,
     ExportDocumentHandler,
@@ -71,7 +73,16 @@ class Settings:
 @lru_cache
 def get_settings() -> Settings:
     database_url = os.environ.get("DATABASE_URL", "")
-    return Settings(database_url=database_url)
+
+    # Read pool size from environment with defaults
+    pool_min_size = int(os.environ.get("DB_POOL_MIN_SIZE", "5"))
+    pool_max_size = int(os.environ.get("DB_POOL_MAX_SIZE", "20"))
+
+    return Settings(
+        database_url=database_url,
+        pool_min_size=pool_min_size,
+        pool_max_size=pool_max_size,
+    )
 
 
 class Container:
@@ -104,12 +115,31 @@ class Container:
 
     def _register_projections(self) -> None:
         if self._pool:
-            logger.info("Registering projections with event publisher")
+            logger.info("Registering projections and event handlers with event publisher")
+
+            # Register projections
             document_projection = DocumentProjection(self._pool)
             self.event_publisher.register_projection(document_projection)
             policy_projection = PolicyProjection(self._pool)
             self.event_publisher.register_projection(policy_projection)
-            logger.info(f"Registered projections, event_publisher now has {len(self.event_publisher._projections)} projections")
+
+            # Register event handlers
+            db_connection = PostgresConnection(self._pool)
+            semantic_curation_handler = SemanticCurationEventHandler(
+                document_repository=self.document_repository,
+                event_publisher=self.event_publisher,
+                db_connection=db_connection,
+                enabled=True,
+            )
+
+            # Subscribe to DocumentConverted events
+            from src.domain.events.document_events import DocumentConverted
+            self.event_publisher.subscribe_to_event(DocumentConverted, semantic_curation_handler.handle)
+
+            logger.info(
+                f"Registered {len(self.event_publisher._projections)} projections and "
+                f"{len(self.event_publisher._handlers)} event handlers"
+            )
 
     async def close(self) -> None:
         if self._pool:

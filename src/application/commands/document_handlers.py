@@ -3,7 +3,7 @@ from typing import Optional
 from uuid import UUID, uuid4
 
 from .base import CommandHandler, CommandResult
-from src.domain.commands import UploadDocument, ExportDocument, DeleteDocument
+from src.domain.commands import UploadDocument, ExportDocument, DeleteDocument, CurateSemanticIR
 
 logger = logging.getLogger(__name__)
 from src.domain.aggregates.document import Document
@@ -12,6 +12,7 @@ from src.domain.exceptions.document_exceptions import DocumentNotFound, InvalidD
 from src.infrastructure.repositories.document_repository import DocumentRepository
 from src.infrastructure.converters.converter_factory import ConverterFactory
 from src.application.services.event_publisher import EventPublisher
+from src.infrastructure.semantic import IRBuilder
 
 
 class UploadDocumentHandler(CommandHandler[UploadDocument, DocumentId]):
@@ -19,11 +20,13 @@ class UploadDocumentHandler(CommandHandler[UploadDocument, DocumentId]):
         self,
         document_repository: DocumentRepository,
         converter_factory: ConverterFactory,
-        event_publisher: EventPublisher
+        event_publisher: EventPublisher,
+        ir_builder: Optional[IRBuilder] = None
     ):
         self._documents = document_repository
         self._converters = converter_factory
         self._publisher = event_publisher
+        self._ir_builder = ir_builder or IRBuilder()
 
     async def handle(self, command: UploadDocument) -> DocumentId:
         try:
@@ -46,6 +49,16 @@ class UploadDocumentHandler(CommandHandler[UploadDocument, DocumentId]):
             logger.info(f"Conversion result: success={result.success}, errors={result.errors}")
 
             if result.success:
+                # Generate semantic IR from conversion result
+                try:
+                    logger.info("Generating semantic IR...")
+                    semantic_ir = self._ir_builder.build(result, str(document_id.value))
+                    result.semantic_ir = semantic_ir
+                    logger.info(f"Semantic IR generated: {semantic_ir.get_statistics()}")
+                except Exception as e:
+                    logger.warning(f"Failed to generate semantic IR: {e}", exc_info=True)
+                    # Continue without semantic IR
+
                 document.convert(
                     markdown_content=result.markdown_content,
                     sections=[s.__dict__ if hasattr(s, '__dict__') else s for s in result.sections],
@@ -119,5 +132,44 @@ class DeleteDocumentHandler(CommandHandler[DeleteDocument, bool]):
         document = await self._documents.get(command.document_id)
         if document is None:
             raise DocumentNotFound(document_id=command.document_id)
+
+        return True
+
+
+class CurateSemanticIRHandler(CommandHandler[CurateSemanticIR, bool]):
+    """Handler for AI curation of semantic IR."""
+
+    def __init__(
+        self,
+        document_repository: DocumentRepository,
+        event_publisher: EventPublisher,
+    ):
+        self._documents = document_repository
+        self._publisher = event_publisher
+
+    async def handle(self, command: CurateSemanticIR) -> bool:
+        """
+        Handle semantic IR curation command.
+
+        Note: This handler only emits the start event. The actual curation
+        happens in an event listener that reacts to DocumentConverted events.
+        """
+        logger.info(f"Handling CurateSemanticIR command for document {command.document_id}")
+
+        # Load document
+        document = await self._documents.get(command.document_id)
+        if document is None:
+            raise DocumentNotFound(document_id=command.document_id)
+
+        # Start curation (emit event)
+        document.start_ir_curation(provider_type=command.provider_type)
+
+        # Save and publish events
+        events = list(document.pending_events)
+        await self._documents.save(document)
+
+        if events:
+            logger.info(f"Publishing {len(events)} curation events")
+            await self._publisher.publish_all(events)
 
         return True

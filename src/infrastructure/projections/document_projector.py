@@ -12,6 +12,9 @@ from src.domain.events import (
     DocumentUploaded,
     DocumentConverted,
     DocumentExported,
+    SemanticIRCurationStarted,
+    SemanticIRCurated,
+    SemanticIRCurationFailed,
     AnalysisStarted,
     AnalysisCompleted,
     AnalysisFailed,
@@ -40,6 +43,9 @@ class DocumentProjection(Projection):
             DocumentUploaded,
             DocumentConverted,
             DocumentExported,
+            SemanticIRCurationStarted,
+            SemanticIRCurated,
+            SemanticIRCurationFailed,
             AnalysisStarted,
             AnalysisCompleted,
             AnalysisFailed,
@@ -53,6 +59,12 @@ class DocumentProjection(Projection):
                 await self._handle_uploaded(event)
             elif isinstance(event, DocumentConverted):
                 await self._handle_converted(event)
+            elif isinstance(event, SemanticIRCurationStarted):
+                await self._handle_curation_started(event)
+            elif isinstance(event, SemanticIRCurated):
+                await self._handle_curation_completed(event)
+            elif isinstance(event, SemanticIRCurationFailed):
+                await self._handle_curation_failed(event)
             elif isinstance(event, AnalysisStarted):
                 await self._handle_analysis_started(event)
             elif isinstance(event, AnalysisCompleted):
@@ -225,6 +237,29 @@ class DocumentProjection(Projection):
                 """,
                 event.aggregate_id
             )
+
+    async def _handle_curation_started(self, event: SemanticIRCurationStarted) -> None:
+        """Handle semantic IR curation started event."""
+        # No projection changes needed - curation happens in background
+        logger.info(f"Semantic IR curation started for document {event.aggregate_id} with provider {event.provider_type}")
+
+    async def _handle_curation_completed(self, event: SemanticIRCurated) -> None:
+        """Handle semantic IR curation completed event."""
+        logger.info(
+            f"Semantic IR curation completed for document {event.aggregate_id}: "
+            f"added={event.definitions_added}, removed={event.definitions_removed}"
+        )
+        # The enhanced IR is already saved to the database by the event handler
+        # No additional projection updates needed
+
+    async def _handle_curation_failed(self, event: SemanticIRCurationFailed) -> None:
+        """Handle semantic IR curation failed event."""
+        logger.warning(
+            f"Semantic IR curation failed for document {event.aggregate_id}: "
+            f"{event.error_message}"
+        )
+        # Document status remains 'converted' even if curation fails
+        # No projection updates needed
 
     async def _handle_exported(self, event: DocumentExported) -> None:
         async with self._pool.acquire() as conn:

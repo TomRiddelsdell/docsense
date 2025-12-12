@@ -3,6 +3,9 @@ from .document_events import (
     DocumentUploaded,
     DocumentConverted,
     DocumentExported,
+    SemanticIRCurationStarted,
+    SemanticIRCurated,
+    SemanticIRCurationFailed,
 )
 from .analysis_events import (
     AnalysisStarted,
@@ -28,6 +31,9 @@ __all__ = [
     "DocumentUploaded",
     "DocumentConverted",
     "DocumentExported",
+    "SemanticIRCurationStarted",
+    "SemanticIRCurated",
+    "SemanticIRCurationFailed",
     "AnalysisStarted",
     "AnalysisCompleted",
     "AnalysisFailed",

@@ -1,10 +1,23 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import remarkMath from 'remark-math';
+import rehypeRaw from 'rehype-raw';
+import rehypeKatex from 'rehype-katex';
+import 'katex/dist/katex.min.css';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import {
   Table,
   TableBody,
@@ -20,11 +33,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { FileText, Upload, Search, ChevronLeft, ChevronRight, FolderOpen, RefreshCw } from 'lucide-react';
-import { useDocuments } from '@/hooks/useDocuments';
+import { FileText, Upload, Search, ChevronLeft, ChevronRight, FolderOpen, RefreshCw, Download, Eye } from 'lucide-react';
+import { useDocuments, useDocument } from '@/hooks/useDocuments';
 import { cn } from '@/lib/utils';
 import api from '@/lib/api';
 import { useQueryClient } from '@tanstack/react-query';
+import type { DocumentSummary } from '@/types/api';
 
 const statusColors: Record<string, string> = {
   pending: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200',
@@ -41,6 +55,7 @@ export default function DocumentListPage() {
   const [status, setStatus] = useState<string>('all');
   const [search, setSearch] = useState('');
   const [retryingId, setRetryingId] = useState<string | null>(null);
+  const [previewDocId, setPreviewDocId] = useState<string | null>(null);
   const queryClient = useQueryClient();
   
   const { data, isLoading, isError, error } = useDocuments({
@@ -49,7 +64,9 @@ export default function DocumentListPage() {
     status: status !== 'all' ? status : undefined,
   });
 
-  const filteredDocuments = data?.documents.filter(doc => 
+  const { data: previewDoc } = useDocument(previewDocId || undefined);
+
+  const filteredDocuments = data?.documents.filter(doc =>
     !search || doc.title.toLowerCase().includes(search.toLowerCase())
   ) || [];
 
@@ -75,6 +92,15 @@ export default function DocumentListPage() {
     } finally {
       setRetryingId(null);
     }
+  };
+
+  const handleDownload = (docId: string, title: string) => {
+    const link = document.createElement('a');
+    link.href = `${api.defaults.baseURL}/documents/${docId}/download`;
+    link.download = title;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const totalPages = data ? Math.ceil(data.total / 10) : 1;
@@ -222,6 +248,26 @@ export default function DocumentListPage() {
                               {retryingId === doc.id ? 'Resetting...' : 'Retry'}
                             </Button>
                           )}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDownload(doc.id, doc.title)}
+                            className="gap-1"
+                            title="Download original file"
+                          >
+                            <Download className="h-3 w-3" />
+                            Download
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setPreviewDocId(doc.id)}
+                            className="gap-1"
+                            title="Preview markdown"
+                          >
+                            <Eye className="h-3 w-3" />
+                            Preview
+                          </Button>
                           <Button variant="ghost" size="sm" asChild>
                             <Link to={`/documents/${doc.id}`}>View</Link>
                           </Button>
@@ -263,6 +309,32 @@ export default function DocumentListPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Markdown Preview Dialog */}
+      <Dialog open={previewDocId !== null} onOpenChange={() => setPreviewDocId(null)}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle>{previewDoc?.title || 'Document Preview'}</DialogTitle>
+            <DialogDescription>
+              Rendered markdown content
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex-1 overflow-y-auto prose prose-sm dark:prose-invert max-w-none p-6 border rounded-md">
+            {previewDoc?.markdown_content ? (
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm, remarkMath]}
+                rehypePlugins={[rehypeRaw, rehypeKatex]}
+              >
+                {previewDoc.markdown_content}
+              </ReactMarkdown>
+            ) : (
+              <div className="text-center py-12 text-muted-foreground">
+                <p>Loading markdown content...</p>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

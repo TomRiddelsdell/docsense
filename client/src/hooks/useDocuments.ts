@@ -45,7 +45,20 @@ export function useDocumentFeedback(documentId: string | undefined, status?: str
       const { data } = await api.get<FeedbackListResponse>(`/documents/${documentId}/feedback`, {
         params: status ? { status } : undefined,
       });
-      return data;
+
+      // Map backend fields to frontend expected fields
+      const mappedItems = data.items.map(item => ({
+        ...item,
+        title: item.explanation || 'No title',
+        description: item.explanation || 'No description available',
+        location: item.section_id,
+        suggested_text: item.suggestion,
+      }));
+
+      return {
+        ...data,
+        items: mappedItems,
+      };
     },
     enabled: !!documentId,
     staleTime: STALE_TIME,
@@ -101,6 +114,9 @@ export function useAcceptFeedback() {
       queryClient.invalidateQueries({ queryKey: ['documents', documentId, 'feedback'] });
       queryClient.invalidateQueries({ queryKey: ['documents', documentId] });
     },
+    onError: (error) => {
+      console.error('Failed to accept feedback:', error);
+    },
   });
 }
 
@@ -145,6 +161,20 @@ export function useDocumentParameters(documentId: string | undefined) {
     queryKey: ['documents', documentId, 'parameters'],
     queryFn: async () => {
       const { data } = await api.get<ParametersResponse>(`/documents/${documentId}/parameters`);
+      return data;
+    },
+    enabled: !!documentId,
+    staleTime: STALE_TIME,
+  });
+}
+
+export function useDocumentSemanticIR(documentId: string | undefined, format: 'json' | 'llm-text' = 'json') {
+  return useQuery({
+    queryKey: ['documents', documentId, 'semantic-ir', format],
+    queryFn: async () => {
+      const { data } = await api.get(`/documents/${documentId}/semantic-ir`, {
+        params: { format },
+      });
       return data;
     },
     enabled: !!documentId,

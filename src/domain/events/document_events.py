@@ -29,3 +29,27 @@ class DocumentExported(DomainEvent):
     exported_by: str = ""
     version_number: str = ""
     aggregate_type: str = field(default="Document")
+
+
+@dataclass(frozen=True)
+class SemanticIRCurationStarted(DomainEvent):
+    """Emitted when AI curation of semantic IR begins."""
+    provider_type: str = "claude"
+    aggregate_type: str = field(default="Document")
+
+
+@dataclass(frozen=True)
+class SemanticIRCurated(DomainEvent):
+    """Emitted when AI curation of semantic IR completes successfully."""
+    definitions_added: int = 0
+    definitions_removed: int = 0
+    validation_issues_found: int = 0
+    curation_metadata: Dict[str, Any] = field(default_factory=dict)
+    aggregate_type: str = field(default="Document")
+
+
+@dataclass(frozen=True)
+class SemanticIRCurationFailed(DomainEvent):
+    """Emitted when AI curation fails."""
+    error_message: str = ""
+    aggregate_type: str = field(default="Document")

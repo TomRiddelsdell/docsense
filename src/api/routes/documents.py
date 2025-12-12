@@ -1,8 +1,10 @@
 from typing import Optional
 from uuid import UUID
+from io import BytesIO
+import logging
 
 from fastapi import APIRouter, Depends, UploadFile, File, Form, Query, HTTPException, status
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, Response
 
 from src.api.schemas.documents import (
     DocumentResponse,
@@ -21,12 +23,29 @@ from src.api.dependencies import (
     get_document_by_id_handler,
     get_list_documents_handler,
     get_count_documents_handler,
+    get_container,
 )
 from src.domain.commands import UploadDocument, ExportDocument, DeleteDocument
 from src.application.queries.document_queries import GetDocumentById, ListDocuments
 from src.application.queries.base import PaginationParams
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
+
+
+def mime_type_to_document_format(mime_type: str) -> "DocumentFormat":
+    """Convert MIME type to DocumentFormat enum."""
+    from src.infrastructure.converters.base import DocumentFormat
+
+    mime_map = {
+        "application/pdf": DocumentFormat.PDF,
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document": DocumentFormat.WORD,
+        "application/msword": DocumentFormat.WORD,
+        "text/markdown": DocumentFormat.MARKDOWN,
+        "text/x-rst": DocumentFormat.RST,
+    }
+
+    return mime_map.get(mime_type, DocumentFormat.UNKNOWN)
 
 
 @router.post("/documents", response_model=DocumentResponse, status_code=status.HTTP_201_CREATED)
@@ -252,6 +271,69 @@ async def export_document(
     return {"message": "Export completed", "format": request.format}
 
 
+@router.get("/documents/{document_id}/download")
+async def download_original_document(
+    document_id: UUID,
+    handler=Depends(get_document_by_id_handler),
+):
+    """Download the original uploaded document file."""
+    query = GetDocumentById(document_id=document_id)
+    document = await handler.handle(query)
+
+    if document is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Document with ID {document_id} not found",
+        )
+
+    # Get the original content from the database
+    container = await get_container()
+    conn = await container.db_pool.acquire()
+
+    try:
+        row = await conn.fetchrow("""
+            SELECT original_content
+            FROM document_contents
+            WHERE document_id = $1
+            ORDER BY version DESC
+            LIMIT 1
+        """, document_id)
+
+        if not row or not row['original_content']:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Original file content not found",
+            )
+
+        original_content = bytes(row['original_content'])
+
+        # Determine filename and content type
+        filename = document.title or "document"
+        content_type = document.original_format or "application/octet-stream"
+
+        # Add appropriate extension if not present
+        if not any(filename.endswith(ext) for ext in ['.pdf', '.docx', '.doc', '.md', '.rst', '.txt']):
+            ext_map = {
+                'application/pdf': '.pdf',
+                'application/vnd.openxmlformats-officedocument.wordprocessingml.document': '.docx',
+                'application/msword': '.doc',
+                'text/markdown': '.md',
+                'text/x-rst': '.rst',
+            }
+            filename += ext_map.get(content_type, '.bin')
+
+        return Response(
+            content=original_content,
+            media_type=content_type,
+            headers={
+                'Content-Disposition': f'attachment; filename="{filename}"',
+                'Content-Length': str(len(original_content)),
+            }
+        )
+    finally:
+        await container.db_pool.release(conn)
+
+
 @router.put("/documents/{document_id}/policy-repository", response_model=DocumentResponse)
 async def assign_policy_repository(
     document_id: UUID,
@@ -306,3 +388,214 @@ async def remove_policy_repository(
         )
 
     return None
+
+
+@router.get("/documents/{document_id}/semantic-ir")
+async def get_document_semantic_ir(
+    document_id: UUID,
+    format: str = Query("json", pattern="^(json|llm-text)$"),
+    handler=Depends(get_document_by_id_handler),
+):
+    """
+    Retrieve the semantic intermediate representation (IR) for a document.
+
+    Args:
+        document_id: UUID of the document
+        format: Output format - 'json' for structured data or 'llm-text' for LLM-optimized text
+
+    Returns:
+        Semantic IR in requested format
+    """
+    from src.infrastructure.semantic import IRBuilder
+    from src.infrastructure.converters.converter_factory import ConverterFactory
+
+    query = GetDocumentById(document_id=document_id)
+    document = await handler.handle(query)
+
+    if document is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Document with ID {document_id} not found",
+        )
+
+    if not document.markdown_content:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Document has not been converted yet",
+        )
+
+    # Rebuild IR from document data
+    try:
+        container = await get_container()
+
+        # Get conversion result from document
+        from src.infrastructure.converters.base import (
+            ConversionResult,
+            DocumentSection,
+            DocumentMetadata,
+            DocumentFormat,
+        )
+
+        sections = []
+        if document.sections:
+            for s in document.sections:
+                if isinstance(s, dict):
+                    sections.append(
+                        DocumentSection(
+                            id=s.get("id", ""),
+                            title=s.get("title", ""),
+                            content=s.get("content", ""),
+                            level=s.get("level", 1),
+                            start_line=s.get("start_line"),
+                            end_line=s.get("end_line"),
+                        )
+                    )
+
+        metadata_dict = document.metadata or {}
+        metadata = DocumentMetadata(
+            title=document.title,
+            author=metadata_dict.get("author"),
+            created_date=metadata_dict.get("created_date"),
+            modified_date=metadata_dict.get("modified_date"),
+            page_count=metadata_dict.get("page_count", 0),
+            word_count=metadata_dict.get("word_count", 0),
+            original_format=mime_type_to_document_format(document.original_format) if document.original_format else DocumentFormat.UNKNOWN,
+        )
+
+        conversion_result = ConversionResult(
+            success=True,
+            markdown_content=document.markdown_content,
+            sections=sections,
+            metadata=metadata,
+        )
+
+        # Build IR
+        ir_builder = IRBuilder()
+        ir = ir_builder.build(conversion_result, str(document_id))
+
+        if format == "llm-text":
+            return Response(
+                content=ir.to_llm_format(),
+                media_type="text/plain",
+            )
+        else:
+            return ir.to_dict()
+
+    except Exception as e:
+        logger.exception(f"Error generating semantic IR: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to generate semantic IR: {str(e)}",
+        )
+
+
+@router.get("/documents/{document_id}/semantic-ir/download")
+async def download_semantic_ir(
+    document_id: UUID,
+    format: str = Query("json", pattern="^(json|llm-text|markdown)$"),
+    handler=Depends(get_document_by_id_handler),
+):
+    """
+    Download the semantic intermediate representation as a file.
+
+    Args:
+        document_id: UUID of the document
+        format: Output format - 'json', 'llm-text', or 'markdown'
+
+    Returns:
+        Downloadable file with semantic IR
+    """
+    from src.infrastructure.semantic import IRBuilder
+    import json
+
+    query = GetDocumentById(document_id=document_id)
+    document = await handler.handle(query)
+
+    if document is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Document with ID {document_id} not found",
+        )
+
+    if not document.markdown_content:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Document has not been converted yet",
+        )
+
+    # Rebuild IR from document data
+    try:
+        from src.infrastructure.converters.base import (
+            ConversionResult,
+            DocumentSection,
+            DocumentMetadata,
+            DocumentFormat,
+        )
+
+        sections = []
+        if document.sections:
+            for s in document.sections:
+                if isinstance(s, dict):
+                    sections.append(
+                        DocumentSection(
+                            id=s.get("id", ""),
+                            title=s.get("title", ""),
+                            content=s.get("content", ""),
+                            level=s.get("level", 1),
+                            start_line=s.get("start_line"),
+                            end_line=s.get("end_line"),
+                        )
+                    )
+
+        metadata_dict = document.metadata or {}
+        metadata = DocumentMetadata(
+            title=document.title,
+            author=metadata_dict.get("author"),
+            created_date=metadata_dict.get("created_date"),
+            modified_date=metadata_dict.get("modified_date"),
+            page_count=metadata_dict.get("page_count", 0),
+            word_count=metadata_dict.get("word_count", 0),
+            original_format=mime_type_to_document_format(document.original_format) if document.original_format else DocumentFormat.UNKNOWN,
+        )
+
+        conversion_result = ConversionResult(
+            success=True,
+            markdown_content=document.markdown_content,
+            sections=sections,
+            metadata=metadata,
+        )
+
+        # Build IR
+        ir_builder = IRBuilder()
+        ir = ir_builder.build(conversion_result, str(document_id))
+
+        # Determine content and filename
+        filename = f"{document.title or 'document'}_semantic_ir"
+
+        if format == "json":
+            content = json.dumps(ir.to_dict(), indent=2)
+            media_type = "application/json"
+            filename += ".json"
+        elif format == "llm-text":
+            content = ir.to_llm_format()
+            media_type = "text/plain"
+            filename += ".txt"
+        else:  # markdown
+            content = ir.raw_markdown
+            media_type = "text/markdown"
+            filename += ".md"
+
+        return Response(
+            content=content.encode('utf-8') if isinstance(content, str) else content,
+            media_type=media_type,
+            headers={
+                'Content-Disposition': f'attachment; filename="{filename}"',
+            }
+        )
+
+    except Exception as e:
+        logger.exception(f"Error downloading semantic IR: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to download semantic IR: {str(e)}",
+        )
