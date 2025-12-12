@@ -1,7 +1,4 @@
-import os
 import logging
-from dataclasses import dataclass
-from functools import lru_cache
 from typing import Optional
 
 import asyncpg
@@ -20,7 +17,8 @@ from src.infrastructure.queries.audit_queries import AuditQueries
 from src.infrastructure.converters.converter_factory import ConverterFactory
 from src.infrastructure.projections.document_projector import DocumentProjection
 from src.infrastructure.projections.policy_projector import PolicyProjection
-from src.application.services.event_publisher import InMemoryEventPublisher
+from src.infrastructure.projections.failure_tracking import ProjectionFailureTracker
+from src.application.services.event_publisher import InMemoryEventPublisher, ProjectionEventPublisher
 from src.application.event_handlers.semantic_curation_handler import SemanticCurationEventHandler
 from src.infrastructure.persistence.postgres_connection import PostgresConnection
 from src.application.commands.document_handlers import (
@@ -61,28 +59,7 @@ from src.application.queries.audit_queries import (
     GetRecentAuditLogsHandler,
     GetAuditLogByDocumentHandler,
 )
-
-
-@dataclass
-class Settings:
-    database_url: str
-    pool_min_size: int = 5
-    pool_max_size: int = 20
-
-
-@lru_cache
-def get_settings() -> Settings:
-    database_url = os.environ.get("DATABASE_URL", "")
-
-    # Read pool size from environment with defaults
-    pool_min_size = int(os.environ.get("DB_POOL_MIN_SIZE", "5"))
-    pool_max_size = int(os.environ.get("DB_POOL_MAX_SIZE", "20"))
-
-    return Settings(
-        database_url=database_url,
-        pool_min_size=pool_min_size,
-        pool_max_size=pool_max_size,
-    )
+from .config import get_settings, Settings
 
 
 class Container:
@@ -94,6 +71,7 @@ class Container:
         self._event_store: Optional[PostgresEventStore] = None
         self._snapshot_store: Optional[InMemorySnapshotStore] = None
         self._event_publisher: Optional[InMemoryEventPublisher] = None
+        self._failure_tracker: Optional[ProjectionFailureTracker] = None
         self._converter_factory: Optional[ConverterFactory] = None
 
     @classmethod
@@ -105,11 +83,11 @@ class Container:
         return cls._instance
 
     async def _initialize(self) -> None:
-        if self._pool is None and self._settings.database_url:
+        if self._pool is None and self._settings.DATABASE_URL:
             self._pool = await asyncpg.create_pool(
-                self._settings.database_url,
-                min_size=self._settings.pool_min_size,
-                max_size=self._settings.pool_max_size,
+                self._settings.DATABASE_URL,
+                min_size=self._settings.DB_POOL_MIN_SIZE,
+                max_size=self._settings.DB_POOL_MAX_SIZE,
             )
             self._register_projections()
 
@@ -163,9 +141,25 @@ class Container:
         return self._snapshot_store
 
     @property
+    def failure_tracker(self) -> Optional[ProjectionFailureTracker]:
+        if self._failure_tracker is None and self._pool:
+            self._failure_tracker = ProjectionFailureTracker(self._pool)
+        return self._failure_tracker
+
+    @property
     def event_publisher(self) -> InMemoryEventPublisher:
         if self._event_publisher is None:
-            self._event_publisher = InMemoryEventPublisher()
+            # Use ProjectionEventPublisher with failure tracking if pool is available
+            if self._pool and self.failure_tracker:
+                self._event_publisher = ProjectionEventPublisher(
+                    projections=[],  # Will be registered in _register_projections
+                    failure_tracker=self.failure_tracker,
+                    max_retries=3,
+                    retry_delay_seconds=1
+                )
+            else:
+                # Fallback to InMemoryEventPublisher for testing without DB
+                self._event_publisher = InMemoryEventPublisher()
         return self._event_publisher
 
     @property

@@ -54,30 +54,29 @@ class DocumentProjection(Projection):
 
     async def handle(self, event: DomainEvent) -> None:
         logger.info(f"DocumentProjection handling event: {event.event_type}, aggregate_id: {event.aggregate_id}")
-        try:
-            if isinstance(event, DocumentUploaded):
-                await self._handle_uploaded(event)
-            elif isinstance(event, DocumentConverted):
-                await self._handle_converted(event)
-            elif isinstance(event, SemanticIRCurationStarted):
-                await self._handle_curation_started(event)
-            elif isinstance(event, SemanticIRCurated):
-                await self._handle_curation_completed(event)
-            elif isinstance(event, SemanticIRCurationFailed):
-                await self._handle_curation_failed(event)
-            elif isinstance(event, AnalysisStarted):
-                await self._handle_analysis_started(event)
-            elif isinstance(event, AnalysisCompleted):
-                await self._handle_analysis_completed(event)
-            elif isinstance(event, AnalysisFailed):
-                await self._handle_analysis_failed(event)
-            elif isinstance(event, AnalysisReset):
-                await self._handle_analysis_reset(event)
-            elif isinstance(event, DocumentExported):
-                await self._handle_exported(event)
-            logger.info(f"DocumentProjection successfully handled event: {event.event_type}")
-        except Exception as e:
-            logger.exception(f"DocumentProjection failed to handle event {event.event_type}: {e}")
+        
+        if isinstance(event, DocumentUploaded):
+            await self._handle_uploaded(event)
+        elif isinstance(event, DocumentConverted):
+            await self._handle_converted(event)
+        elif isinstance(event, SemanticIRCurationStarted):
+            await self._handle_curation_started(event)
+        elif isinstance(event, SemanticIRCurated):
+            await self._handle_curation_completed(event)
+        elif isinstance(event, SemanticIRCurationFailed):
+            await self._handle_curation_failed(event)
+        elif isinstance(event, AnalysisStarted):
+            await self._handle_analysis_started(event)
+        elif isinstance(event, AnalysisCompleted):
+            await self._handle_analysis_completed(event)
+        elif isinstance(event, AnalysisFailed):
+            await self._handle_analysis_failed(event)
+        elif isinstance(event, AnalysisReset):
+            await self._handle_analysis_reset(event)
+        elif isinstance(event, DocumentExported):
+            await self._handle_exported(event)
+        
+        logger.info(f"DocumentProjection successfully handled event: {event.event_type}")
 
     async def _handle_uploaded(self, event: DocumentUploaded) -> None:
         async with self._pool.acquire() as conn:

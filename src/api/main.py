@@ -18,7 +18,10 @@ logging.getLogger('pdfplumber').setLevel(logging.WARNING)
 
 from .middleware.error_handler import add_exception_handlers
 from .middleware.request_id import RequestIdMiddleware
-from .routes import documents, analysis, feedback, policies, audit, health, chat, parameters, analysis_logs
+from .routes import (
+    documents, analysis, feedback, policies, audit, health, 
+    chat, parameters, analysis_logs, projection_health, projection_admin
+)
 from .dependencies import Container
 
 STATIC_DIR = Path(__file__).parent.parent.parent / "client" / "dist"
@@ -26,21 +29,23 @@ STATIC_DIR = Path(__file__).parent.parent.parent / "client" / "dist"
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    # Validate configuration at startup
-    from src.infrastructure.config import validate_startup_config
-
-    environment = os.getenv("ENVIRONMENT", "development")
-    # In production, fail on configuration errors
-    # In development, only warn
-    fail_on_error = environment == "production"
+    # Validate configuration at startup using Pydantic Settings
+    from .config import get_settings
+    from pydantic import ValidationError
 
     try:
-        validate_startup_config(fail_on_error=fail_on_error)
-        logging.info("Configuration validation passed")
+        settings = get_settings()
+        # Settings are automatically validated by Pydantic
+        # log_startup_info() is called in get_settings()
+    except ValidationError as e:
+        logging.critical("Configuration validation failed:")
+        for error in e.errors():
+            field = " -> ".join(str(loc) for loc in error['loc'])
+            logging.critical(f"  {field}: {error['msg']}")
+        raise
     except Exception as e:
-        logging.error(f"Configuration validation failed: {e}")
-        if fail_on_error:
-            raise
+        logging.critical(f"Configuration initialization failed: {e}")
+        raise
 
     container = await Container.get_instance()
     yield
@@ -55,23 +60,41 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
-    # CORS configuration from environment
-    cors_origins_str = os.getenv("CORS_ORIGINS", "http://localhost:5000")
-    cors_origins = [origin.strip() for origin in cors_origins_str.split(",")]
+    # Get validated settings
+    from .config import get_settings
+    settings = get_settings()
 
-    # In development, allow all origins if explicitly set to "*"
-    # In production, this should NEVER be "*"
-    if cors_origins == ["*"]:
-        logging.warning(
-            "CORS is configured to allow all origins. "
-            "This is a security risk in production. "
-            "Set CORS_ORIGINS environment variable to specific origins."
+    # CORS configuration from validated settings
+    cors_origins = settings.get_cors_origins_list()
+
+    # Security validation: cannot use wildcard with credentials
+    if "*" in cors_origins:
+        error_msg = (
+            "CORS Security Error: Cannot use allow_origins=['*'] with allow_credentials=True. "
+            "This violates CORS security policy. "
+            "Set CORS_ORIGINS to specific origins (e.g., 'http://localhost:5000,https://app.example.com')."
         )
+        if settings.ENVIRONMENT == "production":
+            raise ValueError(error_msg)
+        else:
+            logging.error(error_msg)
+            # In development, disable credentials if wildcard is used
+            allow_credentials = False
+            logging.warning("allow_credentials disabled due to wildcard origin in development mode")
+    else:
+        allow_credentials = True
+
+    # Log CORS configuration at startup
+    logging.info(f"CORS Configuration:")
+    logging.info(f"  Environment: {settings.ENVIRONMENT}")
+    logging.info(f"  Allowed Origins: {cors_origins}")
+    logging.info(f"  Allow Credentials: {allow_credentials}")
+    logging.info(f"  Allowed Methods: GET, POST, PUT, DELETE, PATCH")
 
     app.add_middleware(
         CORSMiddleware,
         allow_origins=cors_origins,
-        allow_credentials=True,
+        allow_credentials=allow_credentials,
         allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH"],
         allow_headers=["*"],
     )
@@ -89,6 +112,8 @@ def create_app() -> FastAPI:
     app.include_router(chat.router, prefix="/api/v1", tags=["chat"])
     app.include_router(parameters.router, prefix="/api/v1", tags=["parameters"])
     app.include_router(analysis_logs.router, prefix="/api/v1", tags=["analysis-logs"])
+    app.include_router(projection_health.router, prefix="/api/v1", tags=["projection-health"])
+    app.include_router(projection_admin.router, prefix="/api/v1", tags=["projection-admin"])
 
     if STATIC_DIR.exists():
         app.mount("/assets", StaticFiles(directory=STATIC_DIR / "assets"), name="assets")
