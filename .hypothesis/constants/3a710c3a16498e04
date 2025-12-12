@@ -1,0 +1,4 @@
+# file: /workspaces/src/infrastructure/semantic/table_extractor.py
+# hypothesis_version: 6.148.7
+
+[0.8, 100, '#', '%', ',', ':', 'numeric', 'section-unknown', 'text', '|']

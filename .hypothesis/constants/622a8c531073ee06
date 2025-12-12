@@ -1,0 +1,4 @@
+# file: /workspaces/src/infrastructure/ai/analysis/analysis_log.py
+# hypothesis_version: 6.148.7
+
+['AnalysisLogStore', 'completed', 'completed_at', 'debug', 'details', 'document_id', 'entries', 'error', 'id', 'in_progress', 'info', 'level', 'message', 'stage', 'started_at', 'status', 'timestamp', 'warning']

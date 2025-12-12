@@ -1,0 +1,4 @@
+# file: /workspaces/src/infrastructure/semantic/definition_extractor.py
+# hypothesis_version: 6.148.7
+
+[0.5, 500, ' a', ' and', ' non', ' of', ' or', ' the', ' to', '.', '. ', '...', '\\s*\\.\\s*$', '\\s+', 'a', 'an', 'and', 'are', 'as', 'at', 'be', 'but', 'by', 'for', 'from', 'if', 'in', 'is', 'it', 'may', 'of', 'on', 'or', 'that', 'the', 'these', 'this', 'those', 'to', 'when', 'where', 'will', 'with']

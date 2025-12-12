@@ -132,4 +132,11 @@ def create_app() -> FastAPI:
     return app
 
 
-app = create_app()
+# Only create app at module level if not running tests
+# This allows tests to set up environment variables before validation
+import sys
+if "pytest" not in sys.modules:
+    app = create_app()
+else:
+    # In test mode, create a minimal app that will be replaced by test fixtures
+    app = None  # type: ignore

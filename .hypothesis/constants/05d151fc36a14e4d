@@ -1,0 +1,4 @@
+# file: /workspaces/src/domain/value_objects/semantic_ir/__init__.py
+# hypothesis_version: 6.148.7
+
+['CrossReference', 'DependencyType', 'DocumentIR', 'FormulaReference', 'IRSection', 'Parameter', 'SectionType', 'TableData', 'TermDefinition', 'TermDependency', 'TermLineage', 'ValidationIssue', 'ValidationSeverity', 'ValidationType']

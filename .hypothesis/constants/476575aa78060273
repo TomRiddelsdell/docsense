@@ -1,0 +1,4 @@
+# file: /workspaces/src/api/config.py
+# hypothesis_version: 6.148.7
+
+[100, 120, 8000, 65535, 10485760, '*', ',', '-api-key', './uploads', '.env', '/api/v1', '=', 'ANTHROPIC_API_KEY', 'API base path prefix', 'CORS_ORIGINS', 'CRITICAL', 'DATABASE_URL', 'DB_POOL_MAX_SIZE', 'DB_POOL_MIN_SIZE', 'DEBUG', 'DEFAULT_AI_PROVIDER', 'ENVIRONMENT', 'ERROR', 'GEMINI_API_KEY', 'INFO', 'LOG_LEVEL', 'OPENAI_API_KEY', 'OpenAI GPT API key', 'SECRET_KEY', 'WARNING', 'after', 'case_sensitive', 'claude', 'development', 'env_file', 'env_file_encoding', 'extra', 'gemini', 'ignore', 'json', 'openai', 'postgres://', 'postgresql://', 'production', 'utf-8', 'your-', 'your-secret-key-here']

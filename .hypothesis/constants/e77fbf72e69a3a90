@@ -1,0 +1,4 @@
+# file: /workspaces/src/application/commands/policy_handlers.py
+# hypothesis_version: 6.148.7
+
+['EventPublisher']

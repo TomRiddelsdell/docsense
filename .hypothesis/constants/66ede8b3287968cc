@@ -1,0 +1,4 @@
+# file: /workspaces/src/infrastructure/ai/analysis/engine.py
+# hypothesis_version: 6.148.7
+
+[0.0, 100, 200, 4000, '...', 'AI analysis complete', 'Aggregating results', 'aggregation', 'ai_response', 'analysis', 'complete', 'completed', 'content_preview', 'critical_gaps', 'critical_issues', 'error', 'error_type', 'failed', 'feedback', 'feedback_items_count', 'high_issues', 'include_suggestions', 'initialization', 'issues_found', 'max_issues', 'model', 'no issues found', 'original_length', 'overall_score', 'policy_evaluation', 'policy_rules_count', 'preprocessing', 'processed_length', 'provider', 'reduction_pct', 'response', 'severity', 'suggestions disabled', 'suggestions_count', 'total_issues', 'total_length', 'truncated', 'unknown']

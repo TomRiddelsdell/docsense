@@ -1,0 +1,4 @@
+# file: /workspaces/src/infrastructure/semantic/lineage_extractor.py
+# hypothesis_version: 6.148.7
+
+[100, 150, 200, '"([^"]+)"', '(?:unless|except)', '(\\d+(?:\\.\\d+)?)\\s*%', ',', '.', '[+\\-*/=]', '[.;]', '\\$([^$]+)\\$', '\\b', '\\b([A-Z])\\b(?!\\w)', '\\d+\\s*[+\\-*/]\\s*\\d+', 'basis', 'basis_points', 'bp', 'currency', 'day', 'dollar', 'duration', 'month', 'numeric', 'percent', 'percentage', 'usd', 'variable', 'year']

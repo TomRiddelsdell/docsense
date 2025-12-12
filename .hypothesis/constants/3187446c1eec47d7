@@ -1,0 +1,4 @@
+# file: /workspaces/src/infrastructure/semantic/ir_builder.py
+# hypothesis_version: 6.148.7
+
+['Untitled', 'author', 'created_date', 'extra', 'modified_date', 'original_format', 'page_count', 'title', 'word_count']

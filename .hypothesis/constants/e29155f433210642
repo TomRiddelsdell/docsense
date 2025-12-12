@@ -1,0 +1,4 @@
+# file: /workspaces/src/domain/value_objects/semantic_ir/cross_reference.py
+# hypothesis_version: 6.148.7
+
+['CrossReference', 'definition', 'formula', 'id', 'reference_text', 'resolved', 'section', 'source_id', 'source_type', 'table', 'target_id', 'target_type']

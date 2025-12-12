@@ -1,0 +1,4 @@
+# file: /workspaces/src/api/routes/projection_admin.py
+# hypothesis_version: 6.148.7
+
+[400, 404, 500, 503, 999999999, '/admin/projections', '/status', 'active_failures', 'admin', 'completed', 'critical', 'critical_projections', 'degraded', 'degraded_projections', 'failure_id', 'health_status', 'healthy', 'healthy_projections', 'last_event_sequence', 'manual_fix', 'manual_retry', 'manual_skip', 'message', 'offline', 'offline_projections', 'overall_status', 'projection_name', 'reset_at', 'resolution_method', 'resolved_at', 'retry', 'skip', 'status', 'success', 'timestamp', 'total_projections']

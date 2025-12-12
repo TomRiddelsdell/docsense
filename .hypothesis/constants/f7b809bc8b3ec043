@@ -1,0 +1,4 @@
+# file: /workspaces/src/infrastructure/semantic/reference_extractor.py
+# hypothesis_version: 6.148.7
+
+['(\\d+(?:\\.\\d+)*)', 'definition', 'formula', 'section', 'table']

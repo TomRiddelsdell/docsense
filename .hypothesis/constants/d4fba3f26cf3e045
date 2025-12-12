@@ -1,0 +1,4 @@
+# file: /workspaces/src/infrastructure/semantic/section_classifier.py
+# hypothesis_version: 6.148.7
+
+['$$', '\\$[^$]+\\$', 'algorithm', 'annex', 'appendix', 'attachment', 'calculation', 'code', 'computation', 'configuration', 'definition', 'equation', 'exhibit', 'formula', 'glossary', 'implementation', 'parameters', 'pseudocode', 'schedule', 'table', 'terminology', 'terms', '|']

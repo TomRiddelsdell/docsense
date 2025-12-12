@@ -1,0 +1,4 @@
+# file: /workspaces/src/infrastructure/semantic/formula_extractor.py
+# hypothesis_version: 6.148.7
+
+['!=', '(\\1)/(\\2)', '*', '/', '<=', '>=', '[{}()[\\]]', '[{}]', '\\$\\$(.*?)\\$\\$', '\\\\[a-z]+\\s*', '\\\\approx', '\\\\div', '\\\\geq', '\\\\int', '\\\\leq', '\\\\neq', '\\\\prod', '\\\\sqrt{([^}]+)}', '\\\\sum', '\\\\times', '_', 'a', 'alpha', 'approx', 'ast', 'b', 'beta', 'c', 'cdot', 'cos', 'delta', 'div', 'e', 'epsilon', 'exp', 'frac', 'gamma', 'geq', 'i', 'inf', 'infty', 'int', 'integral', 'lambda', 'ldots', 'left', 'leq', 'lim', 'ln', 'log', 'mathbf', 'mathit', 'mathrm', 'max', 'min', 'mu', 'neq', 'omega', 'partial', 'phi', 'pi', 'pm', 'prod', 'right', 'section-unknown', 'sigma', 'sin', 'sqrt', 'sqrt(\\1)', 'sum', 'sup', 'tan', 'tau', 'text', 'theta', 'times', 'x', 'y', 'z', '≈']

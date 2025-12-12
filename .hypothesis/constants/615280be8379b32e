@@ -1,0 +1,4 @@
+# file: /workspaces/src/domain/value_objects/semantic_ir/formula_reference.py
+# hypothesis_version: 6.148.7
+
+['FormulaReference', 'dependencies', 'id', 'latex', 'line_number', 'mathml', 'name', 'plain_text', 'section_id', 'variables']

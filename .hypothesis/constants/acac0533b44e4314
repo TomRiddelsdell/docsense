@@ -1,0 +1,4 @@
+# file: /workspaces/src/infrastructure/projections/document_projector.py
+# hypothesis_version: 6.148.7
+
+[0.7, 'category', 'confidence', 'description', 'id', 'improvement', 'location', 'medium', 'original_text', 'rule_id', 'severity', 'title', 'uploaded']

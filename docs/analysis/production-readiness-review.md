@@ -1,1165 +1,1154 @@
-# Production Readiness Review - Senior Engineering Assessment
+# Production Readiness Review: DDD & Microservices Analysis
 
-**Date**: 2025-12-12
-**Reviewer**: Senior Engineer (Claude Code)
+**Review Date**: 2025-12-12
+**Reviewer**: Domain-Driven Design & Microservices Expert
 **Codebase**: Trading Algorithm Document Analyzer
-**Version**: Phase 6 Complete
+**Version**: Phase 6 (Frontend Complete)
+**Lines of Code**: ~15,000 (152 Python files, 373 passing tests)
 
 ---
 
 ## Executive Summary
 
-This comprehensive review assessed the codebase across five dimensions: Domain-Driven Design compliance, Event Sourcing implementation, production readiness, code quality, and documentation completeness.
+This trading algorithm document analyzer demonstrates **excellent Domain-Driven Design (DDD) fundamentals** with proper event sourcing and CQRS implementation. The codebase follows a clean layered architecture with well-defined aggregate boundaries and strong domain modeling.
 
-**Overall Assessment**: The codebase demonstrates strong architectural foundations with DDD and Event Sourcing patterns, comprehensive test coverage (373 passing tests), and good type safety. However, **several critical issues must be addressed before production deployment**, particularly around security (CORS configuration), error handling (projection failures), and operational concerns (logging, monitoring, deployment).
+However, as a **monolithic application**, it requires significant architectural refactoring to achieve microservices readiness and production-grade scalability, reliability, and operational excellence.
 
-**Critical Blockers for Production**: 6
-**High Priority Issues**: 15
-**Medium Priority Issues**: 9
-**Low Priority Issues**: 5
-**Documentation Gaps**: 6
+### Overall Assessment
+
+| Category | Grade | Status |
+|----------|-------|--------|
+| **DDD Implementation** | A- | ✅ Excellent |
+| **Event Sourcing & CQRS** | A | ✅ Excellent |
+| **Aggregate Design** | A | ✅ Excellent |
+| **Microservices Readiness** | C+ | ⚠️ Needs Work |
+| **Production Readiness** | C | ⚠️ Needs Work |
+| **Observability** | D | ❌ Critical Gaps |
+| **Resilience & Fault Tolerance** | D | ❌ Critical Gaps |
+| **Security** | C- | ⚠️ Needs Work |
+| **Scalability** | C | ⚠️ Needs Work |
 
 ---
 
-## CRITICAL ISSUES (Must Fix Before Production)
+## 1. Domain-Driven Design Analysis
 
-### 1. CORS Security Vulnerability - Allows All Origins with Credentials
+### 1.1 Strengths ✅
 
-**Category**: Security, Production
-**Severity**: 🔴 CRITICAL
-**Location**: `/src/api/main.py` (lines 42-48)
+#### Excellent Aggregate Design
+**Location**: `/workspaces/src/domain/aggregates/`
 
-**Description**:
-The CORS middleware configuration allows all origins (`allow_origins=["*"]`) with credentials enabled (`allow_credentials=True`). This is a severe security vulnerability that violates CORS specifications and exposes the API to Cross-Site Request Forgery (CSRF) attacks.
+The application has three well-designed aggregates:
+- **Document** - Manages document lifecycle with proper state transitions
+- **FeedbackSession** - Manages AI-generated feedback workflow
+- **PolicyRepository** - Manages compliance policy collections
 
+**What's Working Well**:
+- Clear aggregate boundaries with no cross-aggregate object references (only IDs)
+- Proper invariant enforcement through domain methods
+- Factory methods for aggregate creation (`Document.upload()`, `FeedbackSession.create_for_document()`)
+- State machines with validated transitions
+- Event-driven aggregate interactions
+
+**Evidence**: `src/domain/aggregates/document.py:98-113`
 ```python
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # ❌ CRITICAL: Allows ANY website
-    allow_credentials=True,  # ❌ Combined with *, this is dangerous
-    allow_methods=["*"],
-    allow_headers=["*"],
+def convert(self, markdown_content: str, sections: List[Dict[str, Any]], ...):
+    if self._status != DocumentStatus.UPLOADED:
+        raise InvalidDocumentState(...)  # Invariant protection
+    self._apply_event(DocumentConverted(...))
+```
+
+#### Rich Value Objects
+**Location**: `/workspaces/src/domain/value_objects/`
+
+**What's Working Well**:
+- All value objects are immutable (frozen dataclasses)
+- Self-validating (e.g., `VersionNumber` validates non-negative components)
+- No primitive obsession - `DocumentId`, `VersionNumber` instead of raw types
+- Sophisticated semantic IR value objects showing advanced domain modeling
+
+**Evidence**: Semantic IR layer demonstrates deep domain understanding with `DocumentIR`, `TermDefinition`, `FormulaReference`, `TableData`, etc.
+
+#### Proper Event Sourcing
+**Location**: `/workspaces/src/infrastructure/persistence/event_store.py`
+
+**What's Working Well**:
+- Immutable events (frozen dataclasses) with past-tense naming
+- Optimistic concurrency control via version checking
+- Append-only event store with no modifications
+- Aggregate reconstitution from events
+- Event serialization/deserialization
+
+**Evidence**: `src/infrastructure/persistence/event_store.py:66-71` - Proper concurrency checking
+
+#### Clean CQRS Separation
+**Location**: `/workspaces/src/application/`
+
+**What's Working Well**:
+- Commands flow through dedicated handlers
+- Queries use optimized read models (projections)
+- Write model (event store) separate from read model (views)
+- Eventual consistency accepted
+
+### 1.2 Areas for Improvement ⚠️
+
+#### Issue #1: Transaction Boundaries and Consistency
+
+**Problem**: Application layer handlers manage cross-aggregate workflows without proper distributed transaction handling.
+
+**Location**: `src/application/commands/analysis_handlers.py:32-129`
+
+**Evidence**:
+```python
+async def handle(self, command: StartAnalysis) -> UUID:
+    document = await self._documents.get(command.document_id)  # Load aggregate 1
+    policy_repo = await self._policies.get(command.policy_repository_id)  # Load aggregate 2
+
+    document.start_analysis(...)  # Modify aggregate 1
+    await self._documents.save(document)  # Save aggregate 1
+
+    # Run AI analysis (external service call)
+    result = await engine.analyze(...)
+
+    # Update aggregate again
+    document.complete_analysis(...)
+    await self._documents.save(document)  # Save aggregate 1 again
+```
+
+**Issues**:
+1. No Unit of Work pattern to ensure atomic operations
+2. Multiple save operations for same aggregate in one handler
+3. External AI service call between saves creates partial failure scenarios
+4. No saga pattern for distributed transactions
+
+**Impact**: Medium - Can lead to inconsistent state if AI analysis fails
+
+**Suggested Fix Prompt**:
+```
+Implement a Unit of Work pattern to manage transaction boundaries across aggregate operations. The Unit of Work should:
+1. Track all aggregate changes in a single transaction scope
+2. Commit all changes atomically at the end of the handler
+3. Roll back all changes if any operation fails
+4. Ensure idempotency for event publishing
+
+Create the following:
+- src/application/services/unit_of_work.py with UnitOfWork interface
+- Modify command handlers to use UnitOfWork context manager
+- Add transaction support to repository pattern
+- Implement rollback mechanism for failed operations
+
+Reference: https://martinfowler.com/eaaCatalog/unitOfWork.html
+```
+
+---
+
+#### Issue #2: Missing Domain Service for Complex Analysis Logic
+
+**Problem**: Complex AI analysis orchestration logic lives in application layer instead of domain layer.
+
+**Location**: `src/application/commands/analysis_handlers.py:53-93`
+
+**Evidence**:
+```python
+# Application layer contains domain logic about converting policies to rules
+policy_rules = [
+    PolicyRule(
+        id=str(p.get("policy_id", "")),
+        name=p.get("policy_name", ""),
+        description=p.get("policy_content", ""),
+        requirement_type=p.get("requirement_type", "SHOULD"),
+        category=p.get("category", "general"),
+        ...
+    )
+    for p in policy_repo.policies
+]
+```
+
+**Issues**:
+1. Domain knowledge about policy structure lives in application layer
+2. Policy-to-rule transformation is domain logic, not application orchestration
+3. No domain service to encapsulate this business rule
+4. Violates DDD principle: domain layer should contain all business logic
+
+**Impact**: Medium - Makes domain logic harder to test and maintain
+
+**Suggested Fix Prompt**:
+```
+Extract AI analysis orchestration into a domain service. Create:
+
+1. src/domain/services/analysis_service.py:
+   - AnalysisService class with method prepare_analysis(document, policy_repository)
+   - Convert PolicyRepository aggregate to PolicyRule value objects
+   - Encapsulate business rules about which policies apply to which documents
+   - Return AnalysisRequest value object with all necessary data
+
+2. Update StartAnalysisHandler to use AnalysisService:
+   - Inject AnalysisService into handler
+   - Call service.prepare_analysis() to get domain objects
+   - Pass domain objects to infrastructure AI engine
+   - Keep only orchestration logic in application layer
+
+This ensures domain logic stays in the domain layer and improves testability.
+```
+
+---
+
+#### Issue #3: Synchronous IR Building Blocks User Operations
+
+**Problem**: Semantic IR building happens synchronously during document upload, blocking the HTTP response.
+
+**Location**: `src/application/commands/document_handlers.py:52-60`
+
+**Evidence**:
+```python
+async def handle(self, command: UploadDocument) -> DocumentId:
+    # ... upload and convert ...
+
+    try:
+        logger.info("Generating semantic IR...")
+        semantic_ir = self._ir_builder.build(result, str(document_id.value))  # BLOCKING
+        result.semantic_ir = semantic_ir
+    except Exception as e:
+        logger.warning(f"Failed to generate semantic IR: {e}", exc_info=True)
+```
+
+**Issues**:
+1. Blocks HTTP response waiting for IR building
+2. Can fail silently (try/except with continue)
+3. Already have async IR curation via events, but still do sync building first
+4. Mixed approach: sync initial build + async AI curation
+
+**Impact**: Low - Already mitigated with try/except and async curation exists
+
+**Suggested Fix Prompt**:
+```
+Remove synchronous IR building from UploadDocumentHandler and rely entirely on async event-driven IR building:
+
+1. Remove IR building from UploadDocumentHandler (lines 52-60 in document_handlers.py)
+2. Keep only document upload and conversion in the handler
+3. Let SemanticCurationEventHandler handle ALL IR building asynchronously
+4. Update SemanticCurationEventHandler to:
+   - First build basic IR structure synchronously
+   - Then enhance it with AI curation
+   - Emit SemanticIRCurated event when complete
+
+This provides faster HTTP responses and cleaner separation of concerns.
+```
+
+---
+
+#### Issue #4: Projection Failure Handling
+
+**Problem**: Failed projections only log errors but don't provide recovery mechanism.
+
+**Location**: `src/application/services/event_publisher.py:52-68`
+
+**Evidence**:
+```python
+for projection in self._projections:
+    if projection.can_handle(event):
+        try:
+            await projection.handle(event)
+        except Exception as e:
+            logger.error(f"Projection {projection.__class__.__name__} failed", exc_info=True)
+            projection_errors.append((projection.__class__.__name__, str(e)))
+
+if projection_errors:
+    logger.critical("PROJECTION FAILURE: Read models may be inconsistent")  # Only logs!
+```
+
+**Issues**:
+1. No retry mechanism for failed projections
+2. No dead letter queue for failed events
+3. No projection rebuild capability
+4. Read models can drift from event store silently
+
+**Impact**: High - Can cause data inconsistency in production
+
+**Suggested Fix Prompt**:
+```
+Implement robust projection failure handling with retry and recovery:
+
+1. Create src/infrastructure/projections/projection_manager.py:
+   - ProjectionCheckpoint to track last processed event per projection
+   - ProjectionRetryPolicy with exponential backoff
+   - ProjectionDeadLetterQueue for events that fail after max retries
+   - RebuildProjection command to replay events from event store
+
+2. Update EventPublisher:
+   - Store failed projections in dead letter queue
+   - Retry failed projections with exponential backoff
+   - Emit ProjectionFailed domain event for monitoring
+   - Add health check endpoint to detect projection lag
+
+3. Add admin API endpoints:
+   - GET /admin/projections - Show projection status and lag
+   - POST /admin/projections/{name}/rebuild - Rebuild projection from events
+   - GET /admin/projections/dead-letter - View failed events
+
+This ensures read model consistency and provides recovery tools.
+```
+
+---
+
+## 2. Microservices Readiness Analysis
+
+### 2.1 Current Architecture: Monolith
+
+**Assessment**: The application is a **well-structured modular monolith** but not microservices-ready.
+
+**Evidence**:
+- Single deployment unit (one FastAPI application)
+- Shared database with all aggregates in one event store
+- In-memory event bus (not distributed)
+- Tightly coupled dependency injection container
+- No service boundaries defined
+
+### 2.2 Bounded Context Analysis ⚠️
+
+**Problem**: No explicit bounded context boundaries defined.
+
+**Current Implicit Contexts**:
+
+1. **Document Management Context**
+   - Aggregates: Document
+   - Responsibilities: Upload, convert, version, export documents
+   - Core language: Document, Section, Metadata, ConversionResult
+
+2. **Analysis Context**
+   - Aggregates: Document (shared!), PolicyRepository
+   - Responsibilities: AI-powered document analysis, compliance checking
+   - Core language: Analysis, ComplianceScore, Finding, PolicyRule
+
+3. **Feedback Context**
+   - Aggregates: FeedbackSession
+   - Responsibilities: Managing user feedback on AI suggestions
+   - Core language: Feedback, ChangeRequest, ApprovalWorkflow
+
+**Issues**:
+1. **Document aggregate is shared across multiple contexts** - violates bounded context principle
+2. No anti-corruption layers between contexts
+3. No context maps defining relationships
+4. No separate databases per context
+
+**Impact**: High - Prevents clean microservices decomposition
+
+**Suggested Fix Prompt**:
+```
+Define explicit bounded contexts and prepare for microservices decomposition:
+
+1. Create docs/architecture/bounded-contexts.md documenting:
+   - Document Management Context
+   - Document Analysis Context
+   - Feedback Management Context
+   - Policy Management Context
+
+   For each context define:
+   - Core aggregates and entities
+   - Ubiquitous language
+   - Context boundaries
+   - Integration points with other contexts
+   - Database schemas (separate per context)
+
+2. Identify Document aggregate overlap:
+   - Document Management owns Document lifecycle (upload, convert, version)
+   - Analysis Context needs read-only DocumentView, not full Document aggregate
+   - Create separate DocumentView in Analysis context
+   - Use eventual consistency via domain events
+
+3. Create context map showing relationships:
+   - Partnership: Which contexts collaborate as equals?
+   - Customer/Supplier: Which contexts serve others?
+   - Conformist: Which contexts must conform to others?
+   - Anti-corruption Layer: Which contexts need translation?
+
+4. Plan migration path:
+   - Phase 1: Separate database schemas per context (same DB, different schemas)
+   - Phase 2: Extract bounded contexts to separate modules
+   - Phase 3: Deploy as separate services with async messaging
+
+Reference: "Implementing Domain-Driven Design" by Vaughn Vernon, Chapter 3
+```
+
+---
+
+### 2.3 Database per Service Pattern ❌
+
+**Problem**: All aggregates share a single PostgreSQL database and event store.
+
+**Location**: `src/api/dependencies.py:108-113`
+
+**Evidence**:
+```python
+self._pool = await asyncpg.create_pool(
+    self._settings.database_url,  # Single database for everything!
+    min_size=self._settings.pool_min_size,
+    max_size=self._settings.pool_max_size,
 )
 ```
 
-**Impact**:
-- Any malicious website can make authenticated requests to your API
-- Users' sessions can be hijacked
-- Sensitive operations (document uploads, policy modifications, analysis) can be triggered from external sites
-- Complete violation of Same-Origin Policy protections
+**Issues**:
+1. Cannot deploy aggregates as independent services
+2. Cannot scale services independently
+3. Shared schema creates coupling
+4. Database becomes a distributed monolith bottleneck
 
-**Why This Matters in Production**:
-An attacker could create a malicious website that, when visited by an authenticated user of your system, could:
-1. Upload malicious documents to their account
-2. Exfiltrate sensitive analysis data
-3. Modify policy configurations
-4. Trigger expensive AI operations to exhaust API quotas
+**Impact**: Critical - Blocks microservices architecture
 
-**Suggested Prompt for Claude**:
+**Suggested Fix Prompt**:
 ```
-Fix the CORS security vulnerability in /src/api/main.py:
+Implement database-per-service pattern for microservices readiness:
 
-1. Read CORS_ORIGINS from environment variable (already defined in .env.example)
-2. Parse comma-separated origins (e.g., "http://localhost:5000,https://app.example.com")
-3. Replace allow_origins=["*"] with the parsed list
-4. Add validation that CORS_ORIGINS is not empty or "*" in production
-5. Add a check that if allow_credentials=True, origins cannot be "*"
-6. Document the correct CORS_ORIGINS format in .env.example
-7. Add startup validation that logs the configured origins
+1. Separate event stores per bounded context:
+   - document_management_events (Document aggregate events)
+   - analysis_events (Analysis workflow events)
+   - feedback_events (FeedbackSession aggregate events)
+   - policy_events (PolicyRepository aggregate events)
 
-Example configuration:
+2. Update infrastructure:
+   - Create src/infrastructure/persistence/multi_tenant_event_store.py
+   - Each EventStore instance points to a different schema/database
+   - Update Container to manage multiple event stores
+   - Update repositories to use context-specific event stores
+
+3. Handle cross-context data access:
+   - Use domain events for cross-context communication
+   - Implement event-carried state transfer pattern
+   - Create materialized views for cross-context queries
+   - No direct database queries across contexts
+
+4. Add migration strategy:
+   - Create separate database migration scripts per context
+   - Ensure backward compatibility during migration
+   - Support gradual rollout of database separation
+
+This enables independent deployment and scaling of services.
+```
+
+---
+
+### 2.4 Event Bus / Message Broker ❌
+
+**Problem**: In-memory event publisher prevents distributed event processing.
+
+**Location**: `src/application/services/event_publisher.py:27-88`
+
+**Evidence**:
 ```python
-cors_origins = os.getenv("CORS_ORIGINS", "http://localhost:5000").split(",")
-if cors_origins == ["*"] and allow_credentials:
-    raise ValueError("Cannot use allow_origins=['*'] with allow_credentials=True")
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[origin.strip() for origin in cors_origins],
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH"],
-    allow_headers=["*"],
+class InMemoryEventPublisher(EventPublisher):
+    def __init__(self):
+        self._handlers: List[EventHandler] = []  # In-process only!
+        self._projections: List[Projection] = []
+        self._event_type_handlers: Dict[Type[DomainEvent], List[EventHandler]] = {}
+```
+
+**Issues**:
+1. Events only propagate within single process
+2. Cannot scale event handlers independently
+3. No guaranteed delivery
+4. No event replay capability across services
+5. No integration events for external systems
+
+**Impact**: Critical - Prevents microservices communication
+
+**Suggested Fix Prompt**:
+```
+Replace in-memory event bus with distributed message broker (RabbitMQ, Kafka, or AWS EventBridge):
+
+1. Create src/infrastructure/messaging/:
+   - message_broker.py with MessageBroker interface
+   - rabbitmq_broker.py implementing MessageBroker
+   - event_mapper.py to convert domain events to integration events
+   - dead_letter_queue.py for failed message handling
+
+2. Implement integration events:
+   - Create src/domain/integration_events/ for cross-service events
+   - DocumentUploadedIntegrationEvent (for external systems)
+   - AnalysisCompletedIntegrationEvent
+   - Define versioned event schemas for backward compatibility
+
+3. Update EventPublisher:
+   - Publish domain events to message broker topics
+   - Subscribe handlers to topics, not in-memory lists
+   - Add message deduplication using event IDs
+   - Implement at-least-once delivery with idempotent handlers
+
+4. Add outbox pattern:
+   - Create outbox table in database
+   - Write events to outbox atomically with aggregate changes
+   - Background worker publishes from outbox to message broker
+   - Ensures reliable event publishing (no dual-write problem)
+
+5. Configuration:
+   - Add MESSAGE_BROKER_URL to environment variables
+   - Configure topics/exchanges per bounded context
+   - Set up dead letter exchanges for failed messages
+   - Add monitoring for message broker health
+
+Reference: "Building Event-Driven Microservices" by Adam Bellemare
+```
+
+---
+
+### 2.5 Service Discovery and API Gateway ❌
+
+**Problem**: No service discovery or API gateway layer.
+
+**Issues**:
+1. Monolithic API exposes all endpoints from single server
+2. No routing to multiple backend services
+3. No load balancing across service instances
+4. No circuit breakers for service-to-service calls
+
+**Impact**: Critical for microservices
+
+**Suggested Fix Prompt**:
+```
+Implement API Gateway pattern with service discovery:
+
+1. Choose API Gateway:
+   - Option A: Kong API Gateway (production-grade, feature-rich)
+   - Option B: AWS API Gateway (if deploying to AWS)
+   - Option C: NGINX with lua scripts (lightweight)
+   - Option D: Traefik (cloud-native, Kubernetes-friendly)
+
+2. Define service endpoints:
+   - /api/documents/** → Document Management Service
+   - /api/analysis/** → Analysis Service
+   - /api/feedback/** → Feedback Service
+   - /api/policies/** → Policy Service
+
+3. Implement service discovery:
+   - Option A: Consul (HashiCorp)
+   - Option B: etcd
+   - Option C: Kubernetes service discovery (if using K8s)
+
+4. Create API Gateway configuration:
+   - Route rules mapping URLs to services
+   - Health checks for each service
+   - Circuit breaker configuration
+   - Rate limiting per service
+   - Authentication/authorization at gateway level
+   - CORS handling
+
+5. Add service registration:
+   - Each microservice registers itself on startup
+   - Heartbeat mechanism to detect failed services
+   - Graceful shutdown deregistration
+
+Example directory structure:
+- infrastructure/api-gateway/
+  - kong.yml (Kong configuration)
+  - routes.yml (Route definitions)
+  - plugins/ (Custom plugins)
+  - health-checks.yml
+```
+
+---
+
+## 3. Production Readiness Issues
+
+### 3.1 Observability ❌
+
+**Problem**: Minimal observability - no distributed tracing, limited metrics, basic logging.
+
+**Current State**:
+- ✅ Basic Python logging
+- ❌ No structured logging
+- ❌ No distributed tracing
+- ❌ No metrics/monitoring
+- ❌ No log aggregation
+- ❌ No APM (Application Performance Monitoring)
+
+**Impact**: Critical - Cannot debug production issues
+
+**Suggested Fix Prompt**:
+```
+Implement comprehensive observability with OpenTelemetry:
+
+1. Add OpenTelemetry instrumentation:
+   poetry add opentelemetry-api opentelemetry-sdk
+   poetry add opentelemetry-instrumentation-fastapi
+   poetry add opentelemetry-instrumentation-asyncpg
+   poetry add opentelemetry-exporter-otlp
+
+2. Create src/infrastructure/observability/:
+   - tracing.py - Distributed tracing setup
+   - metrics.py - Custom metrics collection
+   - logging.py - Structured logging with correlation IDs
+   - middleware.py - Request tracing middleware
+
+3. Implement distributed tracing:
+   - Trace all command handler executions
+   - Trace repository operations (event store reads/writes)
+   - Trace AI provider calls (with token usage metrics)
+   - Trace projection updates
+   - Add trace IDs to all log messages
+
+4. Add custom metrics:
+   - documents_uploaded_total (counter)
+   - documents_analyzed_total (counter)
+   - analysis_duration_seconds (histogram)
+   - ai_tokens_used_total (counter by provider)
+   - projection_lag_seconds (gauge per projection)
+   - event_store_size_bytes (gauge)
+
+5. Configure exporters:
+   - OTLP exporter to Grafana Cloud / Datadog / New Relic
+   - Prometheus exporter for metrics scraping
+   - Jaeger exporter for local development tracing
+
+6. Add structured logging:
+   - Use structlog for structured JSON logs
+   - Include trace_id, span_id in all logs
+   - Add correlation_id for request tracking
+   - Log all domain events with full context
+
+7. Create dashboards:
+   - docs/observability/grafana-dashboards.json
+   - System health dashboard
+   - Business metrics dashboard
+   - Error rate and latency dashboard
+
+8. Add health check endpoints:
+   - GET /health/liveness (K8s liveness probe)
+   - GET /health/readiness (K8s readiness probe)
+   - GET /health/dependencies (check DB, message broker, AI providers)
+```
+
+---
+
+### 3.2 Resilience and Fault Tolerance ❌
+
+**Problem**: No circuit breakers, retries, timeouts, or bulkheads.
+
+**Location**: `src/application/commands/analysis_handlers.py:86-93`
+
+**Evidence**:
+```python
+# Direct AI provider call with no resilience patterns
+result = await engine.analyze(
+    document_id=command.document_id,
+    document_content=document.markdown_content,
+    policy_rules=policy_rules,
+    options=options,
+    provider_type=provider_type,
 )
+# What if AI provider is down? Times out? Returns 500?
 ```
 
-Ensure this works with the frontend running on port 5000.
+**Issues**:
+1. No circuit breakers for external service calls (AI providers)
+2. No retry logic with exponential backoff
+3. No timeouts configured
+4. No fallback behavior
+5. No bulkhead pattern to isolate failures
+
+**Impact**: Critical - External failures can cascade
+
+**Suggested Fix Prompt**:
 ```
+Implement resilience patterns using Tenacity and Circuit Breaker:
 
----
+1. Install dependencies:
+   poetry add tenacity
+   poetry add pybreaker
 
-### 2. Projection Failures Silently Ignored - Data Consistency Risk
+2. Create src/infrastructure/resilience/:
+   - circuit_breaker.py - Circuit breaker implementation
+   - retry_policy.py - Retry policies with exponential backoff
+   - timeout.py - Timeout configurations
+   - bulkhead.py - Resource isolation
 
-**Category**: Event Sourcing, Data Consistency
-**Severity**: 🔴 CRITICAL
-**Location**: `/src/infrastructure/projections/document_projector.py` (line 79-80), `/src/infrastructure/projections/policy_projector.py` (similar)
+3. Wrap AI provider calls with resilience:
+   from tenacity import retry, stop_after_attempt, wait_exponential
+   from pybreaker import CircuitBreaker
 
-**Description**:
-When a projection fails to update the read model, the exception is caught and logged, but processing continues. This causes the read model to become inconsistent with the event store - the source of truth.
+   @retry(
+       stop=stop_after_attempt(3),
+       wait=wait_exponential(multiplier=1, min=4, max=10),
+       retry=retry_if_exception_type(AIProviderError),
+   )
+   async def analyze_with_retry(self, ...):
+       return await self._ai_provider.analyze(...)
 
-```python
-except Exception as e:
-    logger.exception(f"DocumentProjection failed to handle event {event.event_type}: {e}")
-    # ❌ NO RE-RAISE, NO COMPENSATION, SILENTLY CONTINUES
-    # Event is marked as processed even though read model wasn't updated
-```
+   # Add circuit breaker
+   ai_circuit_breaker = CircuitBreaker(
+       fail_max=5,
+       timeout_duration=60,
+       name="ai_provider_circuit"
+   )
 
-**Impact**:
-- Users see stale or incorrect data in the UI
-- Document status might show "Completed" when analysis actually failed
-- Analysis findings might be missing from the read model
-- Audit logs become unreliable
-- No automatic recovery mechanism
-- Requires manual database intervention to fix
+4. Configure timeouts:
+   - Document upload: 30s
+   - Document conversion: 60s
+   - AI analysis: 120s (configurable per document size)
+   - Policy evaluation: 30s
 
-**Real Production Scenario**:
-1. User uploads document → `DocumentUploaded` event stored ✓
-2. Projection tries to insert into `documents` table
-3. Database connection briefly drops
-4. Projection fails, logs error, continues
-5. User sees "Document uploaded successfully" but document doesn't appear in list
-6. User uploads again → duplicate document created
-7. Support team has to manually reconcile event store with read model
+5. Add fallback behavior:
+   - If AI provider fails, queue for retry
+   - Return cached results if available
+   - Degrade gracefully (e.g., basic rule-based analysis)
 
-**Suggested Prompt for Claude**:
-```
-Fix the projection failure handling to prevent read model inconsistency:
+6. Implement bulkhead pattern:
+   - Separate thread pools for different operations
+   - Limit concurrent AI requests per provider
+   - Prevent resource exhaustion
 
-1. Update DocumentProjection.handle() and PolicyProjection.handle():
-   - Remove the try/except that silently catches exceptions
-   - Let exceptions propagate to the event publisher
-   - OR implement a projection checkpoint/failure tracking system
-
-2. In the event publisher (/src/application/services/event_publisher.py):
-   - Track failed projections
-   - Implement retry logic with exponential backoff
-   - After N retries, mark projection as failed and alert
-
-3. Add a projection health check:
-   - Track last successfully processed event version per projection
-   - Expose metrics via health endpoint
-   - Alert when projection lag exceeds threshold
-
-4. Implement compensation logic:
-   - If projection fails, store failed event for manual replay
-   - Create admin endpoint to replay failed events
-   - Document recovery procedure in /docs/processes/
-
-5. Add integration test that verifies projection failure handling:
-   - Mock database connection failure
-   - Verify exception propagates correctly
-   - Verify retry logic works
-
-Follow Event Sourcing best practices: read models should eventually catch up, but failures must be visible and recoverable.
+7. Add chaos engineering tests:
+   - tests/chaos/ directory
+   - Simulate AI provider failures
+   - Simulate database connection loss
+   - Simulate network delays
 ```
 
 ---
 
-### 3. Missing Secret Validation at Application Startup
+### 3.3 Security ❌
 
-**Category**: Security, Operations
-**Severity**: 🔴 CRITICAL
-**Location**: `/src/api/dependencies.py`, `/src/infrastructure/ai/provider_factory.py`
+**Problem**: Minimal security controls - no authentication, authorization, rate limiting, or secrets management.
 
-**Description**:
-API keys and secrets are read from environment variables without validation at startup. The application starts successfully even with missing or invalid secrets, then fails cryptically when those secrets are needed. ADR-012 mentions Doppler integration but implementation is incomplete.
+**Current State**:
+- ❌ No authentication
+- ❌ No authorization (RBAC)
+- ❌ No API rate limiting
+- ❌ No input sanitization
+- ❌ No secrets encryption at rest
+- ✅ Uses Doppler for secrets management (ADR-023)
+- ❌ No audit logging
 
-```python
-# In dependencies.py:75
-database_url = os.environ.get("DATABASE_URL", "")  # Returns empty string!
+**Impact**: Critical for production
 
-# In provider_factory.py
-api_key = os.environ.get("ANTHROPIC_API_KEY")  # No validation
-if not api_key:
-    # Logs warning but continues - fails later when used
+**Suggested Fix Prompt**:
 ```
+Implement comprehensive security controls:
 
-**Impact**:
-- Application appears healthy but cannot perform core functions
-- AI analysis silently fails with cryptic errors
-- Database operations fail with confusing error messages
-- Health checks pass even though system is broken
-- Difficult to debug in production
+1. Authentication & Authorization:
+   - Add OAuth2/OIDC authentication (Auth0, Okta, or AWS Cognito)
+   - Implement JWT token validation middleware
+   - Add API key authentication for service-to-service calls
 
-**Production Failure Scenario**:
-1. Deploy to production with missing `ANTHROPIC_API_KEY`
-2. Container starts successfully, health checks pass ✓
-3. Load balancer marks instance as healthy ✓
-4. User uploads document and requests analysis
-5. Analysis fails with "Provider 'claude' is not configured"
-6. User sees generic error, support cannot quickly diagnose
-7. Costs incurred for failed requests, bad user experience
+   Create src/api/auth/:
+   - auth_middleware.py - JWT validation middleware
+   - permissions.py - Permission decorators
+   - rbac.py - Role-based access control
 
-**Suggested Prompt for Claude**:
-```
-Implement comprehensive secret validation at application startup:
+2. Define roles and permissions:
+   - viewer: Read-only access to documents and analysis
+   - editor: Upload and edit documents
+   - analyst: Run analysis and approve feedback
+   - admin: Manage policies and users
 
-1. Create a configuration validation module at /src/api/config.py:
-   ```python
-   from pydantic import BaseSettings, validator
+3. Add authorization to endpoints:
+   from src.api.auth.permissions import require_permission
 
-   class Settings(BaseSettings):
-       DATABASE_URL: str
-       CORS_ORIGINS: str
-       LOG_LEVEL: str = "INFO"
+   @router.post("/api/documents", response_model=DocumentId)
+   @require_permission("documents:write")
+   async def upload_document(...):
 
-       # AI Provider Keys (at least one required)
-       ANTHROPIC_API_KEY: Optional[str] = None
-       OPENAI_API_KEY: Optional[str] = None
-       GOOGLE_API_KEY: Optional[str] = None
+4. Implement rate limiting:
+   - Use slowapi or Redis-based rate limiter
+   - Configure per endpoint:
+     - Document upload: 10/hour per user
+     - Analysis: 5/hour per user
+     - Queries: 100/minute per user
+   - Add rate limit headers (X-RateLimit-Remaining, etc.)
 
-       @validator('DATABASE_URL')
-       def validate_database_url(cls, v):
-           if not v or v == "":
-               raise ValueError("DATABASE_URL must be set")
-           return v
+5. Input validation and sanitization:
+   - Validate all file uploads (magic bytes check, not just extension)
+   - Sanitize markdown content to prevent XSS
+   - Validate UUID formats
+   - Add file size limits (env var: MAX_UPLOAD_SIZE_MB)
 
-       def validate_at_least_one_ai_provider(self):
-           if not any([self.ANTHROPIC_API_KEY, self.OPENAI_API_KEY, self.GOOGLE_API_KEY]):
-               raise ValueError("At least one AI provider API key must be configured")
+6. Add security headers:
+   - Create src/api/middleware/security_headers.py
+   - Add helmet-like middleware for FastAPI
+   - Configure CSP, HSTS, X-Frame-Options, etc.
 
-       class Config:
-           env_file = '.env'
-   ```
+7. Audit logging:
+   - Log all authentication attempts (success/failure)
+   - Log all authorization failures
+   - Log all data modifications with user context
+   - Store audit logs separately from application logs
 
-2. Update /src/api/main.py to validate settings at startup:
-   ```python
-   @asynccontextmanager
-   async def lifespan(app: FastAPI):
-       # Validate configuration first
-       try:
-           settings = Settings()
-           settings.validate_at_least_one_ai_provider()
-           logger.info(f"Configuration validated successfully")
-           logger.info(f"Database: {settings.DATABASE_URL[:20]}...")
-           logger.info(f"AI Providers available: {', '.join(...)}")
-       except ValidationError as e:
-           logger.critical(f"Configuration validation failed: {e}")
-           raise
-   ```
+   Create audit_log table:
+   CREATE TABLE audit_logs (
+       id UUID PRIMARY KEY,
+       timestamp TIMESTAMP NOT NULL,
+       user_id UUID,
+       action VARCHAR(100) NOT NULL,
+       resource_type VARCHAR(50),
+       resource_id UUID,
+       ip_address INET,
+       user_agent TEXT,
+       result VARCHAR(20),
+       metadata JSONB
+   );
 
-3. Update dependencies.py to use Settings
+8. Secrets management:
+   - ✅ Already using Doppler (good!)
+   - Add secrets rotation policy
+   - Never log secrets or API keys
+   - Add secret scanning to CI/CD (git-secrets, truffleHog)
 
-4. Add configuration test at /tests/unit/api/test_config.py
-
-5. Document required environment variables in /docs/deployment/
-
-This ensures "fail fast" at startup rather than cryptic runtime failures.
-```
-
----
-
-### 4. Bare Exception Handlers Mask Root Causes
-
-**Category**: Code Quality, Observability
-**Severity**: 🔴 CRITICAL (High volume)
-**Location**: 40+ instances across codebase
-
-**Key Locations**:
-- `/src/api/middleware/error_handler.py:148-161` - Catches ALL exceptions
-- `/src/infrastructure/ai/provider_factory.py:91` - Silent catch
-- `/src/infrastructure/projections/document_projector.py:79` - See issue #2
-- All converter files (`/src/infrastructure/converters/*.py`)
-- Multiple route handlers
-
-**Description**:
-Generic `except Exception as e:` blocks catch everything, including system errors that should crash the application. This masks root causes and makes production debugging extremely difficult.
-
-```python
-# Anti-pattern found throughout codebase:
-try:
-    # ... complex operation ...
-except Exception as e:
-    logger.exception(f"Something failed: {e}")
-    # No re-raise, no specific handling, just log and continue
-```
-
-**Impact**:
-- Database connection failures look like validation errors
-- Out of memory errors get swallowed
-- Connection pool exhaustion is masked
-- Cannot distinguish transient errors from permanent failures
-- Monitoring systems cannot alert on specific error types
-- Debugging requires reading logs with no structured error types
-
-**Production Example**:
-```python
-# In PDF converter:
-try:
-    pdf = pypdf.PdfReader(io.BytesIO(content))
-    # ... conversion logic ...
-except Exception as e:  # ❌ Catches EVERYTHING
-    # Could be: FileNotFoundError, MemoryError, ConnectionError, KeyError...
-    logger.exception(f"PDF conversion failed: {e}")
-    return ConversionResult(success=False, errors=["Conversion failed"])
-    # User sees generic "Conversion failed" for all error types
-```
-
-**Suggested Prompt for Claude**:
-```
-Refactor exception handling to catch specific exceptions and provide actionable error messages:
-
-1. **Phase 1: Converters** (/src/infrastructure/converters/*.py)
-   Replace bare `except Exception` with specific exceptions:
-   ```python
-   try:
-       pdf = pypdf.PdfReader(io.BytesIO(content))
-       text = self._extract_text(pdf)
-   except pypdf.errors.PdfReadError as e:
-       logger.error(f"Invalid PDF file: {e}")
-       return ConversionResult(success=False, errors=["File is not a valid PDF"])
-   except MemoryError:
-       logger.critical(f"Out of memory processing PDF of size {len(content)}")
-       return ConversionResult(success=False, errors=["File too large to process"])
-   except Exception as e:
-       # Log with full stack trace for unexpected errors
-       logger.exception(f"Unexpected error converting PDF: {e}")
-       raise  # Re-raise unexpected errors
-   ```
-
-2. **Phase 2: Projections** (Already covered in Issue #2)
-
-3. **Phase 3: API Error Handler** (/src/api/middleware/error_handler.py)
-   Handle specific exception types:
-   ```python
-   except asyncpg.exceptions.IntegrityConstraintViolationError as e:
-       # Specific handling for duplicate keys
-   except asyncpg.exceptions.ConnectionDoesNotExistError as e:
-       # Database connection issue
-   except ValidationError as e:
-       # Client error vs server error
-   except Exception as e:
-       # Only catch truly unexpected errors here
-   ```
-
-4. **Phase 4: Create custom exception hierarchy**:
-   ```python
-   # In /src/domain/exceptions/base.py
-   class DomainException(Exception): pass
-   class AggregateNotFoundError(DomainException): pass
-   class ConcurrencyError(DomainException): pass
-   class ValidationError(DomainException): pass
-   ```
-
-5. Run tests after each phase to ensure no regressions
-
-This improves observability, debugging, and user experience with actionable error messages.
+9. Add security scanning:
+   - SAST: bandit for Python code
+   - Dependency scanning: safety check
+   - Container scanning: trivy
+   - Add to CI/CD pipeline
 ```
 
 ---
 
-### 5. Event Versioning Strategy Not Implemented
+### 3.4 Configuration Management ⚠️
 
-**Category**: Event Sourcing
-**Severity**: 🔴 CRITICAL (Technical Debt)
-**Location**: `/src/domain/events/base.py` (line 12), all event classes
+**Problem**: Configuration is environment-based but lacks validation and documentation.
 
-**Description**:
-All events have a hardcoded `version: int = field(default=1)`. There's no strategy for handling event schema evolution. When event fields change (add/remove/rename), old events in the database cannot be deserialized.
+**Location**: `src/api/dependencies.py:73-85`
 
+**Evidence**:
 ```python
-@dataclass(frozen=True)
-class DomainEvent:
-    event_id: UUID = field(default_factory=uuid4)
-    event_type: str = ""
-    aggregate_id: str = ""
-    timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
-    version: int = field(default=1)  # ❌ Always 1, never changes
-    user_id: Optional[str] = None
-```
-
-**Impact**:
-- Cannot safely evolve event schemas
-- Adding a required field to an event breaks deserialization of old events
-- Renaming fields causes replay failures
-- Cannot rebuild aggregates from historical events
-- Data migrations become extremely risky
-- May require rebuilding entire event store
-
-**Real Scenario**:
-```python
-# Version 1 (current in production):
-@dataclass(frozen=True)
-class DocumentUploaded(DomainEvent):
-    filename: str
-    content_type: str
-
-# Version 2 (need to add this):
-@dataclass(frozen=True)
-class DocumentUploaded(DomainEvent):
-    filename: str
-    content_type: str
-    file_size: int  # ❌ NEW REQUIRED FIELD - breaks old events!
-    uploaded_by_user_id: str  # ❌ NEW REQUIRED FIELD
-```
-
-When you deploy V2, all old `DocumentUploaded` events (without these fields) will fail to deserialize.
-
-**Suggested Prompt for Claude**:
-```
-Implement a comprehensive event versioning strategy following Event Sourcing best practices:
-
-1. **Create Event Versioning ADR** at /docs/decisions/016-event-versioning-strategy.md:
-   Document the chosen strategy:
-   - Weak schema (new optional fields only)
-   - Event upcasting (transform old events to new schema)
-   - Multiple event versions coexist
-   - Copy-and-transform pattern
-
-2. **Implement Event Upcaster System**:
-   ```python
-   # /src/infrastructure/persistence/event_upcaster.py
-   from typing import Dict, Any, Protocol
-
-   class EventUpcaster(Protocol):
-       def can_upcast(self, event_type: str, version: int) -> bool: ...
-       def upcast(self, event_data: Dict[str, Any]) -> Dict[str, Any]: ...
-
-   class DocumentUploadedV1ToV2Upcaster:
-       def can_upcast(self, event_type: str, version: int) -> bool:
-           return event_type == "DocumentUploaded" and version == 1
-
-       def upcast(self, event_data: Dict[str, Any]) -> Dict[str, Any]:
-           # Add default values for new required fields
-           return {
-               **event_data,
-               "version": 2,
-               "file_size": 0,  # Default for historical events
-               "uploaded_by_user_id": "system",  # Default
-           }
-   ```
-
-3. **Update Event Store to Apply Upcasting**:
-   ```python
-   # In event_store.py
-   def deserialize_event(self, event_data: Dict[str, Any]) -> DomainEvent:
-       event_type = event_data["event_type"]
-       version = event_data.get("version", 1)
-
-       # Apply upcasters until we reach current version
-       for upcaster in self._upcasters:
-           if upcaster.can_upcast(event_type, version):
-               event_data = upcaster.upcast(event_data)
-               version = event_data["version"]
-
-       # Now deserialize to current event class
-       event_class = self._event_registry.get(event_type)
-       return event_class(**event_data)
-   ```
-
-4. **Document Event Evolution Process** in /docs/processes/004-evolving-events.md:
-   - How to add new optional fields (safe)
-   - How to add new required fields (needs upcaster)
-   - How to rename fields (needs upcaster)
-   - How to remove fields (mark as deprecated)
-   - How to test event evolution
-
-5. **Add Integration Tests** for event evolution:
-   - Test deserializing V1 events with V2 code
-   - Test upcasters work correctly
-   - Test aggregate reconstruction with mixed versions
-
-6. **Add Version Registry**:
-   ```python
-   # Document current version of each event
-   EVENT_VERSIONS = {
-       "DocumentUploaded": 2,
-       "DocumentConverted": 1,
-       "AnalysisStarted": 1,
-       # ...
-   }
-   ```
-
-Follow the "Tolerant Reader" pattern: old events must be readable by new code.
-```
-
----
-
-### 6. Database Connection Pool Not Configurable for Production
-
-**Category**: Production Readiness, Performance
-**Severity**: 🔴 CRITICAL
-**Location**: `/src/api/dependencies.py:69-70, 100-104`
-
-**Description**:
-Database connection pool size is hardcoded to `min_size=5, max_size=20`. The Settings class has fields for these values but `get_settings()` doesn't read them from environment. Cannot tune pool size for production load.
-
-```python
-@dataclass
-class Settings:
-    database_url: str
-    pool_min_size: int = 5  # ❌ Hardcoded, not read from env
-    pool_max_size: int = 20  # ❌ Hardcoded
-
 @lru_cache
 def get_settings() -> Settings:
-    database_url = os.environ.get("DATABASE_URL", "")
-    return Settings(database_url=database_url)  # ❌ Doesn't read pool sizes!
-
-# Later:
-self._pool = await asyncpg.create_pool(
-    self._settings.database_url,
-    min_size=self._settings.pool_min_size,  # Always 5
-    max_size=self._settings.pool_max_size,  # Always 20
-)
+    database_url = os.environ.get("DATABASE_URL", "")  # Empty string default!
+    pool_min_size = int(os.environ.get("DB_POOL_MIN_SIZE", "5"))
+    pool_max_size = int(os.environ.get("DB_POOL_MAX_SIZE", "20"))
+    return Settings(...)
 ```
 
-**Impact**:
-- Cannot scale for production traffic
-- max=20 is too small for high-load scenarios
-- Under load, requests queue waiting for connections
-- Cannot tune per environment (dev vs staging vs prod)
-- May need to restart application to change pool size
+**Issues**:
+1. No validation of required environment variables
+2. Empty string default for DATABASE_URL will cause runtime errors
+3. No configuration schema documentation
+4. No type validation for environment variables
+5. Configuration scattered across codebase
 
-**Production Load Analysis**:
-- 100 concurrent users
-- Each request might hold connection for 100ms
-- Need ~10 connections minimum
-- With AI analysis (long-running), could need 50+ connections
-- Current max=20 will cause queuing and timeouts
+**Impact**: Medium - Can cause deployment failures
 
-**Suggested Prompt for Claude**:
+**Suggested Fix Prompt**:
 ```
-Make database connection pool size configurable via environment variables:
+Implement robust configuration management with Pydantic Settings:
 
-1. Update get_settings() in /src/api/dependencies.py:
-   ```python
-   @lru_cache
-   def get_settings() -> Settings:
-       database_url = os.environ.get("DATABASE_URL", "")
-       pool_min_size = int(os.environ.get("DB_POOL_MIN_SIZE", "5"))
-       pool_max_size = int(os.environ.get("DB_POOL_MAX_SIZE", "20"))
+1. Create src/config/settings.py:
+   from pydantic_settings import BaseSettings
+   from pydantic import Field, PostgresDsn, validator
 
-       return Settings(
-           database_url=database_url,
-           pool_min_size=pool_min_size,
-           pool_max_size=pool_max_size,
-       )
-   ```
+   class DatabaseSettings(BaseSettings):
+       url: PostgresDsn = Field(..., env="DATABASE_URL")
+       pool_min_size: int = Field(default=10, ge=1, le=100)
+       pool_max_size: int = Field(default=50, ge=1, le=200)
 
-2. Add to .env.example:
-   ```
-   # Database Connection Pool
-   DB_POOL_MIN_SIZE=5
-   DB_POOL_MAX_SIZE=20
+       @validator("pool_max_size")
+       def validate_pool_max(cls, v, values):
+           if v < values.get("pool_min_size", 0):
+               raise ValueError("pool_max_size must be >= pool_min_size")
+           return v
 
-   # Production recommendations:
-   # DB_POOL_MIN_SIZE=10
-   # DB_POOL_MAX_SIZE=100
-   ```
+   class AISettings(BaseSettings):
+       openai_api_key: str = Field(..., env="OPENAI_API_KEY")
+       claude_api_key: str = Field(..., env="ANTHROPIC_API_KEY")
+       gemini_api_key: str = Field(..., env="GEMINI_API_KEY")
+       default_provider: str = Field(default="claude")
+       max_tokens: int = Field(default=4000, ge=100, le=100000)
 
-3. Add validation in Settings:
-   ```python
-   def __post_init__(self):
-       if self.pool_min_size < 1:
-           raise ValueError("pool_min_size must be >= 1")
-       if self.pool_max_size < self.pool_min_size:
-           raise ValueError("pool_max_size must be >= pool_min_size")
-       if self.pool_max_size > 500:
-           logger.warning(f"pool_max_size={self.pool_max_size} is very high")
-   ```
+   class SecuritySettings(BaseSettings):
+       jwt_secret: str = Field(..., env="JWT_SECRET")
+       jwt_algorithm: str = Field(default="HS256")
+       access_token_expire_minutes: int = Field(default=30)
 
-4. Log pool configuration at startup:
-   ```python
-   logger.info(f"Database pool: min={self.pool_min_size}, max={self.pool_max_size}")
-   ```
+   class ObservabilitySettings(BaseSettings):
+       otlp_endpoint: str | None = Field(None, env="OTLP_ENDPOINT")
+       log_level: str = Field(default="INFO")
+       enable_tracing: bool = Field(default=True)
 
-5. Document tuning guidelines in /docs/deployment/database-tuning.md:
-   - How to calculate required pool size
-   - Monitoring pool usage
-   - Signs of pool exhaustion
-   - Recommended values per load profile
+   class ApplicationSettings(BaseSettings):
+       app_name: str = Field(default="docsense")
+       environment: str = Field(..., env="ENVIRONMENT")  # dev/staging/prod
+       debug: bool = Field(default=False)
+       database: DatabaseSettings = DatabaseSettings()
+       ai: AISettings = AISettings()
+       security: SecuritySettings = SecuritySettings()
+       observability: ObservabilitySettings = ObservabilitySettings()
 
-6. Add pool metrics to health endpoint
-```
+       class Config:
+           env_file = ".env"
+           case_sensitive = False
 
----
+2. Update Container to use validated settings:
+   def __init__(self):
+       self._settings = ApplicationSettings()  # Validates on instantiation
 
-## HIGH PRIORITY ISSUES
+3. Create configuration documentation:
+   - docs/deployment/environment-variables.md
+   - List all required and optional variables
+   - Document default values and validation rules
+   - Provide example .env file
 
-### 7. Mutable Value Objects in FeedbackSession Aggregate
+4. Add configuration tests:
+   - tests/unit/config/test_settings.py
+   - Test validation rules
+   - Test environment variable parsing
+   - Test default values
 
-**Category**: DDD Compliance
-**Severity**: 🟠 HIGH
-**Location**: `/src/domain/aggregates/feedback_session.py:149-173`
-
-**Description**:
-Feedback items are stored as mutable dicts instead of immutable value objects. This violates DDD principles where value objects should be immutable. External code can mutate aggregate state without going through the aggregate's methods.
-
-```python
-def _when(self, event: DomainEvent) -> None:
-    if isinstance(event, FeedbackGenerated):
-        self._feedback_items.append({  # ❌ MUTABLE DICT
-            "feedback_id": event.feedback_id,
-            "finding_id": event.finding_id,
-            "feedback_type": event.feedback_type,
-            "status": "PENDING",  # ❌ Can be changed directly
-            # ...
-        })
-    elif isinstance(event, ChangeAccepted):
-        for item in self._feedback_items:
-            if item["feedback_id"] == event.feedback_id:
-                item["status"] = "ACCEPTED"  # ❌ DIRECT MUTATION
-```
-
-**Impact**:
-- Callers can modify feedback items: `session.feedback_items[0]["status"] = "HACKED"`
-- Breaks encapsulation - aggregate cannot enforce invariants
-- Violates Event Sourcing - state changes not from events
-- Makes testing difficult - cannot verify state transitions
-- Risk of accidental mutations causing bugs
-
-**Suggested Prompt for Claude**:
-```
-Refactor FeedbackSession to use immutable FeedbackItem value objects:
-
-1. Create FeedbackItem value object at /src/domain/value_objects/feedback_item.py:
-   ```python
-   from dataclasses import dataclass
-   from enum import Enum
-   from typing import Optional
-
-   class FeedbackStatus(Enum):
-       PENDING = "pending"
-       ACCEPTED = "accepted"
-       REJECTED = "rejected"
-       MODIFIED = "modified"
-
-   @dataclass(frozen=True)  # ✓ Immutable
-   class FeedbackItem:
-       feedback_id: str
-       finding_id: str
-       feedback_type: str
-       status: FeedbackStatus
-       original_text: str
-       suggested_text: str
-       explanation: str
-       modified_text: Optional[str] = None
-
-       def accept(self) -> "FeedbackItem":
-           return FeedbackItem(
-               feedback_id=self.feedback_id,
-               # ... copy all fields ...
-               status=FeedbackStatus.ACCEPTED,
-           )
-
-       def reject(self) -> "FeedbackItem":
-           # Similar pattern
-
-       def modify(self, new_text: str) -> "FeedbackItem":
-           # Similar pattern
-   ```
-
-2. Update FeedbackSession aggregate:
-   ```python
-   from typing import List
-   from src.domain.value_objects.feedback_item import FeedbackItem, FeedbackStatus
-
-   class FeedbackSession:
-       def __init__(self, ...):
-           self._feedback_items: List[FeedbackItem] = []
-
-       def _when(self, event: DomainEvent) -> None:
-           if isinstance(event, FeedbackGenerated):
-               item = FeedbackItem(
-                   feedback_id=event.feedback_id,
-                   # ...
-                   status=FeedbackStatus.PENDING,
-               )
-               self._feedback_items = self._feedback_items + [item]  # New list
-
-           elif isinstance(event, ChangeAccepted):
-               self._feedback_items = [
-                   item.accept() if item.feedback_id == event.feedback_id else item
-                   for item in self._feedback_items
-               ]
-
-       @property
-       def feedback_items(self) -> List[FeedbackItem]:
-           return self._feedback_items.copy()  # Return copy
-   ```
-
-3. Update serialization logic in repository to handle FeedbackItem
-
-4. Update tests to work with immutable value objects
-
-5. Update API schemas to serialize FeedbackItem correctly
-
-This ensures aggregate state can only be changed through domain events.
+5. Create environment-specific configs:
+   - .env.development
+   - .env.staging
+   - .env.production
+   - Add to .gitignore (only .env.example in repo)
 ```
 
 ---
 
-### 8. Mutable Value Objects in PolicyRepository Aggregate
+## 4. Scalability Concerns
 
-**Category**: DDD Compliance
-**Severity**: 🟠 HIGH
-**Location**: `/src/domain/aggregates/policy_repository.py:20, 32-33`
+### 4.1 Event Store Growth ⚠️
 
-**Description**:
-Similar to FeedbackSession, policies are stored as mutable dicts. Also uses mutable `Set[UUID]` for document assignments.
+**Problem**: Event store will grow unbounded without archival strategy.
 
-```python
-class PolicyRepository:
-    def __init__(self, ...):
-        self._policies: List[Dict[str, Any]] = []  # ❌ Mutable dicts
-        self._assigned_documents: Set[UUID] = set()  # ❌ Mutable set
+**Issues**:
+1. No event archival policy
+2. No event store compression
+3. No event pruning strategy
+4. Snapshots help but don't solve long-term growth
+
+**Impact**: Medium - Will cause performance degradation over time
+
+**Suggested Fix Prompt**:
 ```
+Implement event store archival and optimization:
 
-**Suggested Prompt for Claude**:
-```
-Refactor PolicyRepository to use immutable value objects (similar to Issue #7):
+1. Create event archival strategy:
+   - Archive events older than 1 year to cold storage (S3 Glacier)
+   - Keep events for last year in hot storage (PostgreSQL)
+   - Maintain event ordering for replay capability
 
-1. Create Policy value object at /src/domain/value_objects/policy.py:
-   ```python
-   @dataclass(frozen=True)
-   class Policy:
-       policy_id: str
-       title: str
-       description: str
-       content: str
-       version: str
-       added_at: datetime
-   ```
-
-2. Create DocumentAssignment value object:
-   ```python
-   @dataclass(frozen=True)
-   class DocumentAssignment:
-       document_id: UUID
-       assigned_at: datetime
-       assigned_by: Optional[str] = None
-   ```
-
-3. Update PolicyRepository aggregate to use these value objects
-
-4. Update _when() to create new lists instead of mutating
-
-5. Update repository serialization/deserialization
-
-Follow the same pattern as Issue #7.
-```
-
----
-
-### 9. Race Condition in Optimistic Locking
-
-**Category**: Event Sourcing, Concurrency
-**Severity**: 🟠 HIGH
-**Location**: `/src/infrastructure/persistence/event_store.py:55-90`
-
-**Description**:
-The optimistic locking check happens outside the transaction, creating a race window where two concurrent requests can both pass the version check and insert duplicate events.
-
-```python
-async def append_events(
-    self,
-    aggregate_id: str,
-    events: List[DomainEvent],
-    expected_version: int
-) -> None:
-    # ❌ Check happens OUTSIDE transaction
-    current = await conn.fetchval(
-        "SELECT COALESCE(MAX(event_version), 0) FROM events WHERE aggregate_id = $1",
-        aggregate_id
-    )
-    if current != expected_version:
-        raise ConcurrencyError(...)
-
-    # ❌ RACE WINDOW HERE - another request could insert between check and insert
-
-    for i, event in enumerate(events):
-        version = expected_version + i + 1
-        await conn.execute(
-            "INSERT INTO events (...) VALUES (...)",
-            # ...
-        )
-```
-
-**Race Condition Timeline**:
-```
-Time  Request A                    Request B
-----  -------------------------    -------------------------
-T1    Check version: current=5
-T2                                 Check version: current=5
-T3    Both pass! (expected=5)      Both pass! (expected=5)
-T4    Insert event at version=6
-T5                                 Insert event at version=6 💥
-```
-
-The unique constraint on `(aggregate_id, event_version)` will catch this, but:
-1. Error handling doesn't distinguish expected conflicts from race conditions
-2. No automatic retry logic
-3. User sees cryptic error
-
-**Suggested Prompt for Claude**:
-```
-Fix the race condition in optimistic locking by implementing proper transactional version checking:
-
-1. **Option A: Check-and-Insert in Single Statement**
-   ```python
-   async def append_events(
-       self,
-       aggregate_id: str,
-       events: List[DomainEvent],
-       expected_version: int
-   ) -> None:
-       async with self.pool.acquire() as conn:
-           async with conn.transaction():
-               # Lock the aggregate for this transaction
-               current = await conn.fetchval(
-                   """
-                   SELECT COALESCE(MAX(event_version), 0)
-                   FROM events
-                   WHERE aggregate_id = $1
-                   FOR UPDATE  -- ✓ Locks the rows
-                   """,
-                   aggregate_id
-               )
-
-               if current != expected_version:
-                   raise ConcurrencyError(
-                       f"Expected version {expected_version} but found {current}"
-                   )
-
-               # Now safe to insert - we hold the lock
-               for i, event in enumerate(events):
-                   version = expected_version + i + 1
-                   await conn.execute(...)
-   ```
-
-2. **Option B: Use INSERT ... ON CONFLICT**
-   ```python
-   # Insert with conflict detection
-   try:
-       await conn.execute(
-           """
-           INSERT INTO events (aggregate_id, event_version, ...)
-           VALUES ($1, $2, ...)
-           """,
-           aggregate_id, version, ...
-       )
-   except asyncpg.exceptions.UniqueViolationError:
-       # This is a concurrency conflict, not a bug
-       raise ConcurrencyError(
-           f"Concurrent modification detected for aggregate {aggregate_id}"
-       )
-   ```
-
-3. **Add Automatic Retry in Repository**:
-   ```python
-   async def save(self, aggregate: Document) -> None:
-       max_retries = 3
-       for attempt in range(max_retries):
-           try:
-               await self._event_store.append_events(...)
-               return
-           except ConcurrencyError:
-               if attempt == max_retries - 1:
-                   raise
-               # Reload aggregate and retry
-               aggregate = await self.get(aggregate.id)
-               # Let caller know they need to retry with fresh aggregate
-               raise RetryableConflict()
-   ```
-
-4. Document concurrency handling in /docs/architecture/concurrency-control.md
-
-5. Add integration test that simulates concurrent modifications
-
-This ensures true optimistic locking with proper race condition handling.
-```
-
----
-
-### 10. Incomplete State Restoration from Snapshots
-
-**Category**: Event Sourcing, DDD
-**Severity**: 🟠 HIGH
-**Location**: `/src/infrastructure/repositories/document_repository.py:33-53`
-
-**Description**:
-When restoring aggregate from snapshot, some fields are hardcoded instead of deserialized from the snapshot. This means snapshots don't capture complete state.
-
-```python
-def _deserialize_aggregate(self, state: dict) -> Document:
-    document = Document.__new__(Document)  # Bypass constructor
-    document._id = UUID(state["id"])
-    document._version = state["version"]
-    document._pending_events = []
-    document._filename = state["filename"]
-    # ... more fields ...
-
-    # ❌ HARDCODED - Not from snapshot!
-    document._policy_repository_id = None
-    document._findings = []
-
-    # ❌ MISSING: sections, semantic_ir, analysis_metadata, etc.
-
-    return document
-```
-
-**Impact**:
-- Snapshots are incomplete
-- When loading from snapshot, aggregate has wrong state
-- Policy assignments are lost
-- Analysis findings are lost
-- Other fields may be missing
-- Defeats the purpose of snapshots (performance optimization)
-
-**Suggested Prompt for Claude**:
-```
-Fix snapshot serialization/deserialization to capture complete aggregate state:
-
-1. Update _serialize_aggregate() in DocumentRepository to include ALL fields:
-   ```python
-   def _serialize_aggregate(self, document: Document) -> dict:
-       return {
-           "id": str(document.id),
-           "version": document.version,
-           "filename": document.filename,
-           "title": document.title,
-           "description": document.description,
-           "original_format": document.original_format,
-           "sections": document.sections,  # ✓ Include
-           "policy_repository_id": str(document.policy_repository_id) if document.policy_repository_id else None,  # ✓ Include
-           "findings": [self._serialize_finding(f) for f in document.findings],  # ✓ Include
-           "semantic_ir": document.semantic_ir,  # ✓ Include
-           "analysis_metadata": document.analysis_metadata,  # ✓ Include
-           "status": document.status,
-           "uploaded_at": document.uploaded_at.isoformat(),
-           "last_modified": document.last_modified.isoformat(),
-           # Include ALL aggregate state
-       }
-   ```
-
-2. Update _deserialize_aggregate() to restore ALL fields:
-   ```python
-   def _deserialize_aggregate(self, state: dict) -> Document:
-       document = Document.__new__(Document)
-
-       # Restore ALL fields from state
-       document._id = UUID(state["id"])
-       document._version = state["version"]
-       document._pending_events = []
-       document._filename = state["filename"]
-       # ... all other fields ...
-
-       # ✓ Restore policy assignment
-       policy_id = state.get("policy_repository_id")
-       document._policy_repository_id = UUID(policy_id) if policy_id else None
-
-       # ✓ Restore findings
-       document._findings = [
-           self._deserialize_finding(f) for f in state.get("findings", [])
-       ]
-
-       # ✓ Restore ALL other fields
-
-       return document
-   ```
-
-3. Add validation that deserialized state matches original:
-   ```python
-   # In tests:
-   def test_snapshot_roundtrip():
-       # Create document with complex state
-       doc = create_test_document()
-       doc.assign_to_policy(policy_id)
-       doc.complete_analysis(findings=[...])
-
-       # Serialize and deserialize
-       state = repo._serialize_aggregate(doc)
-       restored = repo._deserialize_aggregate(state)
-
-       # Verify ALL fields match
-       assert restored.policy_repository_id == doc.policy_repository_id
-       assert restored.findings == doc.findings
-       # Assert ALL fields
-   ```
-
-4. Document snapshot format in /docs/architecture/snapshots.md
-
-This ensures snapshots provide true performance benefit without data loss.
-```
-
----
-
-### 11. Missing Input Validation on File Uploads
-
-**Category**: Security, Reliability
-**Severity**: 🟠 HIGH
-**Location**: `/src/api/routes/documents.py:51-91`
-
-**Description**:
-File upload endpoint doesn't validate file size, filename length, or properly sanitize filenames before processing.
-
-```python
-@router.post("/documents", ...)
-async def upload_document(
-    file: UploadFile = File(...),
-    title: str = Form(...),  # ❌ NO MAX LENGTH
-    description: Optional[str] = Form(None),  # ❌ NO MAX LENGTH
-    ...
-):
-    content = await file.read()  # ❌ NO SIZE CHECK - could read 10GB file
-
-    command = UploadDocument(
-        filename=file.filename or title,  # ❌ TRUSTS CLIENT-PROVIDED FILENAME
-        content=content,  # ❌ UNBOUNDED SIZE
-        title=title,
-        # ...
-```
-
-**Impact**:
-- Out of memory from huge file uploads
-- Disk space exhaustion
-- Filename injection attacks (e.g., `../../../../etc/passwd`)
-- Database storage issues (title/description too long)
-- Denial of service through resource exhaustion
-
-**Suggested Prompt for Claude**:
-```
-Add comprehensive input validation to file upload endpoint:
-
-1. Add file size validation:
-   ```python
-   MAX_FILE_SIZE = 50 * 1024 * 1024  # 50 MB
-
-   @router.post("/documents", ...)
-   async def upload_document(
-       file: UploadFile = File(...),
-       title: str = Form(..., max_length=255),  # ✓ Max length
-       description: Optional[str] = Form(None, max_length=2000),  # ✓ Max length
+2. Implement event store partitioning:
+   -- Partition events table by created_at
+   CREATE TABLE events (
+       id UUID,
+       aggregate_id UUID,
+       created_at TIMESTAMP,
        ...
-   ):
-       # ✓ Check file size before reading
-       file.file.seek(0, 2)  # Seek to end
-       file_size = file.file.tell()
-       file.file.seek(0)  # Seek back to start
+   ) PARTITION BY RANGE (created_at);
 
-       if file_size > MAX_FILE_SIZE:
-           raise HTTPException(
-               status_code=413,
-               detail=f"File too large. Maximum size is {MAX_FILE_SIZE // 1024 // 1024} MB"
-           )
+   CREATE TABLE events_2024_q4 PARTITION OF events
+       FOR VALUES FROM ('2024-10-01') TO ('2025-01-01');
 
-       content = await file.read()
-   ```
+3. Create archive service:
+   - src/infrastructure/persistence/event_archiver.py
+   - Background job to archive old partitions
+   - Compress archived events
+   - Store in S3 with lifecycle policy
 
-2. Sanitize filename:
-   ```python
-   import re
-   from pathlib import Path
+4. Implement event replay from archive:
+   - Query archive when loading old aggregates
+   - Combine archive + hot store events
+   - Cache restored aggregates
 
-   def sanitize_filename(filename: str) -> str:
-       # Remove path separators
-       filename = Path(filename).name
-       # Remove/replace dangerous characters
-       filename = re.sub(r'[^\w\s\-\.]', '_', filename)
-       # Limit length
-       if len(filename) > 255:
-           name, ext = filename.rsplit('.', 1) if '.' in filename else (filename, '')
-           filename = name[:250] + ('.' + ext if ext else '')
-       return filename
-
-   command = UploadDocument(
-       filename=sanitize_filename(file.filename or title),
-       # ...
-   ```
-
-3. Validate content type:
-   ```python
-   ALLOWED_CONTENT_TYPES = {
-       "application/pdf",
-       "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-       "text/markdown",
-       "text/x-rst",
-   }
-
-   if file.content_type not in ALLOWED_CONTENT_TYPES:
-       raise HTTPException(
-           status_code=415,
-           detail=f"Unsupported file type: {file.content_type}"
-       )
-   ```
-
-4. Document limits in /docs/api/openapi.yaml and .env.example
-
-5. Add configuration for MAX_FILE_SIZE from environment
-
-6. Add tests for validation edge cases
+5. Add event store metrics:
+   - event_store_size_gb (gauge)
+   - events_archived_total (counter)
+   - event_store_partitions_count (gauge)
 ```
 
 ---
 
-## Continue in Part 2...
+### 4.2 No Backup and Restore Strategy ❌
 
-*(Document continues with remaining HIGH, MEDIUM, LOW priority issues and DOCUMENTATION GAPS)*
+**Problem**: No documented backup and restore procedures.
 
----
+**Impact**: Critical - Data loss risk
 
-## Summary Statistics
+**Suggested Fix Prompt**:
+```
+Implement comprehensive backup and restore strategy:
 
-- **Total Issues Found**: 35
-- **Critical**: 6 (Must fix before production)
-- **High**: 15 (Fix this sprint)
-- **Medium**: 9 (Fix next sprint)
-- **Low**: 5 (Roadmap)
+1. Database backups:
+   - Use PostgreSQL continuous archiving (WAL archiving)
+   - Full backup daily
+   - Incremental backups every hour
+   - Retain backups for 30 days
+   - Store in S3 with cross-region replication
 
-**Estimated Effort**:
-- Critical Issues: 2-3 weeks
-- High Priority: 3-4 weeks
-- Medium Priority: 2 weeks
-- Low Priority: 1 week
+2. Event store backups:
+   - Events are immutable, perfect for backup
+   - Daily snapshot of events table
+   - Export to parquet files in S3
+   - Test restore procedure monthly
 
-**Total**: ~8-10 weeks for full production readiness
+3. Create backup scripts:
+   - scripts/backup/backup-database.sh
+   - scripts/backup/backup-events.sh
+   - scripts/restore/restore-from-backup.sh
 
----
+4. Document restore procedures:
+   - docs/operations/backup-restore.md
+   - Point-in-time recovery steps
+   - RTO (Recovery Time Objective): 1 hour
+   - RPO (Recovery Point Objective): 1 hour
 
-## Recommended Prioritization
-
-### Week 1-2 (Block Production Deploy):
-1. Fix CORS configuration (#1)
-2. Fix projection failure handling (#2)
-3. Implement secret validation (#3)
-
-### Week 3-4 (Enable Safe Deploy):
-4. Fix optimistic locking race condition (#9)
-5. Implement event versioning strategy (#5)
-6. Make DB pool configurable (#6)
-
-### Week 5-6 (Improve Reliability):
-7. Refactor exception handling (#4)
-8. Fix snapshot serialization (#10)
-9. Add input validation (#11)
-
-### Week 7-8 (DDD Compliance):
-10. Refactor value objects (#7, #8)
-11. Improve logging and monitoring
-12. Add deployment documentation
+5. Test disaster recovery:
+   - Quarterly DR drills
+   - Restore to separate environment
+   - Verify data integrity
+   - Document lessons learned
+```
 
 ---
 
-## Notes for Implementation
+## 5. Recommended Implementation Roadmap
 
-**Important**: When fixing these issues:
-1. Write tests FIRST for each fix
-2. Deploy critical fixes individually (not batched)
-3. Monitor production after each deploy
-4. Document rollback procedures
-5. Keep ADRs updated with decisions
+### Phase 1: Production Readiness (4-6 weeks)
+**Priority: Critical**
 
-**Testing Strategy**:
-- Unit tests for business logic
-- Integration tests for database/event store
-- End-to-end tests for critical paths
-- Load tests for performance-critical fixes
+1. **Week 1-2: Observability Foundation**
+   - Implement OpenTelemetry tracing (Issue #3.1)
+   - Add structured logging with correlation IDs
+   - Create Grafana dashboards
+   - Add health check endpoints
 
-**Deployment Strategy**:
-- Use feature flags for risky changes
-- Deploy to staging first, validate thoroughly
-- Canary deployment for critical fixes
-- Have rollback plan ready
+2. **Week 2-3: Resilience & Security**
+   - Add circuit breakers and retries (Issue #3.2)
+   - Implement authentication & authorization (Issue #3.3)
+   - Add rate limiting
+   - Configure proper timeouts
+
+3. **Week 3-4: Infrastructure**
+   - Create Dockerfile and docker-compose (Issue #5.1)
+   - Set up CI/CD pipeline
+   - Implement backup strategy (Issue #4.2)
+   - Add configuration validation (Issue #3.4)
+
+4. **Week 4-6: Operational Readiness**
+   - Create deployment documentation
+   - Add performance and load tests
+   - Implement projection failure recovery (Issue #1.4)
+   - Configure production monitoring and alerting
+
+### Phase 2: DDD Refinements (2-3 weeks)
+**Priority: High**
+
+1. **Week 1: Transaction Management**
+   - Implement Unit of Work pattern (Issue #1.1)
+   - Extract analysis domain service (Issue #1.2)
+   - Remove synchronous IR building (Issue #1.3)
+
+2. **Week 2-3: Architecture Documentation**
+   - Define bounded contexts (Issue #2.2)
+   - Create context maps
+   - Document ubiquitous language
+   - Plan microservices decomposition
+
+### Phase 3: Microservices Foundation (6-8 weeks)
+**Priority: Medium (if microservices are required)**
+
+1. **Week 1-2: Messaging Infrastructure**
+   - Replace in-memory event bus with RabbitMQ/Kafka (Issue #2.4)
+   - Implement outbox pattern
+   - Add integration events
+   - Test message delivery guarantees
+
+2. **Week 3-4: Service Decomposition**
+   - Separate database schemas per context (Issue #2.3)
+   - Extract bounded contexts to separate modules
+   - Implement anti-corruption layers
+   - Add event-carried state transfer
+
+3. **Week 5-6: Service Deployment**
+   - Create separate Docker images per service
+   - Implement API Gateway (Issue #2.5)
+   - Add service discovery
+   - Configure inter-service communication
+
+4. **Week 7-8: Microservices Operations**
+   - Distributed tracing across services
+   - Centralized logging
+   - Service mesh (optional: Istio/Linkerd)
+   - Chaos engineering tests
+
+### Phase 4: Scalability & Optimization (4-6 weeks)
+**Priority: Low (after production launch)**
+
+1. **Horizontal Scaling**
+   - Implement streaming file uploads
+   - Add distributed caching (Redis)
+   - Configure auto-scaling
+   - Load testing at scale
+
+2. **Database Optimization**
+   - Add comprehensive indexes
+   - Implement event store archival (Issue #4.1)
+   - Set up read replicas
+   - Optimize query performance
 
 ---
 
-*End of Production Readiness Review Part 1*
+## 6. Summary of Critical Issues
+
+### Must Fix Before Production (P0)
+
+| # | Issue | Location | Impact | Effort |
+|---|-------|----------|--------|--------|
+| 1 | No distributed tracing/observability | Infrastructure | Critical | 1-2 weeks |
+| 2 | No circuit breakers/resilience | AI integration | Critical | 1 week |
+| 3 | No authentication/authorization | API | Critical | 2 weeks |
+| 4 | No backup/restore strategy | Operations | Critical | 1 week |
+| 5 | No deployment infrastructure | DevOps | Critical | 2 weeks |
+| 6 | Projection failure recovery | Infrastructure | High | 3 days |
+
+### Should Fix Soon (P1)
+
+| # | Issue | Location | Impact | Effort |
+|---|-------|----------|--------|--------|
+| 7 | Missing Unit of Work pattern | Application | Medium | 1 week |
+| 8 | Analysis logic in app layer | Application | Medium | 3 days |
+| 9 | Synchronous IR building | Application | Low | 2 days |
+| 10 | Configuration validation | Config | Medium | 2 days |
+
+### Plan for Future (P2)
+
+| # | Issue | Location | Impact | Effort |
+|---|-------|----------|--------|--------|
+| 11 | Bounded context definition | Architecture | Low | 1 week |
+| 12 | Message broker integration | Infrastructure | N/A* | 2 weeks |
+| 13 | Database per service | Infrastructure | N/A* | 3 weeks |
+| 14 | API Gateway | Infrastructure | N/A* | 1 week |
+| 15 | Event store archival | Infrastructure | Low | 1 week |
+
+\* N/A = Not applicable unless microservices architecture is adopted
+
+---
+
+## 7. Conclusion
+
+This codebase demonstrates **strong DDD fundamentals** with proper event sourcing, CQRS, and aggregate design. The domain model is well-structured, and the layered architecture is clean.
+
+However, **production readiness requires significant work**:
+- ✅ **DDD Implementation**: A- (Excellent)
+- ❌ **Observability**: Critical gaps
+- ❌ **Resilience**: No fault tolerance patterns
+- ❌ **Security**: Minimal controls
+- ❌ **Infrastructure**: No IaC or deployment automation
+
+**Recommendation for Production Launch**:
+1. **Must complete Phase 1** (Production Readiness) before launching
+2. **Consider Phase 2** (DDD Refinements) for better maintainability
+3. **Only do Phase 3** (Microservices) if you have:
+   - Multiple teams working on the codebase
+   - Need for independent deployment/scaling of components
+   - Significant traffic requiring horizontal scaling
+
+**For Small-to-Medium Scale** (< 100K requests/day):
+- Skip microservices (Phase 3)
+- Focus on monolith optimization
+- Use read replicas for scaling
+- Deploy as a well-structured modular monolith
+
+**For Large Scale** (> 100K requests/day):
+- Complete all phases
+- Invest in microservices architecture
+- Implement full observability stack
+- Add chaos engineering
+
+---
+
+*End of Production Readiness Review*

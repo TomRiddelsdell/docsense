@@ -1,0 +1,4 @@
+# file: /workspaces/src/application/event_handlers/semantic_curation_handler.py
+# hypothesis_version: 6.148.7
+
+['claude', 'definitions_added', 'definitions_removed', 'error_type', 'final_definitions', 'original_definitions', 'provider', 'semantic_curation', 'semantic_ir']

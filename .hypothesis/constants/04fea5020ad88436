@@ -1,0 +1,4 @@
+# file: /workspaces/src/domain/value_objects/semantic_ir/term_definition.py
+# hypothesis_version: 6.148.7
+
+['Term cannot be empty', 'TermDefinition', 'aliases', 'definition', 'id', 'lineage', 'section_id', 'term']

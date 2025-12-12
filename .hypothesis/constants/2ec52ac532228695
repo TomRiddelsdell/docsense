@@ -1,0 +1,4 @@
+# file: /workspaces/src/infrastructure/projections/failure_tracking.py
+# hypothesis_version: 6.148.7
+
+['id', 'retry_count']

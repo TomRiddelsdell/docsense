@@ -1,0 +1,4 @@
+# file: /workspaces/src/domain/events/__init__.py
+# hypothesis_version: 6.148.7
+
+['AnalysisCompleted', 'AnalysisFailed', 'AnalysisReset', 'AnalysisStarted', 'ChangeAccepted', 'ChangeModified', 'ChangeRejected', 'DocumentConverted', 'DocumentExported', 'DocumentUploaded', 'DomainEvent', 'FeedbackGenerated', 'PolicyAdded', 'SemanticIRCurated']

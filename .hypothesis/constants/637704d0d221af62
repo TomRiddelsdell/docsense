@@ -1,0 +1,4 @@
+# file: /workspaces/src/domain/value_objects/semantic_ir/section_type.py
+# hypothesis_version: 6.148.7
+
+['annex', 'code', 'definition', 'formula', 'glossary', 'narrative', 'table', 'unknown']

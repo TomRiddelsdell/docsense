@@ -63,7 +63,10 @@
       "Bash(python3:*)",
       "Bash(lsof:*)",
       "Bash(xargs kill -9)",
-      "Bash(wc:*)"
+      "Bash(wc:*)",
+      "Bash(tree:*)",
+      "Bash(poetry show:*)",
+      "Bash(poetry add:*)"
     ],
     "deny": [],
     "ask": []

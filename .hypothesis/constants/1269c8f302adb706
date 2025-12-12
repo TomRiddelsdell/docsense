@@ -1,0 +1,4 @@
+# file: /workspaces/src/domain/value_objects/semantic_ir/term_lineage.py
+# hypothesis_version: 6.148.7
+
+['Parameter', 'TermDependency', 'TermLineage', 'computed_from', 'conditional_on', 'conditions', 'constraints', 'context', 'default_value', 'dependency_type', 'description', 'direct_reference', 'formula', 'formula_input', 'input_terms', 'is_computed', 'metadata', 'name', 'param_type', 'parameter', 'parameters', 'units', 'unknown']

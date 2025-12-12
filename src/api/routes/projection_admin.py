@@ -11,7 +11,7 @@ from datetime import datetime
 import asyncpg
 
 from src.infrastructure.projections.failure_tracking import ProjectionFailureTracker
-from src.infrastructure.event_store.store import EventStore
+from src.infrastructure.persistence.event_store import PostgresEventStore
 from src.infrastructure.projections.base import Projection
 from src.api.dependencies import Container
 

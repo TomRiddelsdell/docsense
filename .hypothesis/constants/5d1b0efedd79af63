@@ -1,0 +1,4 @@
+# file: /workspaces/src/infrastructure/semantic/ai_curator.py
+# hypothesis_version: 6.148.7
+
+[200, 1500, 2000, 10000, '[', ']', 'ai-discovered', 'claude', 'confidence', 'definition', 'high', 'medium', 'severity', 'term']

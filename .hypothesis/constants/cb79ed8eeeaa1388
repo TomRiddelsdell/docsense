@@ -1,0 +1,4 @@
+# file: /workspaces/src/api/routes/projection_health.py
+# hypothesis_version: 6.148.7
+
+[404, 500, 503, '/', '/health/projections', '/{projection_name}', 'health']

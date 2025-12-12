@@ -1,0 +1,4 @@
+# file: /workspaces/src/domain/value_objects/semantic_ir/validation_issue.py
+# hypothesis_version: 6.148.7
+
+['ValidationIssue', 'ambiguous_term', 'circular_dependency', 'duplicate_definition', 'error', 'id', 'incomplete_formula', 'info', 'issue_type', 'location', 'message', 'missing_reference', 'name', 'related_ids', 'severity', 'suggestion', 'undefined_variable', 'value', 'warning']

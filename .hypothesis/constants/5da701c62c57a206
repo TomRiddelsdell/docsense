@@ -1,0 +1,4 @@
+# file: /workspaces/src/domain/aggregates/document.py
+# hypothesis_version: 6.148.7
+
+['Document', 'claude', 'convert', 'export', 'reset_for_retry', 'start_analysis', 'start_ir_curation', 'system']

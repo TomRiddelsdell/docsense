@@ -1,0 +1,4 @@
+# file: /workspaces/src/infrastructure/converters/base.py
+# hypothesis_version: 6.148.7
+
+['#', '.', 'DocumentIR', 'docx', 'md', 'pdf', 'rst', 'unknown']

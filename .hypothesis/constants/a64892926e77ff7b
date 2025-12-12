@@ -1,0 +1,4 @@
+# file: /workspaces/src/domain/value_objects/semantic_ir/document_ir.py
+# hypothesis_version: 6.148.7
+
+['DocumentIR', 'cross_references', 'definition_count', 'definitions', 'document_id', 'formula_count', 'formulae', 'markdown_length', 'metadata', 'original_format', 'raw_markdown', 'section_count', 'sections', 'table_count', 'tables', 'title', 'total_terms', 'validation_issues', 'ℹ️', '⚠️', '❌']

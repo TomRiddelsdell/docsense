@@ -1,0 +1,4 @@
+# file: /workspaces/src/domain/value_objects/semantic_ir/ir_section.py
+# hypothesis_version: 6.148.7
+
+['IRSection', 'content', 'end_line', 'id', 'level', 'name', 'parent_id', 'section_type', 'start_line', 'title', 'unknown', 'value']

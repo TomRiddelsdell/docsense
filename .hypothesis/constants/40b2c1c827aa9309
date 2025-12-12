@@ -1,0 +1,4 @@
+# file: /workspaces/src/infrastructure/queries/policy_queries.py
+# hypothesis_version: 6.148.7
+
+['created_at', 'description', 'document_count', 'id', 'name', 'policy_count', 'repository_id', 'requirement_type', 'updated_at']
