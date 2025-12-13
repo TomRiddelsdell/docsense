@@ -35,14 +35,14 @@ class Settings(BaseSettings):
     DB_POOL_MIN_SIZE: int = Field(
         default=5,
         ge=1,
-        le=50,
+        le=1000,  # Allow high values but warn via validator
         description="Minimum database connection pool size"
     )
 
     DB_POOL_MAX_SIZE: int = Field(
         default=20,
         ge=1,
-        le=100,
+        le=1000,  # Allow high values but warn via validator
         description="Maximum database connection pool size"
     )
 
@@ -352,6 +352,21 @@ class Settings(BaseSettings):
             raise ValueError(
                 f"DB_POOL_MIN_SIZE ({self.DB_POOL_MIN_SIZE}) cannot be greater than "
                 f"DB_POOL_MAX_SIZE ({self.DB_POOL_MAX_SIZE})"
+            )
+
+        # Warn about very high pool sizes
+        if self.DB_POOL_MAX_SIZE > 500:
+            logger.warning(
+                f"DB_POOL_MAX_SIZE ({self.DB_POOL_MAX_SIZE}) is very high. "
+                f"Each connection consumes server memory. Consider if you really need >500 connections. "
+                f"Typical production values are 20-100."
+            )
+
+        if self.DB_POOL_MIN_SIZE > 100:
+            logger.warning(
+                f"DB_POOL_MIN_SIZE ({self.DB_POOL_MIN_SIZE}) is very high. "
+                f"This will keep many idle connections open. "
+                f"Typical production values are 5-20."
             )
 
         return self

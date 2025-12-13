@@ -1,0 +1,4 @@
+# file: /workspaces/src/infrastructure/converters/exceptions.py
+# hypothesis_version: 6.148.7
+
+['UTF-8', 'content', 'content_type', 'document', 'encoding', 'format', 'library', 'limit_mb', 'size_mb', 'supported_formats']

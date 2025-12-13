@@ -1,5 +1,6 @@
 from pathlib import Path
 import re
+import logging
 
 from docutils.core import publish_parts
 from docutils.parsers.rst import Parser
@@ -10,6 +11,9 @@ from .base import (
     DocumentMetadata,
     DocumentFormat,
 )
+from .exceptions import EncodingError
+
+logger = logging.getLogger(__name__)
 
 
 class RstConverter(DocumentConverter):
@@ -23,6 +27,7 @@ class RstConverter(DocumentConverter):
             with open(file_path, 'r', encoding='utf-8') as f:
                 content = f.read()
             return self.convert_from_bytes(content.encode('utf-8'), file_path.name)
+
         except FileNotFoundError:
             return ConversionResult(
                 success=False,
@@ -31,33 +36,59 @@ class RstConverter(DocumentConverter):
                 metadata=DocumentMetadata(original_format=DocumentFormat.RST),
                 errors=[f"File not found: {file_path}"]
             )
+
         except UnicodeDecodeError as e:
-            return ConversionResult(
-                success=False,
-                markdown_content="",
-                sections=[],
-                metadata=DocumentMetadata(original_format=DocumentFormat.RST),
-                errors=[f"Encoding error: {str(e)}"]
+            logger.error(f"Encoding error reading RST file {file_path}: {e}")
+            raise EncodingError(
+                f"File is not valid UTF-8: {e.reason}",
+                details={'encoding': 'UTF-8', 'filename': str(file_path), 'position': e.start}
             )
+
+        except PermissionError as e:
+            logger.error(f"Permission denied reading file {file_path}: {e}")
+            raise FileNotFoundError(f"Cannot read file (permission denied): {file_path}")
+
+        except Exception as e:
+            logger.exception(f"Unexpected error reading RST file {file_path}: {e}")
+            raise
     
     def convert_from_bytes(self, content: bytes, filename: str) -> ConversionResult:
         errors = []
         warnings = []
-        
+
         try:
             rst_content = content.decode('utf-8')
-        except UnicodeDecodeError:
+
+        except UnicodeDecodeError as e:
+            # Try fallback encodings
+            logger.warning(f"UTF-8 decoding failed for {filename}, trying fallback encodings")
+
             try:
                 rst_content = content.decode('latin-1')
-                warnings.append("Document was decoded using latin-1 fallback")
-            except Exception as e:
-                return ConversionResult(
-                    success=False,
-                    markdown_content="",
-                    sections=[],
-                    metadata=DocumentMetadata(original_format=DocumentFormat.RST),
-                    errors=[f"Failed to decode content: {str(e)}"]
-                )
+                warnings.append("Document was decoded using latin-1 fallback (may have character issues)")
+                logger.info(f"Successfully decoded {filename} using latin-1")
+
+            except UnicodeDecodeError:
+                try:
+                    rst_content = content.decode('cp1252')  # Windows encoding
+                    warnings.append("Document was decoded using cp1252 fallback (may have character issues)")
+                    logger.info(f"Successfully decoded {filename} using cp1252")
+
+                except UnicodeDecodeError as final_error:
+                    logger.error(f"All encoding attempts failed for {filename}")
+                    raise EncodingError(
+                        "Cannot decode file with UTF-8, latin-1, or cp1252",
+                        details={
+                            'encoding': 'UTF-8',
+                            'filename': filename,
+                            'tried_encodings': ['utf-8', 'latin-1', 'cp1252'],
+                            'error': str(final_error)
+                        }
+                    )
+
+        except Exception as e:
+            logger.exception(f"Unexpected error decoding {filename}: {e}")
+            raise
         
         markdown_content = self._rst_to_markdown(rst_content)
         

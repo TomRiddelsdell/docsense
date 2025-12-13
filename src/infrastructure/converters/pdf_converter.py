@@ -2,6 +2,7 @@ from pathlib import Path
 from io import BytesIO
 from typing import Any, List, Dict
 import re
+import logging
 
 import fitz
 import pdfplumber
@@ -12,6 +13,14 @@ from .base import (
     DocumentMetadata,
     DocumentFormat,
 )
+from .exceptions import (
+    InvalidFileFormatError,
+    FileTooLargeError,
+    ContentExtractionError,
+    PasswordProtectedError,
+)
+
+logger = logging.getLogger(__name__)
 
 
 class PdfConverter(DocumentConverter):
@@ -49,27 +58,46 @@ class PdfConverter(DocumentConverter):
         errors: list[str] = []
         warnings: list[str] = []
         doc: Any = None
-        
+
+        # Check file size (10 MB limit for PDFs)
+        size_mb = len(content) / (1024 * 1024)
+        if size_mb > 10:
+            logger.warning(f"Large PDF file: {size_mb:.1f} MB")
+            warnings.append(f"Large file ({size_mb:.1f} MB) may take longer to process")
+
         try:
+            # Try to open the PDF
             doc = fitz.open(stream=content, filetype="pdf")
-            
+
+            # Check if PDF is encrypted/password protected
+            if doc.is_encrypted:
+                logger.error(f"Password-protected PDF: {filename}")
+                raise PasswordProtectedError(
+                    "Document is password protected",
+                    details={'filename': filename}
+                )
+
             markdown_lines: list[str] = []
             page_count = len(doc)
-            
+
+            if page_count == 0:
+                logger.warning(f"Empty PDF: {filename}")
+                warnings.append("PDF contains no pages")
+
             for page_num in range(page_count):
                 page = doc[page_num]
-                
+
                 # Use enhanced text extraction with formula detection
                 page_markdown = self._extract_page_with_formulas(page, warnings)
                 markdown_lines.extend(page_markdown)
-                
+
                 if page_num < page_count - 1:
                     markdown_lines.append("")
                     markdown_lines.append("---")
                     markdown_lines.append("")
-            
+
             pdf_metadata = doc.metadata if doc.metadata else {}
-            
+
             metadata = DocumentMetadata(
                 title=pdf_metadata.get("title", "") or filename,
                 author=pdf_metadata.get("author"),
@@ -79,15 +107,50 @@ class PdfConverter(DocumentConverter):
                 word_count=0,
                 original_format=DocumentFormat.PDF
             )
-            
-        except Exception as e:
-            return ConversionResult(
-                success=False,
-                markdown_content="",
-                sections=[],
-                metadata=DocumentMetadata(original_format=DocumentFormat.PDF),
-                errors=[f"Failed to process PDF: {str(e)}"]
+
+        except PasswordProtectedError:
+            # Re-raise our custom exception
+            raise
+
+        except MemoryError as e:
+            logger.critical(f"Out of memory processing PDF: {filename} ({size_mb:.1f} MB)")
+            raise FileTooLargeError(
+                f"File too large to process ({size_mb:.1f} MB)",
+                details={'size_mb': size_mb, 'limit_mb': 10, 'filename': filename}
             )
+
+        except (fitz.FileDataError, fitz.FileNotFoundError) as e:
+            logger.error(f"Invalid PDF file format: {filename}: {e}")
+            raise InvalidFileFormatError(
+                "File is not a valid PDF or is corrupted",
+                details={'format': 'PDF', 'filename': filename, 'error': str(e)}
+            )
+
+        except RuntimeError as e:
+            # PyMuPDF raises RuntimeError for various issues
+            error_str = str(e).lower()
+            if 'encrypted' in error_str or 'password' in error_str:
+                logger.error(f"Encrypted PDF: {filename}")
+                raise PasswordProtectedError(
+                    "Document is password protected",
+                    details={'filename': filename}
+                )
+            elif 'damaged' in error_str or 'corrupt' in error_str:
+                logger.error(f"Corrupted PDF: {filename}: {e}")
+                raise InvalidFileFormatError(
+                    "PDF file is corrupted",
+                    details={'format': 'PDF', 'filename': filename, 'error': str(e)}
+                )
+            else:
+                # Unexpected RuntimeError
+                logger.exception(f"Unexpected runtime error processing PDF {filename}: {e}")
+                raise
+
+        except Exception as e:
+            # Log unexpected errors with full stack trace
+            logger.exception(f"Unexpected error processing PDF {filename}: {e}")
+            raise
+
         finally:
             if doc:
                 doc.close()
@@ -133,28 +196,50 @@ class PdfConverter(DocumentConverter):
     
     def _extract_tables_with_pdfplumber(self, content: bytes, warnings: list[str]) -> str:
         table_markdown: list[str] = []
-        
+
         try:
             with pdfplumber.open(BytesIO(content)) as pdf:
                 for page_num, page in enumerate(pdf.pages, 1):
-                    tables = page.extract_tables()
-                    for table_idx, table in enumerate(tables, 1):
-                        if not table or not table[0]:
-                            continue
-                        
-                        table_markdown.append(f"### Table {page_num}.{table_idx}")
-                        table_markdown.append("")
-                        
-                        for row_idx, row in enumerate(table):
-                            cells = [str(cell or '').strip().replace('\n', ' ') for cell in row]
-                            table_markdown.append('| ' + ' | '.join(cells) + ' |')
-                            if row_idx == 0:
-                                table_markdown.append('| ' + ' | '.join(['---'] * len(cells)) + ' |')
-                        
-                        table_markdown.append("")
+                    try:
+                        tables = page.extract_tables()
+                        for table_idx, table in enumerate(tables, 1):
+                            if not table or not table[0]:
+                                continue
+
+                            table_markdown.append(f"### Table {page_num}.{table_idx}")
+                            table_markdown.append("")
+
+                            for row_idx, row in enumerate(table):
+                                cells = [str(cell or '').strip().replace('\n', ' ') for cell in row]
+                                table_markdown.append('| ' + ' | '.join(cells) + ' |')
+                                if row_idx == 0:
+                                    table_markdown.append('| ' + ' | '.join(['---'] * len(cells)) + ' |')
+
+                            table_markdown.append("")
+
+                    except (IndexError, AttributeError) as e:
+                        # Malformed table data
+                        logger.warning(f"Skipping malformed table on page {page_num}: {e}")
+                        warnings.append(f"Could not extract table on page {page_num} (malformed data)")
+
+                    except Exception as e:
+                        # Unexpected error extracting table
+                        logger.warning(f"Error extracting table on page {page_num}: {e}")
+                        warnings.append(f"Could not extract table on page {page_num}")
+
+        except (OSError, IOError) as e:
+            logger.warning(f"Could not read PDF for table extraction: {e}")
+            warnings.append(f"Could not extract tables: file access error")
+
+        except MemoryError:
+            logger.warning("Out of memory during table extraction")
+            warnings.append("Could not extract tables: insufficient memory")
+
         except Exception as e:
-            warnings.append(f"Could not extract tables: {str(e)}")
-        
+            # Log unexpected errors but continue (table extraction is optional)
+            logger.warning(f"Unexpected error during table extraction: {e}", exc_info=True)
+            warnings.append(f"Could not extract tables: {type(e).__name__}")
+
         return '\n'.join(table_markdown)
     
     def _extract_page_with_formulas(self, page: Any, warnings: List[str]) -> List[str]:
@@ -213,12 +298,39 @@ class PdfConverter(DocumentConverter):
                     else:
                         markdown_lines.append("")
             
-        except Exception as e:
-            warnings.append(f"Error extracting formulas: {str(e)}")
+        except AttributeError as e:
+            # Page object doesn't have expected methods/attributes
+            logger.warning(f"Invalid page object structure: {e}")
+            warnings.append("Could not extract formulas from this page (invalid structure)")
             # Fallback to simple text extraction
-            text = page.get_text("text")
-            markdown_lines = text.split('\n')
-        
+            try:
+                text = page.get_text("text")
+                markdown_lines = text.split('\n')
+            except Exception:
+                markdown_lines = ["[Could not extract text from this page]"]
+
+        except (KeyError, TypeError) as e:
+            # Malformed text dictionary structure
+            logger.warning(f"Malformed page text structure: {e}")
+            warnings.append("Could not extract formulas from this page (malformed structure)")
+            # Fallback to simple text extraction
+            try:
+                text = page.get_text("text")
+                markdown_lines = text.split('\n')
+            except Exception:
+                markdown_lines = ["[Could not extract text from this page]"]
+
+        except Exception as e:
+            # Unexpected error during formula extraction
+            logger.warning(f"Unexpected error extracting formulas: {e}", exc_info=True)
+            warnings.append(f"Could not extract formulas: {type(e).__name__}")
+            # Fallback to simple text extraction
+            try:
+                text = page.get_text("text")
+                markdown_lines = text.split('\n')
+            except Exception:
+                markdown_lines = ["[Could not extract text from this page]"]
+
         return markdown_lines
     
     def _extract_block_text(self, lines: List[Dict]) -> str:

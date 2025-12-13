@@ -66,7 +66,8 @@
       "Bash(wc:*)",
       "Bash(tree:*)",
       "Bash(poetry show:*)",
-      "Bash(poetry add:*)"
+      "Bash(poetry add:*)",
+      "Bash(poetry run python3:*)"
     ],
     "deny": [],
     "ask": []

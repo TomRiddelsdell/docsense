@@ -25,6 +25,8 @@ from src.api.dependencies import (
     get_count_documents_handler,
     get_container,
 )
+from src.api.config import get_settings
+from src.api.utils.validation import validate_upload_file
 from src.domain.commands import UploadDocument, ExportDocument, DeleteDocument
 from src.application.queries.document_queries import GetDocumentById, ListDocuments
 from src.application.queries.base import PaginationParams
@@ -57,10 +59,70 @@ async def upload_document(
     upload_handler=Depends(get_upload_document_handler),
     query_handler=Depends(get_document_by_id_handler),
 ):
-    content = await file.read()
+    """
+    Upload a document for analysis.
 
+    Validates:
+    - File size (must be <= MAX_UPLOAD_SIZE from config)
+    - Filename (sanitized to prevent path traversal)
+    - Content type (must be in allowed list)
+    - Title length (max 255 characters)
+    - Description length (max 2000 characters)
+
+    Args:
+        file: The document file to upload
+        title: Document title (required, max 255 characters)
+        description: Optional description (max 2000 characters)
+        policy_repository_id: Optional policy repository to use for analysis
+
+    Returns:
+        DocumentResponse with the created document details
+
+    Raises:
+        HTTPException 400: Invalid input (bad filename, title, or description)
+        HTTPException 413: File too large
+        HTTPException 415: Unsupported file type
+    """
+    # Get configuration settings
+    settings = get_settings()
+
+    # Read file content (we need size for validation)
+    content = await file.read()
+    file_size = len(content)
+
+    # Log upload attempt for security auditing
+    logger.info(
+        f"Document upload attempt: filename='{file.filename}', "
+        f"content_type='{file.content_type}', size={file_size:,} bytes, "
+        f"title='{title}'"
+    )
+
+    # Comprehensive input validation
+    try:
+        sanitized_filename = validate_upload_file(
+            filename=file.filename,
+            content_type=file.content_type,
+            file_size=file_size,
+            max_size=settings.MAX_UPLOAD_SIZE,
+            title=title,
+            description=description,
+        )
+    except HTTPException as e:
+        # Log validation failure for security monitoring
+        logger.warning(
+            f"Document upload validation failed: {e.detail} "
+            f"(filename='{file.filename}', size={file_size:,} bytes)"
+        )
+        raise
+
+    logger.info(
+        f"Document upload validation passed: original_filename='{file.filename}', "
+        f"sanitized_filename='{sanitized_filename}', size={file_size:,} bytes"
+    )
+
+    # Create upload command with validated and sanitized inputs
     command = UploadDocument(
-        filename=file.filename or title,
+        filename=sanitized_filename,
         content=content,
         content_type=file.content_type or "application/octet-stream",
         uploaded_by="anonymous",

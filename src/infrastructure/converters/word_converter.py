@@ -1,8 +1,10 @@
 from pathlib import Path
 from io import BytesIO
+import logging
 
 from docx import Document
 from docx.opc.exceptions import PackageNotFoundError
+from docx.oxml.exceptions import InvalidXmlError
 
 from .base import (
     DocumentConverter,
@@ -10,6 +12,13 @@ from .base import (
     DocumentMetadata,
     DocumentFormat,
 )
+from .exceptions import (
+    InvalidFileFormatError,
+    FileTooLargeError,
+    PasswordProtectedError,
+)
+
+logger = logging.getLogger(__name__)
 
 
 class WordConverter(DocumentConverter):
@@ -34,25 +43,58 @@ class WordConverter(DocumentConverter):
     def convert_from_bytes(self, content: bytes, filename: str) -> ConversionResult:
         errors = []
         warnings = []
-        
+
+        # Check file size (20 MB limit for Word documents)
+        size_mb = len(content) / (1024 * 1024)
+        if size_mb > 20:
+            logger.warning(f"Large Word file: {size_mb:.1f} MB")
+            warnings.append(f"Large file ({size_mb:.1f} MB) may take longer to process")
+
         try:
             doc = Document(BytesIO(content))
-        except PackageNotFoundError:
-            return ConversionResult(
-                success=False,
-                markdown_content="",
-                sections=[],
-                metadata=DocumentMetadata(original_format=DocumentFormat.WORD),
-                errors=["Invalid or corrupted Word document"]
+
+        except PackageNotFoundError as e:
+            logger.error(f"Invalid Word document package: {filename}: {e}")
+            raise InvalidFileFormatError(
+                "File is not a valid Word document (DOCX)",
+                details={'format': 'DOCX', 'filename': filename, 'error': str(e)}
             )
+
+        except InvalidXmlError as e:
+            # OXML package read errors - usually corruption or invalid XML
+            logger.error(f"Corrupted Word document: {filename}: {e}")
+            raise InvalidFileFormatError(
+                "Word document is corrupted or malformed",
+                details={'format': 'DOCX', 'filename': filename, 'error': str(e)}
+            )
+
+        except MemoryError:
+            logger.critical(f"Out of memory processing Word document: {filename} ({size_mb:.1f} MB)")
+            raise FileTooLargeError(
+                f"File too large to process ({size_mb:.1f} MB)",
+                details={'size_mb': size_mb, 'limit_mb': 20, 'filename': filename}
+            )
+
+        except (OSError, IOError) as e:
+            # File access errors
+            error_str = str(e).lower()
+            if 'password' in error_str or 'encrypted' in error_str:
+                logger.error(f"Password-protected Word document: {filename}")
+                raise PasswordProtectedError(
+                    "Document is password protected",
+                    details={'filename': filename}
+                )
+            else:
+                logger.error(f"Cannot read Word document: {filename}: {e}")
+                raise InvalidFileFormatError(
+                    "Cannot read Word document",
+                    details={'format': 'DOCX', 'filename': filename, 'error': str(e)}
+                )
+
         except Exception as e:
-            return ConversionResult(
-                success=False,
-                markdown_content="",
-                sections=[],
-                metadata=DocumentMetadata(original_format=DocumentFormat.WORD),
-                errors=[f"Failed to open document: {str(e)}"]
-            )
+            # Log unexpected errors with full stack trace
+            logger.exception(f"Unexpected error opening Word document {filename}: {e}")
+            raise
         
         markdown_lines = []
         
@@ -85,10 +127,17 @@ class WordConverter(DocumentConverter):
             
             markdown_lines.append("")
         
-        for table in doc.tables:
-            table_md = self._convert_table(table)
-            markdown_lines.append(table_md)
-            markdown_lines.append("")
+        for table_idx, table in enumerate(doc.tables, 1):
+            try:
+                table_md = self._convert_table(table)
+                markdown_lines.append(table_md)
+                markdown_lines.append("")
+            except (IndexError, AttributeError) as e:
+                logger.warning(f"Skipping malformed table {table_idx}: {e}")
+                warnings.append(f"Could not convert table {table_idx} (malformed structure)")
+            except Exception as e:
+                logger.warning(f"Error converting table {table_idx}: {e}")
+                warnings.append(f"Could not convert table {table_idx}")
         
         markdown_content = '\n'.join(markdown_lines)
         

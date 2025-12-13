@@ -3365,5 +3365,1150 @@ docs/api/ir-endpoints.yaml                    # OpenAPI additions
 
 ---
 
+## Phase 11: Implementation Precision Specification Framework
+
+**Duration**: 4-6 weeks  
+**Priority**: High (enables bulletproof implementation from specifications)  
+**Related**: [ADR-017](decisions/017-implementation-precision-specification.md), [Vision Enhancements](analysis/vision-enhancement-proposals.md)
+
+**Goal**: Implement automated validation that specifications are complete and unambiguous for implementation, detecting missing precision specs, edge cases, parameter schemas, and temporal specifications.
+
+---
+
+### 11.1 Precision Validator Core (Week 1-2)
+
+**Files to Create**:
+```
+src/domain/semantic/precision_validator.py  # Core validation logic
+src/domain/semantic/precision_spec.py       # Precision specification value objects
+src/domain/semantic/edge_case.py            # Edge case representation
+src/domain/semantic/parameter_schema.py     # Parameter schema validation
+```
+
+**PrecisionValidator Implementation**:
+```python
+# src/domain/semantic/precision_validator.py
+from dataclasses import dataclass, field
+from typing import List, Dict, Optional
+from enum import Enum
+
+class IssueCategory(Enum):
+    COMPUTATIONAL_SEMANTICS = "computational_semantics"
+    EDGE_CASE = "edge_case"
+    PARAMETER_SCHEMA = "parameter_schema"
+    TEMPORAL_SPECIFICATION = "temporal_specification"
+    DATA_CONTRACT = "data_contract"
+    MARKET_CALENDAR = "market_calendar"
+
+class IssueSeverity(Enum):
+    CRITICAL = "critical"  # Blocks implementation
+    HIGH = "high"          # Likely to cause issues
+    MEDIUM = "medium"      # Should be addressed
+    LOW = "low"            # Nice to have
+
+@dataclass
+class PrecisionIssue:
+    """Single precision/completeness issue detected"""
+    severity: IssueSeverity
+    category: IssueCategory
+    location: str  # section, line, formula ID
+    description: str
+    context: Optional[str] = None  # Text where issue found
+    suggestion: str = ""
+    examples: List[str] = field(default_factory=list)
+
+@dataclass
+class PrecisionReport:
+    """Complete precision validation report"""
+    implementation_readiness_score: int  # 0-100
+    max_score: int = 100
+    coverage: Dict[str, float] = field(default_factory=dict)
+    issues: List[PrecisionIssue] = field(default_factory=list)
+    suggestions: List[str] = field(default_factory=list)
+    
+    @property
+    def critical_issues(self) -> List[PrecisionIssue]:
+        return [i for i in self.issues if i.severity == IssueSeverity.CRITICAL]
+    
+    @property
+    def high_priority_issues(self) -> List[PrecisionIssue]:
+        return [i for i in self.issues 
+                if i.severity in (IssueSeverity.CRITICAL, IssueSeverity.HIGH)]
+
+class PrecisionValidator:
+    """Validate specifications for implementation precision"""
+    
+    def __init__(self, semantic_ir: SemanticIR, calendar_validator: Optional[MarketCalendar] = None):
+        self.ir = semantic_ir
+        self.calendar_validator = calendar_validator
+        self.issues: List[PrecisionIssue] = []
+    
+    def validate(self) -> PrecisionReport:
+        """Run all validation checks"""
+        self.issues = []
+        
+        # Run all validators
+        self._validate_computational_semantics()
+        self._validate_edge_cases()
+        self._validate_parameter_schemas()
+        self._validate_temporal_specifications()
+        self._validate_data_contracts()
+        
+        # Compute coverage scores
+        coverage = self._compute_coverage()
+        
+        # Compute readiness score
+        score = self._compute_readiness_score(coverage)
+        
+        return PrecisionReport(
+            implementation_readiness_score=score,
+            coverage=coverage,
+            issues=self.issues,
+            suggestions=self._generate_suggestions()
+        )
+    
+    def _validate_computational_semantics(self):
+        """Check for precision, rounding, numeric type specifications"""
+        for formula in self.ir.formulas:
+            # Check for precision specification
+            if not formula.precision_spec:
+                self.issues.append(PrecisionIssue(
+                    severity=IssueSeverity.HIGH,
+                    category=IssueCategory.COMPUTATIONAL_SEMANTICS,
+                    location=f"formula:{formula.id}",
+                    description="Formula lacks precision specification",
+                    context=formula.expression,
+                    suggestion="Add precision: decimal places, rounding rule, numeric type",
+                    examples=[
+                        "✓ 'rounded to 4 decimal places using banker's rounding'",
+                        "✓ 'float64, round to nearest'"
+                    ]
+                ))
+            
+            # Check for rounding rule
+            if formula.contains_division and not formula.rounding_rule:
+                self.issues.append(PrecisionIssue(
+                    severity=IssueSeverity.MEDIUM,
+                    category=IssueCategory.COMPUTATIONAL_SEMANTICS,
+                    location=f"formula:{formula.id}",
+                    description="Division without rounding rule",
+                    context=formula.expression,
+                    suggestion="Specify: round-up/down/nearest/banker's"
+                ))
+    
+    def _validate_edge_cases(self):
+        """Check for edge case handling specifications"""
+        for formula in self.ir.formulas:
+            # Division by zero
+            if formula.contains_division:
+                if not formula.has_edge_case("division_by_zero"):
+                    self.issues.append(PrecisionIssue(
+                        severity=IssueSeverity.CRITICAL,
+                        category=IssueCategory.EDGE_CASE,
+                        location=f"formula:{formula.id}",
+                        description="Division without zero-handling specification",
+                        context=formula.expression,
+                        suggestion="Specify behavior when denominator = 0",
+                        examples=[
+                            "Return null",
+                            "Return infinity",
+                            "Cap at 999",
+                            "Throw error"
+                        ]
+                    ))
+            
+            # Null/missing values
+            if formula.has_data_dependencies and not formula.has_edge_case("null_handling"):
+                self.issues.append(PrecisionIssue(
+                    severity=IssueSeverity.HIGH,
+                    category=IssueCategory.EDGE_CASE,
+                    location=f"formula:{formula.id}",
+                    description="No null/missing value handling specified",
+                    context=formula.expression,
+                    suggestion="Specify: skip nulls, use default, or error"
+                ))
+    
+    def _validate_parameter_schemas(self):
+        """Check for complete parameter specifications"""
+        for param in self.ir.parameters:
+            issues = []
+            
+            if not param.type_annotation:
+                issues.append("type (int/float/decimal/string/date)")
+            if not param.range and param.is_numeric:
+                issues.append("valid range [min, max]")
+            if not param.default_value and param.is_optional:
+                issues.append("default value")
+            if not param.constraints:
+                issues.append("constraints (e.g., > 0, percentage [0,1])")
+            
+            if issues:
+                self.issues.append(PrecisionIssue(
+                    severity=IssueSeverity.MEDIUM,
+                    category=IssueCategory.PARAMETER_SCHEMA,
+                    location=f"parameter:{param.name}",
+                    description=f"Parameter missing: {', '.join(issues)}",
+                    context=param.name,
+                    suggestion=f"Add complete schema for '{param.name}'"
+                ))
+    
+    def _validate_temporal_specifications(self):
+        """Check for timing, sequencing, calendar specifications"""
+        for temporal_ref in self.ir.temporal_references:
+            if not temporal_ref.timing:
+                self.issues.append(PrecisionIssue(
+                    severity=IssueSeverity.HIGH,
+                    category=IssueCategory.TEMPORAL_SPECIFICATION,
+                    location=temporal_ref.location,
+                    description="Vague timing requirement",
+                    context=temporal_ref.text,
+                    suggestion="Specify exact time (market open/close, EOD, specific time)"
+                ))
+            
+            if temporal_ref.is_relative_date and not temporal_ref.calendar_spec:
+                self.issues.append(PrecisionIssue(
+                    severity=IssueSeverity.CRITICAL,
+                    category=IssueCategory.MARKET_CALENDAR,
+                    location=temporal_ref.location,
+                    description="Relative date without calendar specification",
+                    context=temporal_ref.text,
+                    suggestion="Specify: 'N NYSE trading days' or 'N calendar days'",
+                    examples=[
+                        "✓ '20 NYSE trading days'",
+                        "✓ '30 calendar days'",
+                        "✗ 'previous month' (ambiguous)"
+                    ]
+                ))
+    
+    def _compute_coverage(self) -> Dict[str, float]:
+        """Compute coverage scores for each category"""
+        return {
+            "precision_specifications": self._precision_coverage(),
+            "edge_case_handling": self._edge_case_coverage(),
+            "parameter_schemas": self._parameter_coverage(),
+            "temporal_specifications": self._temporal_coverage(),
+            "data_contracts": self._data_contract_coverage()
+        }
+    
+    def _compute_readiness_score(self, coverage: Dict[str, float]) -> int:
+        """Compute overall implementation readiness score (0-100)"""
+        # Weighted average of coverage scores
+        weights = {
+            "precision_specifications": 0.25,
+            "edge_case_handling": 0.25,
+            "parameter_schemas": 0.20,
+            "temporal_specifications": 0.20,
+            "data_contracts": 0.10
+        }
+        score = sum(coverage[k] * weights[k] for k in weights)
+        
+        # Penalties for critical issues
+        critical_penalty = len(self.critical_issues) * 5
+        high_penalty = len([i for i in self.issues if i.severity == IssueSeverity.HIGH]) * 2
+        
+        return max(0, int(score * 100) - critical_penalty - high_penalty)
+```
+
+**AI Agent Prompt for Phase 11**:
+```
+You are implementing the Implementation Precision Specification Framework (ADR-017).
+
+Context:
+- We already have Semantic IR (ADR-014) that extracts terms, formulas, dependencies
+- We need to VALIDATE that specifications are complete for implementation
+- Market calendars are a critical source of issues and must be validated
+
+Your task:
+1. Create domain/semantic/precision_validator.py following the example structure
+2. Implement validators for:
+   - Computational semantics (precision, rounding, numeric types)
+   - Edge cases (division by zero, nulls, insufficient data)
+   - Parameter schemas (types, ranges, defaults, constraints)
+   - Temporal specifications (timing, sequencing, calendars)
+   - Data contracts (sources, quality, corporate actions)
+3. Ensure validators check FOR MISSING specifications, not validate correctness
+4. Generate actionable suggestions with examples
+5. Compute implementation readiness score (0-100)
+6. Integrate with existing Semantic IR pipeline
+
+Key Requirements:
+- Detect ambiguity in specifications (e.g., "previous 20 days" without calendar type)
+- Flag missing edge case handling (especially division by zero)
+- Validate all temporal references have explicit calendar specifications
+- Generate helpful examples in suggestions
+- Produce structured JSON reports for API/UI consumption
+
+Validation Patterns:
+✓ GOOD: "20 NYSE trading days, rounded to 4 decimals using banker's rounding"
+✗ BAD: "about 20 days, rounded"
+
+✓ GOOD: "If volatility = 0, return null"
+✗ BAD: (no specification for volatility = 0)
+
+See ADR-017 for complete specification and examples.
+```
+
+**Completion Criteria**:
+- [ ] PrecisionValidator class implemented with all 5 category validators
+- [ ] PrecisionReport generation with score calculation
+- [ ] Integration with SemanticIR pipeline
+- [ ] Unit tests with 90%+ coverage
+- [ ] Example validation reports generated from sample documents
+
+---
+
+### 11.2 Calendar Integration (Week 2-3)
+
+See Phase 12 for Market Calendar Validation Framework (implemented in parallel).
+
+---
+
+### 11.3 Validation Report API (Week 3-4)
+
+**Files to Create**:
+```
+src/api/routers/precision.py                # API endpoints
+src/application/queries/precision_queries.py  # Query handlers
+client/src/components/precision/ValidationReport.tsx
+client/src/components/precision/IssueCard.tsx
+```
+
+**API Endpoints**:
+```python
+# GET /documents/{document_id}/precision
+@router.get("/{document_id}/precision", response_model=PrecisionReportResponse)
+async def get_precision_report(document_id: UUID):
+    """Get precision validation report for a document"""
+    semantic_ir = await semantic_repo.get_ir(document_id)
+    validator = PrecisionValidator(semantic_ir)
+    report = validator.validate()
+    return PrecisionReportResponse.from_domain(report)
+
+# GET /documents/{document_id}/precision/issues
+@router.get("/{document_id}/precision/issues", response_model=List[PrecisionIssueResponse])
+async def get_precision_issues(
+    document_id: UUID,
+    severity: Optional[IssueSeverity] = None,
+    category: Optional[IssueCategory] = None
+):
+    """Get precision issues with optional filtering"""
+    ...
+```
+
+**Completion Criteria**:
+- [ ] API endpoints for precision reports and issues
+- [ ] Query handlers implemented
+- [ ] OpenAPI spec updated
+- [ ] Frontend components display validation results
+
+---
+
+### 11.4 UI Components (Week 4-5)
+
+**Components to Create**:
+```tsx
+// Validation report overview
+<ValidationReport report={report} />
+
+// Issue list with filtering
+<IssueList issues={issues} onFilterChange={handleFilter} />
+
+// Individual issue card with suggestions
+<IssueCard issue={issue} />
+
+// Implementation readiness score gauge
+<ReadinessScore score={85} />
+```
+
+**Completion Criteria**:
+- [ ] Validation report displayed on document detail page
+- [ ] Issues grouped by category and severity
+- [ ] Filtering by severity/category functional
+- [ ] Suggestions displayed with examples
+- [ ] Implementation readiness score prominently shown
+
+---
+
+### 11.5 Phase 11 Completion Criteria
+
+- [ ] **Precision Validator**: All 5 category validators implemented
+- [ ] **Scoring Algorithm**: Implementation readiness score (0-100) working
+- [ ] **API Integration**: Validation reports accessible via API
+- [ ] **Frontend Display**: Validation results shown in UI
+- [ ] **Testing**: 90%+ test coverage for validator
+- [ ] **Documentation**: ADR-017 implemented, API docs updated
+
+**Success Metrics**:
+- Detect 95%+ of precision specification gaps
+- Validation processing time < 2 seconds for 100-page doc
+- Implementation readiness score correlates with implementation time
+- User feedback: "Validation catches issues I would have missed"
+
+---
+
+## Phase 12: Market Calendar Validation Framework
+
+**Duration**: 3-4 weeks  
+**Priority**: CRITICAL (user-identified as major source of implementation issues)  
+**Related**: [ADR-018](decisions/018-market-calendar-validation.md), [ADR-017](decisions/017-implementation-precision-specification.md)
+
+**Goal**: Implement bulletproof validation of calendar-dependent logic, especially relative dates and data sampling specifications.
+
+---
+
+### 12.1 Market Calendar Core (Week 1-2)
+
+**Files to Create**:
+```
+src/domain/semantic/calendar.py             # MarketCalendar utility class
+src/domain/semantic/calendar_extractor.py   # Pattern detection
+src/domain/semantic/calendar_types.py       # Calendar specification types
+```
+
+**Dependencies**:
+```
+pandas-market-calendars==4.3.3
+exchange-calendars==4.5.2
+```
+
+**MarketCalendar Implementation**:
+```python
+# src/domain/semantic/calendar.py
+from datetime import date, timedelta
+from typing import List, Set, Optional
+from enum import Enum
+import pandas_market_calendars as mcal
+
+class CalendarType(Enum):
+    TRADING_DAYS = "trading_days"
+    BUSINESS_DAYS = "business_days"
+    CALENDAR_DAYS = "calendar_days"
+    SETTLEMENT_DAYS = "settlement_days"
+
+class MarketCalendar:
+    """Calendar-aware date computation with validation"""
+    
+    SUPPORTED_CALENDARS = {
+        "NYSE": "New York Stock Exchange",
+        "NASDAQ": "NASDAQ",
+        "LSE": "London Stock Exchange",
+        "TSE": "Tokyo Stock Exchange",
+        "HKEX": "Hong Kong Exchange",
+        "Eurex": "Eurex"
+    }
+    
+    def __init__(self, calendar_name: str = "NYSE"):
+        if calendar_name not in self.SUPPORTED_CALENDARS:
+            raise ValueError(f"Unsupported calendar: {calendar_name}")
+        self.calendar_name = calendar_name
+        self._cal = mcal.get_calendar(calendar_name)
+    
+    def trading_days_between(
+        self,
+        start_date: date,
+        end_date: date
+    ) -> int:
+        """Count trading days between two dates (inclusive)"""
+        schedule = self._cal.schedule(start_date, end_date)
+        return len(schedule)
+    
+    def add_trading_days(
+        self,
+        base_date: date,
+        offset: int
+    ) -> date:
+        """Add/subtract trading days from a date"""
+        # Get valid trading days around the date
+        days_buffer = abs(offset) * 3  # Safety margin
+        start = base_date - timedelta(days=days_buffer)
+        end = base_date + timedelta(days=days_buffer)
+        valid_days = self._cal.valid_days(start, end)
+        
+        try:
+            idx = valid_days.get_loc(base_date)
+            result_idx = idx + offset
+            if 0 <= result_idx < len(valid_days):
+                return valid_days[result_idx].date()
+            else:
+                raise ValueError(f"Offset {offset} exceeds available trading days")
+        except KeyError:
+            raise ValueError(f"{base_date} is not a {self.calendar_name} trading day")
+    
+    def is_trading_day(self, check_date: date) -> bool:
+        """Check if a date is a trading day"""
+        valid_days = self._cal.valid_days(check_date, check_date)
+        return len(valid_days) > 0
+    
+    def next_trading_day(self, base_date: date) -> date:
+        """Get next trading day after base_date"""
+        return self.add_trading_days(base_date, 1)
+    
+    def previous_trading_day(self, base_date: date) -> date:
+        """Get previous trading day before base_date"""
+        return self.add_trading_days(base_date, -1)
+    
+    def align_multi_market(
+        self,
+        start_date: date,
+        end_date: date,
+        calendars: List[str],
+        strategy: str = "all_open"
+    ) -> List[date]:
+        """Get dates when multiple markets are aligned
+        
+        Args:
+            strategy: 'all_open' (intersection) or 'any_open' (union)
+        """
+        if strategy == "all_open":
+            # Intersection: dates when ALL markets are open
+            valid_dates: Optional[Set[date]] = None
+            for cal_name in calendars:
+                cal = mcal.get_calendar(cal_name)
+                cal_valid = set(cal.valid_days(start_date, end_date).date)
+                if valid_dates is None:
+                    valid_dates = cal_valid
+                else:
+                    valid_dates &= cal_valid
+            return sorted(valid_dates or set())
+        
+        elif strategy == "any_open":
+            # Union: dates when ANY market is open
+            valid_dates: Set[date] = set()
+            for cal_name in calendars:
+                cal = mcal.get_calendar(cal_name)
+                valid_dates |= set(cal.valid_days(start_date, end_date).date)
+            return sorted(valid_dates)
+        
+        else:
+            raise ValueError(f"Unknown alignment strategy: {strategy}")
+```
+
+**CalendarExtractor Implementation**:
+```python
+# src/domain/semantic/calendar_extractor.py
+import re
+from dataclasses import dataclass
+from typing import List, Optional
+
+@dataclass
+class CalendarReference:
+    """Represents a calendar-dependent specification in text"""
+    text: str
+    location: str  # section, line
+    is_relative_date: bool
+    is_sampling_spec: bool
+    calendar_type: Optional[CalendarType] = None
+    calendar_name: Optional[str] = None
+    timing: Optional[str] = None
+    issues: List[str] = field(default_factory=list)
+
+class CalendarExtractor:
+    """Extract and validate calendar specifications from text"""
+    
+    PATTERNS = {
+        "relative_days": r"(?:previous|last|past)\s+(\d+)\s+(days?|trading\s+days?|business\s+days?)",
+        "relative_period": r"(?:previous|last|past)\s+(month|quarter|year)",
+        "frequency": r"(daily|weekly|monthly|quarterly|annually)",
+        "end_of_period": r"end\s+of\s+(?:day|month|quarter|year)",
+        "market_names": r"(NYSE|NASDAQ|LSE|TSE|HKEX|Eurex)",
+        "calendar_types": r"(trading\s+days?|business\s+days?|calendar\s+days?)",
+    }
+    
+    def extract_calendar_refs(self, text: str, location: str = "") -> List[CalendarReference]:
+        """Extract calendar references and validate completeness"""
+        refs = []
+        
+        # Find relative date patterns
+        for match in re.finditer(self.PATTERNS["relative_days"], text, re.IGNORECASE):
+            ref = CalendarReference(
+                text=match.group(0),
+                location=location,
+                is_relative_date=True,
+                is_sampling_spec=False
+            )
+            
+            # Check if calendar type is specified
+            if "trading" in match.group(2).lower():
+                ref.calendar_type = CalendarType.TRADING_DAYS
+            elif "business" in match.group(2).lower():
+                ref.calendar_type = CalendarType.BUSINESS_DAYS
+            else:
+                ref.issues.append("Calendar type not specified (trading/business/calendar days)")
+            
+            # Check if market calendar is specified
+            market_match = re.search(self.PATTERNS["market_names"], text[max(0, match.start()-50):match.end()+50])
+            if market_match:
+                ref.calendar_name = market_match.group(1)
+            else:
+                ref.issues.append("Market calendar not specified (NYSE/LSE/TSE/etc)")
+            
+            refs.append(ref)
+        
+        return refs
+```
+
+**AI Agent Prompt for Phase 12**:
+```
+You are implementing the Market Calendar Validation Framework (ADR-018).
+
+Context:
+- Market calendars are THE MOST CRITICAL source of implementation issues (user-identified)
+- Relative dates like "previous 20 days" are highly ambiguous
+- Different markets have different holidays and trading days
+- Multi-market scenarios require explicit alignment strategies
+
+Your task:
+1. Create domain/semantic/calendar.py with MarketCalendar utility class
+2. Create domain/semantic/calendar_extractor.py for pattern detection
+3. Implement calendar-aware date arithmetic:
+   - trading_days_between(start, end) → count
+   - add_trading_days(date, offset) → date
+   - is_trading_day(date) → bool
+   - align_multi_market(dates, calendars, strategy) → dates
+4. Extract calendar references from text and validate completeness
+5. Flag ALL ambiguous temporal references
+
+Critical Validation Rules:
+✗ "previous 20 days" → AMBIGUOUS (trading or calendar?)
+✓ "previous 20 NYSE trading days" → COMPLETE
+
+✗ "monthly rebalancing" → AMBIGUOUS (end of month? which calendar?)
+✓ "rebalance on last NYSE trading day of each calendar month" → COMPLETE
+
+✗ "3-month correlation" → AMBIGUOUS (which markets? alignment?)
+✓ "3-month correlation using dates when both NYSE and TSE open" → COMPLETE
+
+Dependencies:
+- Use pandas-market-calendars library (primary)
+- Fallback to exchange-calendars if needed
+- Support NYSE, NASDAQ, LSE, TSE, HKEX, Eurex
+
+Integration Points:
+- Extend PrecisionValidator (Phase 11) with calendar validation
+- Add calendar metadata to SemanticIR temporal references
+- Generate calendar-specific validation issues
+
+Testing Requirements:
+- Test with known holidays (Christmas, New Year, Thanksgiving)
+- Test multi-year periods including leap years
+- Test multi-market alignments
+- Validate against historical date ranges
+
+See ADR-018 for complete specification and examples.
+```
+
+**Completion Criteria**:
+- [ ] MarketCalendar class with date arithmetic methods
+- [ ] CalendarExtractor detects temporal references
+- [ ] Integration with PrecisionValidator
+- [ ] Unit tests with 90%+ coverage
+- [ ] Tests with major market calendars (NYSE, LSE, TSE, HKEX)
+
+---
+
+### 12.2 Calendar Validation Integration (Week 2-3)
+
+Integrate calendar validation into PrecisionValidator:
+
+```python
+# In precision_validator.py
+def _validate_temporal_specifications(self):
+    """Enhanced with calendar validation"""
+    # Extract calendar references using CalendarExtractor
+    extractor = CalendarExtractor()
+    refs = extractor.extract_calendar_refs(self.ir.full_text)
+    
+    for ref in refs:
+        # Check for issues flagged by extractor
+        for issue_text in ref.issues:
+            self.issues.append(PrecisionIssue(
+                severity=IssueSeverity.CRITICAL if ref.is_relative_date else IssueSeverity.HIGH,
+                category=IssueCategory.MARKET_CALENDAR,
+                location=ref.location,
+                description=issue_text,
+                context=ref.text,
+                suggestion=self._generate_calendar_suggestion(ref),
+                examples=self._calendar_examples(ref)
+            ))
+```
+
+**Completion Criteria**:
+- [ ] Calendar validation integrated into PrecisionValidator
+- [ ] Calendar issues appear in precision reports
+- [ ] API endpoints return calendar validation results
+- [ ] Frontend displays calendar issues prominently
+
+---
+
+### 12.3 Calendar Utilities for Testing (Week 3-4)
+
+Provide calendar utilities for Phase 13 (Testing Framework):
+
+```python
+# Export utilities for use in test generation
+from domain.semantic.calendar import MarketCalendar
+
+# Used by test case generator to create calendar-aware test cases
+calendar = MarketCalendar("NYSE")
+test_dates = calendar.add_trading_days(start_date, 20)
+```
+
+**Completion Criteria**:
+- [ ] Calendar utilities documented and exported
+- [ ] Integration examples provided
+- [ ] Used by test generation framework (Phase 13)
+
+---
+
+### 12.4 Phase 12 Completion Criteria
+
+- [ ] **MarketCalendar Class**: Date arithmetic for major exchanges
+- [ ] **CalendarExtractor**: Detects and validates temporal references
+- [ ] **Validation Integration**: Calendar checks in precision validator
+- [ ] **API & UI**: Calendar issues displayed prominently
+- [ ] **Testing**: 95%+ accuracy on calendar ambiguity detection
+- [ ] **Documentation**: ADR-018 implemented, examples added
+
+**Success Metrics**:
+- 100% detection of ambiguous relative dates
+- Calendar-aware date arithmetic matches exchange schedules
+- Zero calendar-related implementation discrepancies
+- User feedback: "Calendar validation catches critical issues"
+
+---
+
+## Phase 13: Implementation Testing and Verification Framework
+
+**Duration**: 5-6 weeks  
+**Priority**: High (validates implementations match specifications)  
+**Related**: [ADR-019](decisions/019-implementation-testing-verification.md)
+
+**Goal**: Generate executable test cases from specifications, provide reference implementations, and enable cross-validation between multiple implementations.
+
+---
+
+### 13.1 Test Case Generator (Week 1-2)
+
+**Files to Create**:
+```
+src/domain/testing/test_generator.py        # Generate test cases from specs
+src/domain/testing/test_case.py             # TestCase value object
+src/domain/testing/test_categories.py       # Normal, boundary, edge, error categories
+```
+
+**TestCaseGenerator Implementation**:
+```python
+# src/domain/testing/test_generator.py
+from dataclasses import dataclass, field
+from typing import Dict, List, Any, Optional
+from enum import Enum
+
+class TestCategory(Enum):
+    NORMAL = "normal"      # Typical values
+    BOUNDARY = "boundary"  # Min/max parameter values
+    EDGE = "edge"          # Edge cases from spec
+    ERROR = "error"        # Exception cases
+
+@dataclass
+class TestCase:
+    """Executable test case with expected results"""
+    name: str
+    category: TestCategory
+    inputs: Dict[str, Any]
+    expected_output: Optional[Any] = None
+    precision: Optional[int] = None  # decimal places for comparison
+    tolerance: Optional[float] = None  # absolute tolerance for floating point
+    description: str = ""
+    metadata: Dict[str, Any] = field(default_factory=dict)
+
+class TestCaseGenerator:
+    """Generate executable test cases from semantic specifications"""
+    
+    def generate_from_formula(
+        self,
+        formula: FormulaNode,
+        semantic_ir: SemanticIR
+    ) -> List[TestCase]:
+        """
+        Generate comprehensive test cases:
+        - Normal cases with typical values
+        - Boundary cases at parameter limits
+        - Edge cases from precision specification
+        - Error cases from exception specifications
+        """
+        test_cases = []
+        
+        # Extract parameters
+        params = self._extract_parameters(formula, semantic_ir)
+        
+        # Normal case: typical values
+        test_cases.append(TestCase(
+            name=f"{formula.name}_normal",
+            category=TestCategory.NORMAL,
+            inputs=self._generate_typical_values(params),
+            description="Typical parameter values"
+        ))
+        
+        # Boundary cases: min/max of each parameter
+        for param in params:
+            if param.has_range:
+                test_cases.append(TestCase(
+                    name=f"{formula.name}_boundary_{param.name}_min",
+                    category=TestCategory.BOUNDARY,
+                    inputs={
+                        **self._generate_typical_values(params),
+                        param.name: param.min
+                    },
+                    description=f"{param.name} at minimum value {param.min}"
+                ))
+                test_cases.append(TestCase(
+                    name=f"{formula.name}_boundary_{param.name}_max",
+                    category=TestCategory.BOUNDARY,
+                    inputs={
+                        **self._generate_typical_values(params),
+                        param.name: param.max
+                    },
+                    description=f"{param.name} at maximum value {param.max}"
+                ))
+        
+        # Edge cases from precision specifications
+        for edge_case in formula.edge_cases:
+            test_cases.append(TestCase(
+                name=f"{formula.name}_edge_{edge_case.name}",
+                category=TestCategory.EDGE,
+                inputs=self._generate_edge_case_inputs(edge_case, params),
+                expected_output=edge_case.expected_behavior,
+                description=edge_case.description
+            ))
+        
+        return test_cases
+```
+
+**AI Agent Prompt for Phase 13**:
+```
+You are implementing the Implementation Testing and Verification Framework (ADR-019).
+
+Context:
+- We have specifications validated for precision (Phase 11) and calendar correctness (Phase 12)
+- We need to VERIFY that implementations actually match the specifications
+- Different implementations of same spec should produce identical results
+- Silent calculation errors are a major risk
+
+Your task:
+1. Create domain/testing/test_generator.py to generate test cases from specifications
+2. Create domain/testing/reference_impl.py to generate Python reference implementations
+3. Create domain/testing/cross_validator.py to compare multiple implementations
+4. Generate test cases for:
+   - Normal cases (typical values)
+   - Boundary cases (parameter min/max)
+   - Edge cases (from specification)
+   - Error cases (exception handling)
+
+Test Case Generation Strategy:
+- Extract parameters from SemanticIR
+- Generate typical values based on parameter types
+- Create boundary test cases at min/max
+- Add edge cases from precision validation (Phase 11)
+- Include calendar edge cases (Phase 12): holidays, year-end, multi-market
+
+Reference Implementation Generation:
+- Generate Python code directly from specification
+- Include exact precision handling (rounding rules)
+- Include complete edge case handling
+- Include calendar-aware date operations
+- Executable and deterministic
+
+Cross-Validation:
+- Run multiple implementations on same test cases
+- Compare outputs with specified tolerance
+- Flag discrepancies with max difference
+- Generate validation report
+
+Integration Points:
+- Use SemanticIR for formula/parameter extraction
+- Use PrecisionSpec for rounding rules
+- Use MarketCalendar for date operations
+- Use edge_cases from validation (Phase 11)
+
+Success Criteria:
+- Generate 50+ test cases per formula (normal, boundary, edge, error)
+- Reference implementation matches specification exactly
+- Cross-validation detects 99%+ of implementation discrepancies
+- CI/CD integration prevents specification violations
+
+See ADR-019 for complete specification and examples.
+```
+
+**Completion Criteria**:
+- [ ] TestCaseGenerator creates comprehensive test suites
+- [ ] Test cases cover normal, boundary, edge, error scenarios
+- [ ] Calendar-aware test cases included
+- [ ] Unit tests with 90%+ coverage
+
+---
+
+### 13.2 Reference Implementation Generator (Week 2-3)
+
+**Files to Create**:
+```
+src/domain/testing/reference_impl.py        # Generate Python reference code
+src/domain/testing/code_generator.py        # Code generation utilities
+```
+
+**ReferenceImplementation Generator**:
+```python
+# src/domain/testing/reference_impl.py
+from typing import Callable
+from src.domain.semantic.calendar import MarketCalendar
+
+class ReferenceImplementation:
+    """Generate Python reference implementations from specifications"""
+    
+    def generate_reference(
+        self,
+        formula: FormulaNode,
+        semantic_ir: SemanticIR,
+        calendar: Optional[MarketCalendar] = None
+    ) -> Callable:
+        """Generate executable Python function"""
+        # Generate function signature
+        params = self._extract_parameters(formula, semantic_ir)
+        
+        # Generate function body
+        code = self._generate_implementation_code(
+            formula=formula,
+            params=params,
+            precision=formula.precision_spec,
+            edge_cases=formula.edge_cases,
+            calendar=calendar
+        )
+        
+        # Create executable function
+        namespace = self._create_namespace(calendar)
+        exec(code, namespace)
+        return namespace[formula.name]
+```
+
+**Completion Criteria**:
+- [ ] ReferenceImplementation generates executable Python code
+- [ ] Generated code includes precision handling
+- [ ] Generated code includes edge case handling
+- [ ] Calendar operations integrated
+- [ ] Unit tests validate generated code
+
+---
+
+### 13.3 Cross-Validation Framework (Week 3-4)
+
+**Files to Create**:
+```
+src/domain/testing/cross_validator.py       # Compare implementations
+src/domain/testing/validation_report.py     # Report data structures
+```
+
+**CrossValidator Implementation**:
+```python
+# src/domain/testing/cross_validator.py
+@dataclass
+class ValidationReport:
+    """Results of validating one implementation against reference"""
+    total_tests: int
+    passed: int
+    failed: int
+    results: List[TestResult]
+    discrepancy_summary: Dict[str, Any]
+
+class CrossValidator:
+    """Validate implementations against reference and each other"""
+    
+    def validate_implementation(
+        self,
+        implementation: Callable,
+        reference: Callable,
+        test_cases: List[TestCase],
+        tolerance: float = 1e-10
+    ) -> ValidationReport:
+        """Run test cases and compare results"""
+        results = []
+        
+        for test_case in test_cases:
+            # Run reference
+            try:
+                ref_output = reference(**test_case.inputs)
+            except Exception as e:
+                ref_output = f"ERROR: {e}"
+            
+            # Run implementation
+            try:
+                impl_output = implementation(**test_case.inputs)
+            except Exception as e:
+                impl_output = f"ERROR: {e}"
+            
+            # Compare
+            match = self._compare_outputs(
+                ref_output,
+                impl_output,
+                tolerance=test_case.tolerance or tolerance,
+                precision=test_case.precision
+            )
+            
+            results.append(TestResult(
+                test_case=test_case,
+                reference_output=ref_output,
+                implementation_output=impl_output,
+                match=match,
+                discrepancy=self._calculate_discrepancy(ref_output, impl_output)
+            ))
+        
+        return ValidationReport(
+            total_tests=len(results),
+            passed=sum(1 for r in results if r.match),
+            failed=sum(1 for r in results if not r.match),
+            results=results,
+            discrepancy_summary=self._summarize_discrepancies(results)
+        )
+```
+
+**Completion Criteria**:
+- [ ] CrossValidator compares implementations
+- [ ] ValidationReport summarizes results
+- [ ] Discrepancy detection and measurement
+- [ ] Unit tests with mock implementations
+
+---
+
+### 13.4 CI/CD Integration (Week 4-5)
+
+**Files to Create**:
+```
+.github/workflows/specification-validation.yml
+scripts/run_validation.py
+scripts/check_validation.py
+```
+
+**GitHub Actions Workflow**:
+```yaml
+name: Specification Validation
+
+on: [push, pull_request]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Generate Test Cases
+        run: |
+          python -m domain.testing.test_generator \
+            --specs docs/strategies/ \
+            --output tests/generated/
+      
+      - name: Generate Reference Implementations
+        run: |
+          python -m domain.testing.reference_impl \
+            --specs docs/strategies/ \
+            --output tests/reference/
+      
+      - name: Run Cross-Validation
+        run: |
+          pytest tests/generated/ \
+            --reference tests/reference/ \
+            --implementations src/strategies/ \
+            --report validation-report.json
+      
+      - name: Check Validation Results
+        run: |
+          python scripts/check_validation.py \
+            --report validation-report.json \
+            --threshold 100  # Require 100% match
+          
+      - name: Upload Validation Report
+        uses: actions/upload-artifact@v3
+        with:
+          name: validation-report
+          path: validation-report.json
+```
+
+**Completion Criteria**:
+- [ ] CI/CD workflow runs on every push
+- [ ] Validation failures block merges
+- [ ] Validation reports uploaded as artifacts
+- [ ] Dashboard displays validation status
+
+---
+
+### 13.5 API & UI Integration (Week 5-6)
+
+**Files to Create**:
+```
+src/api/routers/testing.py                  # API endpoints
+src/application/queries/testing_queries.py  # Query handlers
+client/src/components/testing/ValidationDashboard.tsx
+client/src/components/testing/TestCaseList.tsx
+```
+
+**API Endpoints**:
+```python
+# GET /documents/{document_id}/testing/test-cases
+@router.get("/{document_id}/testing/test-cases")
+async def get_test_cases(document_id: UUID):
+    """Generate test cases for a document's formulas"""
+    ...
+
+# GET /documents/{document_id}/testing/reference
+@router.get("/{document_id}/testing/reference")
+async def get_reference_implementation(document_id: UUID, formula_id: str):
+    """Get reference implementation for a formula"""
+    ...
+
+# POST /testing/validate
+@router.post("/testing/validate")
+async def validate_implementation(request: ValidationRequest):
+    """Validate an implementation against reference"""
+    ...
+```
+
+**Frontend Components**:
+```tsx
+<ValidationDashboard
+  documentId={documentId}
+  testCases={testCases}
+  validationResults={results}
+/>
+
+<TestCaseList
+  testCases={testCases}
+  onRunTest={handleRunTest}
+  results={results}
+/>
+```
+
+**Completion Criteria**:
+- [ ] API endpoints for test cases and validation
+- [ ] Frontend displays test cases
+- [ ] Frontend shows validation results
+- [ ] User can trigger validation from UI
+
+---
+
+### 13.6 Phase 13 Completion Criteria
+
+- [ ] **Test Generator**: Creates comprehensive test suites from specifications
+- [ ] **Reference Impl**: Generates executable Python code from specs
+- [ ] **Cross-Validator**: Compares implementations and detects discrepancies
+- [ ] **CI/CD Integration**: Automated validation on every commit
+- [ ] **API & UI**: Test cases and validation results accessible
+- [ ] **Documentation**: ADR-019 implemented, testing guide created
+
+**Success Metrics**:
+- Generate 50+ test cases per formula (average)
+- Reference implementation executes successfully for 95%+ of formulas
+- Cross-validation detects 99%+ of implementation discrepancies
+- Zero specification violations reach production
+- Implementation time reduced from 2-4 weeks to 3-5 days
+
+---
+
 *This plan should be reviewed and updated as implementation progresses. Each phase completion should trigger an update to this document reflecting lessons learned and any scope adjustments.*
 

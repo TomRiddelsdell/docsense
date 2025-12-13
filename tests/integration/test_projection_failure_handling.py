@@ -15,7 +15,7 @@ from datetime import datetime, timedelta
 from uuid import uuid4
 from unittest.mock import Mock, AsyncMock, patch
 
-from src.domain.events.document import DocumentUploaded
+from src.domain.events.document_events import DocumentUploaded
 from src.infrastructure.projections.failure_tracking import (
     ProjectionFailureTracker,
     RetryableProjectionPublisher
