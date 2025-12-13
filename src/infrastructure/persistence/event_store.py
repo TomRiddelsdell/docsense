@@ -7,6 +7,7 @@ import asyncpg
 
 from src.domain.events import DomainEvent
 from src.infrastructure.persistence.event_serializer import EventSerializer
+from src.infrastructure.persistence.event_upcaster import UpcasterRegistry, create_upcaster_registry
 
 
 class ConcurrencyError(Exception):
@@ -48,9 +49,15 @@ class EventStore(ABC):
 
 
 class PostgresEventStore(EventStore):
-    def __init__(self, pool: asyncpg.Pool, serializer: Optional[EventSerializer] = None):
+    def __init__(
+        self, 
+        pool: asyncpg.Pool, 
+        serializer: Optional[EventSerializer] = None,
+        upcaster_registry: Optional[UpcasterRegistry] = None
+    ):
         self._pool = pool
         self._serializer = serializer or EventSerializer()
+        self._upcaster_registry = upcaster_registry or create_upcaster_registry()
 
     async def append(
         self,
@@ -109,6 +116,8 @@ class PostgresEventStore(EventStore):
         events = []
         for row in rows:
             payload = json.loads(row["payload"]) if isinstance(row["payload"], str) else row["payload"]
+            # Apply upcasting before deserialization
+            payload = self._upcaster_registry.upcast(payload)
             event = self._serializer.deserialize(row["event_type"], payload)
             events.append(event)
         return events
@@ -133,6 +142,8 @@ class PostgresEventStore(EventStore):
         events = []
         for row in rows:
             payload = json.loads(row["payload"]) if isinstance(row["payload"], str) else row["payload"]
+            # Apply upcasting before deserialization
+            payload = self._upcaster_registry.upcast(payload)
             event = self._serializer.deserialize(row["event_type"], payload)
             events.append(event)
         return events
