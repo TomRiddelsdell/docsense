@@ -133,7 +133,9 @@ However, creating high-quality documentation is:
 3. ✅ **COMPLETED**: User aggregate (Phase 13.2.1) - 23 tests passing
 4. ✅ **COMPLETED**: Extend Document aggregate with ownership (Phase 13.2.2) - 16 tests passing
 5. ✅ **COMPLETED**: Implement AuthorizationService (Phase 13.3) - 28 tests passing
-6. 🔄 **IN PROGRESS**: Database migrations (Phase 13.4)
+6. ✅ **COMPLETED**: Database migrations (Phase 13.4) - 4 migration scripts
+7. ✅ **COMPLETED**: User repository and projections (Phase 13.5)
+8. 🔄 **IN PROGRESS**: API authentication middleware (Phase 13.6)
 
 ### 🔴 Production Blockers (Deferred - After Auth)
 
@@ -4413,11 +4415,11 @@ Use standard PostgreSQL DDL, compatible with asyncpg.
 ```
 
 **Completion Criteria**:
-- [ ] Migration scripts created and tested
-- [ ] users, groups, access_audit_log tables created
-- [ ] document_views extended with ownership columns
-- [ ] Indexes created for performance
-- [ ] Backfill strategy for existing documents
+- [x] Migration scripts created and tested
+- [x] users, groups, access_audit_log tables created
+- [x] document_views extended with ownership columns
+- [x] Indexes created for performance
+- [x] Backfill strategy for existing documents
 
 ---
 
@@ -4478,11 +4480,11 @@ Reference src/infrastructure/repositories/document_repository.py for patterns.
 ```
 
 **Completion Criteria**:
-- [ ] UserRepository with event sourcing
-- [ ] get_or_create_from_auth() for auto-registration
-- [ ] UserProjection updates read model
-- [ ] UserQueries for fast lookups
-- [ ] Integration tests with database
+- [x] UserRepository with event sourcing
+- [x] get_or_create_from_auth() for auto-registration
+- [x] UserProjection updates read model
+- [x] UserQueries for fast lookups
+- [ ] Integration tests with database (deferred to Phase 13.8)
 
 ---
 
