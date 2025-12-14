@@ -70,8 +70,15 @@ class PostgresEventStore(EventStore):
 
         async with self._pool.acquire() as conn:
             async with conn.transaction():
+                # Lock aggregate rows to prevent concurrent modifications
+                # Using FOR UPDATE ensures only one transaction can check/insert at a time
                 current = await conn.fetchval(
-                    "SELECT COALESCE(MAX(event_version), 0) FROM events WHERE aggregate_id = $1",
+                    """
+                    SELECT COALESCE(MAX(event_version), 0)
+                    FROM events
+                    WHERE aggregate_id = $1
+                    FOR UPDATE
+                    """,
                     aggregate_id
                 )
                 if current != expected_version:

@@ -2,6 +2,7 @@ from typing import Type
 from uuid import UUID
 
 from src.domain.aggregates.policy_repository import PolicyRepository as PolicyRepositoryAggregate
+from src.domain.value_objects import Policy
 from src.infrastructure.repositories.base import Repository
 
 
@@ -13,6 +14,11 @@ class PolicyRepositoryRepository(Repository[PolicyRepositoryAggregate]):
         return "PolicyRepository"
 
     def _serialize_aggregate(self, aggregate: PolicyRepositoryAggregate) -> dict:
+        """
+        Serialize PolicyRepository using immutable Policy value objects.
+
+        Uses Policy.to_dict() for proper serialization.
+        """
         return {
             "id": str(aggregate.id),
             "version": aggregate.version,
@@ -20,10 +26,10 @@ class PolicyRepositoryRepository(Repository[PolicyRepositoryAggregate]):
             "description": aggregate.description,
             "policies": [
                 {
-                    "policy_id": str(p["policy_id"]),
-                    "name": p["name"],
-                    "description": p["description"],
-                    "requirement_type": p["requirement_type"],
+                    "policy_id": str(p.policy_id),
+                    "policy_name": p.policy_name,
+                    "policy_content": p.policy_content,
+                    "requirement_type": p.requirement_type.value,
                 }
                 for p in aggregate.policies
             ],
@@ -31,6 +37,11 @@ class PolicyRepositoryRepository(Repository[PolicyRepositoryAggregate]):
         }
 
     def _deserialize_aggregate(self, state: dict) -> PolicyRepositoryAggregate:
+        """
+        Deserialize PolicyRepository using immutable Policy value objects.
+
+        Uses Policy.from_dict() for proper deserialization.
+        """
         repo = PolicyRepositoryAggregate.__new__(PolicyRepositoryAggregate)
         repo._id = UUID(state["id"])
         repo._version = state["version"]
@@ -38,13 +49,8 @@ class PolicyRepositoryRepository(Repository[PolicyRepositoryAggregate]):
         repo._name = state["name"]
         repo._description = state["description"]
         repo._policies = [
-            {
-                "policy_id": UUID(p["policy_id"]),
-                "name": p["name"],
-                "description": p["description"],
-                "requirement_type": p["requirement_type"],
-            }
+            Policy.from_dict(p)
             for p in state["policies"]
         ]
-        repo._assigned_documents = [UUID(doc_id) for doc_id in state["assigned_documents"]]
+        repo._assigned_documents = set(UUID(doc_id) for doc_id in state["assigned_documents"])
         return repo

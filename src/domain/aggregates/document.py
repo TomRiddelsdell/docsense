@@ -38,6 +38,10 @@ class Document(Aggregate):
         self._policy_repository_id: Optional[UUID] = None
         self._compliance_score: Optional[float] = None
         self._findings: List[Dict[str, Any]] = []
+        # NEW: Access control fields
+        self._owner_kerberos_id: str = ""
+        self._visibility: str = "private"  # Will use DocumentVisibility enum
+        self._shared_with_groups: set = set()
 
     @property
     def filename(self) -> str:
@@ -67,6 +71,21 @@ class Document(Aggregate):
     def current_version(self) -> VersionNumber:
         return self._current_version
 
+    @property
+    def owner_kerberos_id(self) -> str:
+        """Get the document owner's Kerberos ID."""
+        return self._owner_kerberos_id
+    
+    @property
+    def visibility(self) -> str:
+        """Get the document visibility level."""
+        return self._visibility
+    
+    @property
+    def shared_with_groups(self) -> set:
+        """Get the groups this document is shared with."""
+        return self._shared_with_groups.copy()
+
     @classmethod
     def upload(
         cls,
@@ -84,6 +103,7 @@ class Document(Aggregate):
                 original_format=original_format,
                 file_size_bytes=len(content),
                 uploaded_by=uploaded_by,
+                owner_kerberos_id=uploaded_by,  # NEW: Set owner
             )
         )
         return document
@@ -260,17 +280,91 @@ class Document(Aggregate):
                 version_number=str(self._current_version),
             )
         )
+    
+    def share_with_group(self, group: str, shared_by: str) -> None:
+        """Share document with a group.
+        
+        Automatically changes visibility to GROUP if currently PRIVATE.
+        
+        Args:
+            group: Group name to share with
+            shared_by: Kerberos ID of user sharing the document
+        """
+        from src.domain.events.document_events import DocumentSharedWithGroup
+        
+        if group not in self._shared_with_groups:
+            self._apply_event(
+                DocumentSharedWithGroup(
+                    aggregate_id=self._id,
+                    group=group,
+                    shared_by=shared_by,
+                )
+            )
+    
+    def make_private(self, changed_by: str) -> None:
+        """Remove all group sharing and set visibility to private.
+        
+        Args:
+            changed_by: Kerberos ID of user making the document private
+        """
+        from src.domain.events.document_events import DocumentMadePrivate
+        
+        if self._visibility != "private" or self._shared_with_groups:
+            self._apply_event(
+                DocumentMadePrivate(
+                    aggregate_id=self._id,
+                    changed_by=changed_by,
+                )
+            )
+    
+    def can_view(self, user_kerberos_id: str, user_groups: set) -> bool:
+        """Check if a user can view this document.
+        
+        Args:
+            user_kerberos_id: User's Kerberos ID
+            user_groups: Set of groups the user belongs to
+            
+        Returns:
+            True if user can view the document
+        """
+        # Owner can always view
+        if self._owner_kerberos_id == user_kerberos_id:
+            return True
+        
+        # Check visibility level
+        if self._visibility == "private":
+            return False
+        elif self._visibility == "group":
+            # User must be in at least one shared group
+            return bool(self._shared_with_groups & user_groups)
+        elif self._visibility == "organization":
+            # All authenticated users can view (future)
+            return True
+        elif self._visibility == "public":
+            # Anonymous access (future)
+            return True
+        
+        return False
 
     def _when(self, event: DomainEvent) -> None:
+        from src.domain.events.document_events import DocumentSharedWithGroup, DocumentMadePrivate
+        
         if isinstance(event, DocumentUploaded):
             self._filename = event.filename
             self._original_format = event.original_format
             self._status = DocumentStatus.UPLOADED
+            self._owner_kerberos_id = event.owner_kerberos_id  # NEW
         elif isinstance(event, DocumentConverted):
             self._markdown_content = event.markdown_content
             self._sections = event.sections
             self._metadata = event.metadata
             self._status = DocumentStatus.CONVERTED
+        elif isinstance(event, DocumentSharedWithGroup):
+            self._shared_with_groups.add(event.group)
+            self._visibility = "group"  # Automatically change to GROUP
+        elif isinstance(event, DocumentMadePrivate):
+            self._shared_with_groups.clear()
+            self._visibility = "private"
         elif isinstance(event, AnalysisStarted):
             self._policy_repository_id = event.policy_repository_id
             self._status = DocumentStatus.ANALYZING

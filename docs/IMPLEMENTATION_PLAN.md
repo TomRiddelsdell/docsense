@@ -1,8 +1,8 @@
 # Implementation Plan: Trading Algorithm Document Analyzer
 
-**Last Updated**: December 13, 2025  
-**Status**: Phase 6 Complete, Production Hardening In Progress  
-**Next Milestone**: Production Deployment Readiness
+**Last Updated**: December 14, 2025  
+**Status**: Phase 6 Complete, Phase 13 (Authentication) Ready to Start  
+**Next Milestone**: User Authentication and Authorization Implementation
 
 ---
 
@@ -89,20 +89,57 @@ However, creating high-quality documentation is:
 | **Semantic IR** | ✅ Complete | `src/domain/value_objects/document_ir.py` | Term lineage, validation |
 | **Test Suite** | ✅ 373 passing | `tests/` | Unit + integration coverage |
 | **OpenAPI Spec** | ✅ Complete | `docs/api/openapi.yaml` | Full API documentation |
-| **ADRs** | ✅ 16 documented | `docs/decisions/` | All major decisions recorded |
+| **ADRs** | ✅ 21 documented | `docs/decisions/` | All major decisions recorded |
 | **Database Schema** | ✅ Complete | `docs/database/` | Event store + projections |
+| **Test Documents** | ✅ Complete | `data/test_documents/` | 20 .docx + 20 .json test suite |
 
-**Recent Completions** (December 2025):
-- ✅ Event versioning strategy with upcasters ([ADR-016](decisions/016-event-versioning-strategy.md))
-- ✅ Projection failure handling with retry logic
-- ✅ CORS security vulnerability fixed
-- ✅ Semantic IR implementation for term lineage tracking
-- ✅ AI provider multi-model integration
-- ✅ Doppler secrets management integration
+**Recent Completions** (December 13-14, 2025):
+- ✅ Optimistic locking race condition fixes ([change log](changes/2025-12-13-optimistic-locking-race-condition-fix.md))
+- ✅ Snapshot serialization improvements ([change log](changes/2025-12-13-snapshot-serialization-fix.md))
+- ✅ Value object DDD compliance enforcement ([change log](changes/2025-12-13-value-object-ddd-compliance.md))
+- ✅ Security and performance test suites ([change log](changes/2025-12-14-security-performance-test-suites.md))
+- ✅ Test document suite: 20 documents covering 158 issues ([README](../data/test_documents/README.md))
+- ✅ ADR-021: User/Group Authentication Architecture ([ADR-021](decisions/021-user-group-authentication-authorization.md))
+- ✅ Implementation Precision Specification Framework (ADR-017, ADR-018, ADR-019)
+- ✅ Vision enhancement proposals for implementation precision
 
-### 🔴 Production Blockers (Must Fix)
+### 🔵 Next Priority: Phase 13 - Authentication & Authorization
+
+**Status**: ⚠️ **READY TO START** - ADR complete, implementation plan detailed
+
+**Why This Is Next**:
+1. **User Requirement**: Application needs user awareness and document ownership
+2. **Foundation Complete**: ADR-021 defines comprehensive architecture
+3. **Blocked Features**: Document sharing, access control, audit trail depend on auth
+4. **Production Readiness**: Auth required before deployment
+
+**What's Ready**:
+- ✅ ADR-021: Complete authentication/authorization architecture documented
+- ✅ Implementation plan: Detailed Phase 13 with week-by-week breakdown
+- ✅ AI agent prompts: Comprehensive prompts for each implementation step
+- ✅ Database schema: Migration scripts designed
+- ✅ Security model: Kerberos auth, RBAC, audit logging specified
+
+**Implementation Path** (3-4 weeks):
+1. **Week 1**: Domain model (User aggregate, Document ownership extensions, Authorization service)
+2. **Week 2**: Infrastructure (Database migrations, UserRepository, projections)
+3. **Week 3**: API layer (Authentication middleware, endpoints with auth checks)
+4. **Week 3-4**: Frontend (AuthContext, ShareDialog, user display)
+5. **Week 4**: Audit logging (Complete access audit trail)
+
+**Immediate Next Steps**:
+1. ✅ Read ADR-021 to understand architecture: `docs/decisions/021-user-group-authentication-authorization.md`
+2. ✅ Review Phase 13 implementation plan below (starts at line 180)
+3. ✅ **COMPLETED**: User aggregate (Phase 13.2.1) - 23 tests passing
+4. ✅ **COMPLETED**: Extend Document aggregate with ownership (Phase 13.2.2) - 16 tests passing
+5. ✅ **COMPLETED**: Implement AuthorizationService (Phase 13.3) - 28 tests passing
+6. 🔄 **IN PROGRESS**: Database migrations (Phase 13.4)
+
+### 🔴 Production Blockers (Deferred - After Auth)
 
 Based on [Production Readiness Review](analysis/production-readiness-review.md):
+
+**Note**: These are important but deferred until after authentication is implemented, as auth is a user-requested feature blocking other functionality.
 
 1. **❌ Missing Secret Validation** - App starts with invalid config
 2. **❌ Bare Exception Handlers** - Root causes masked
@@ -111,13 +148,17 @@ Based on [Production Readiness Review](analysis/production-readiness-review.md):
 5. **❌ No Monitoring/Metrics** - Cannot detect problems
 6. **❌ Deployment Docs Incomplete** - No deployment process
 
-### 🟡 High Priority (Address Soon)
+### 🟡 Future Enhancements (Post-Auth, Post-Production)
 
 - Implement structured logging with correlation IDs
 - Add Prometheus metrics and health endpoints
 - Implement rate limiting and request throttling
 - Add database migration tooling
 - Complete deployment documentation
+- Multi-document analysis (Phase 9)
+- Semantic IR enhancements (Phase 10)
+- Implementation precision validation (Phases 11-12)
+- Testing framework (Phase 14)
 - Add load testing and performance benchmarks
 
 ### 🔵 Future Enhancements (Phases 7-10)
@@ -4077,7 +4118,642 @@ test_dates = calendar.add_trading_days(start_date, 20)
 
 ---
 
-## Phase 13: Implementation Testing and Verification Framework
+## Phase 13: User Authentication and Authorization Infrastructure
+
+**Duration**: 3-4 weeks  
+**Priority**: HIGH (Security and access control foundation)  
+**Related**: [ADR-021](decisions/021-user-group-authentication-authorization.md)
+
+**Goal**: Implement Kerberos-based authentication, role-based authorization, and document ownership with group-based sharing.
+
+### 13.1 Phase Overview
+
+This phase implements user authentication and authorization as specified in ADR-021. The architecture follows these principles:
+
+1. **Authentication**: Kerberos via HTTP headers (no password storage)
+2. **Authorization**: Role-Based Access Control (RBAC) with granular permissions
+3. **Document Access**: Private by default, optional group sharing
+4. **Security**: Defense-in-depth with audit logging
+5. **Single Database**: Development and production share same schema
+
+**Security Model**:
+- Users authenticated via enterprise Kerberos SSO
+- Documents owned by creator, private by default
+- Explicit sharing with groups via toggle
+- All access logged for audit trail
+- RBAC roles: VIEWER, CONTRIBUTOR, ADMIN, AUDITOR
+
+---
+
+### 13.2 Foundation: Domain Model Extensions (Week 1)
+
+**Duration**: 4-5 days
+
+#### 13.2.1 User Aggregate
+
+**Files to Create**:
+```
+src/domain/aggregates/user.py              # User aggregate
+src/domain/events/user_events.py           # User events
+src/domain/commands/user_commands.py       # User commands
+src/domain/value_objects/user_role.py      # UserRole enum
+```
+
+**AI Agent Prompt for User Aggregate**:
+```
+Implement the User aggregate following DDD and event sourcing patterns as specified in ADR-021.
+
+Context:
+- Users authenticated via Kerberos (6-character ID)
+- Groups provided via HTTP header (comma-separated list)
+- Roles: VIEWER, CONTRIBUTOR, ADMIN, AUDITOR
+- No password storage (external authentication)
+- Single database for dev and production
+
+Task:
+1. Create src/domain/aggregates/user.py with User aggregate:
+   - Kerberos ID as aggregate ID (6 characters, immutable)
+   - Groups stored as Set[str] for fast membership checks
+   - Roles stored as Set[UserRole]
+   - Implement User.register() factory method
+   - Implement role and group management methods
+   - Follow existing Aggregate base class pattern from src/domain/aggregates/base.py
+
+2. Create src/domain/events/user_events.py:
+   - UserRegistered (kerberos_id, groups, display_name, email, initial_roles)
+   - UserGroupAdded (group)
+   - UserRoleGranted (role)
+   - UserDeactivated
+
+3. Create src/domain/value_objects/user_role.py:
+   - UserRole enum: VIEWER, CONTRIBUTOR, ADMIN, AUDITOR
+
+Key Requirements:
+- ADMIN role implies all permissions
+- User can be in multiple groups
+- Event sourcing: all state changes via events
+- has_role() method checks if user has specific role or is ADMIN
+- in_group() method checks group membership
+
+Testing:
+- Test User.register() with valid/invalid Kerberos IDs (must be 6 characters)
+- Test role granting and checking
+- Test group membership
+- Test event application and reconstitution
+
+Reference src/domain/aggregates/document.py for patterns.
+```
+
+**Completion Criteria**:
+- [x] User aggregate with event sourcing
+- [x] UserRole enum with 4 roles
+- [x] User events (UserRegistered, UserGroupAdded, UserRoleGranted, UserDeactivated)
+- [x] Unit tests with 90%+ coverage (23 tests passing)
+- [ ] Integration with event store (Phase 13.5)
+
+---
+
+#### 13.2.2 Document Access Control Extensions
+
+**Files to Modify**:
+```
+src/domain/aggregates/document.py          # Add ownership and visibility
+src/domain/events/document_events.py       # Add sharing events
+src/domain/value_objects/visibility.py     # DocumentVisibility enum
+```
+
+**AI Agent Prompt for Document Extensions**:
+```
+Extend the Document aggregate to support ownership and access control as specified in ADR-021.
+
+Context:
+- Documents owned by the uploader (Kerberos ID)
+- Default visibility: PRIVATE (owner only)
+- Can be shared with groups via toggle
+- Authorization checked at aggregate level
+
+Task:
+1. Create src/domain/value_objects/visibility.py:
+   - DocumentVisibility enum: PRIVATE, GROUP, ORGANIZATION, PUBLIC
+   - Only PRIVATE and GROUP implemented initially
+
+2. Modify src/domain/aggregates/document.py:
+   - Add _owner_kerberos_id: str field
+   - Add _visibility: DocumentVisibility field (default PRIVATE)
+   - Add _shared_with_groups: Set[str] field
+   - Update DocumentUploaded event to include owner_kerberos_id
+   - Implement share_with_group(group, shared_by) method
+   - Implement make_private(changed_by) method
+   - Implement can_view(user_kerberos_id, user_groups) method
+
+3. Add to src/domain/events/document_events.py:
+   - DocumentSharedWithGroup (group, shared_by)
+   - DocumentMadePrivate (changed_by)
+
+Key Requirements:
+- Owner stored immutably on upload
+- Visibility defaults to PRIVATE
+- Sharing with group automatically changes visibility to GROUP
+- Making private clears all group shares
+- can_view() returns True if: owner OR (visibility=GROUP AND user in shared groups)
+- All state changes via events
+
+Testing:
+- Test upload sets owner correctly
+- Test share_with_group() adds group and changes visibility
+- Test make_private() clears groups
+- Test can_view() for owner, group member, and non-member
+- Test event reconstitution preserves ownership
+
+Maintain existing Document behavior (conversion, analysis, etc.).
+```
+
+**Completion Criteria**:
+- [x] DocumentVisibility enum (PRIVATE, GROUP, ORGANIZATION, PUBLIC)
+- [x] Document aggregate extended with ownership fields
+- [x] DocumentUploaded event includes owner
+- [x] New events: DocumentSharedWithGroup, DocumentMadePrivate
+- [x] Authorization methods: share_with_group(), make_private(), can_view()
+- [x] Unit tests with 90%+ coverage (16 tests passing)
+
+---
+
+### 13.3 Authorization Service (Week 1-2)
+
+**Duration**: 3-4 days
+
+**Files to Create**:
+```
+src/domain/services/authorization_service.py  # Permission checks
+src/domain/value_objects/permission.py        # Permission enum
+```
+
+**AI Agent Prompt for Authorization Service**:
+```
+Implement the AuthorizationService for policy-based access control as specified in ADR-021.
+
+Context:
+- Role-Based Access Control (RBAC) with 4 roles
+- Permissions: VIEW, EDIT, DELETE, SHARE, ANALYZE, EXPORT, VIEW_AUDIT, MANAGE_USERS
+- Document owners have special privileges
+- Admins can access all documents
+
+Task:
+1. Create src/domain/value_objects/permission.py:
+   - Permission enum with 8 permissions
+
+2. Create src/domain/services/authorization_service.py:
+   - Define ROLE_PERMISSIONS mapping (role → set of permissions)
+   - Implement permission methods:
+     * can_view_document(user, document) → bool
+     * can_edit_document(user, document) → bool
+     * can_share_document(user, document) → bool
+     * can_delete_document(user, document) → bool
+   - Implement utility methods:
+     * has_permission(user, permission) → bool
+     * get_user_permissions(user) → Set[Permission]
+
+Authorization Rules:
+- VIEW: Document owner, group members (if shared), admins
+- EDIT: Document owner, admins
+- SHARE: Document owner (own groups only), admins
+- DELETE: Document owner (with EDIT permission), admins
+- ADMIN role grants ALL permissions
+- Permission denied if user lacks role-based permission
+
+Testing:
+- Test each permission method with owner, group member, non-member
+- Test ADMIN bypasses all restrictions
+- Test VIEWER role has minimal permissions
+- Test get_user_permissions() returns correct set
+
+This is a pure domain service with no infrastructure dependencies.
+```
+
+**Completion Criteria**:
+- [x] Permission enum with 8 permissions
+- [x] AuthorizationService with permission checks
+- [x] Role-to-permission mappings defined
+- [x] Document-level authorization methods
+- [x] Unit tests with 95%+ coverage (28 tests passing)
+
+---
+
+### 13.4 Infrastructure: Database Schema (Week 2)
+
+**Duration**: 2-3 days
+
+**Files to Create**:
+```
+migrations/014_add_users_table.sql
+migrations/015_add_groups_table.sql
+migrations/016_add_access_audit_log.sql
+migrations/017_alter_documents_add_owner.sql
+```
+
+**AI Agent Prompt for Database Migrations**:
+```
+Create database migration scripts for authentication and authorization as specified in ADR-021.
+
+Context:
+- PostgreSQL database with event sourcing (events table exists)
+- Adding user authentication and document access control
+- Need to support audit logging
+- Single database for dev and production
+
+Task:
+1. Create migrations/014_add_users_table.sql:
+   - kerberos_id VARCHAR(6) PRIMARY KEY
+   - display_name, email VARCHAR(255)
+   - groups TEXT[] (array of group names)
+   - roles TEXT[] (array of role names)
+   - is_active BOOLEAN DEFAULT TRUE
+   - created_at, updated_at TIMESTAMP
+   - Indexes: GIN on groups, B-tree on is_active
+
+2. Create migrations/015_add_groups_table.sql:
+   - id VARCHAR(255) PRIMARY KEY
+   - display_name VARCHAR(255)
+   - description TEXT
+   - created_at TIMESTAMP
+
+3. Create migrations/016_add_access_audit_log.sql:
+   - id UUID PRIMARY KEY
+   - user_kerberos_id VARCHAR(6) NOT NULL
+   - document_id UUID
+   - action VARCHAR(50) NOT NULL (view, edit, share, delete)
+   - result VARCHAR(20) NOT NULL (allowed, denied)
+   - reason TEXT
+   - ip_address INET
+   - user_agent TEXT
+   - occurred_at TIMESTAMP
+   - Indexes: B-tree on user, document, occurred_at DESC, action
+
+4. Create migrations/017_alter_documents_add_owner.sql:
+   - ALTER document_views ADD COLUMN owner_kerberos_id VARCHAR(6)
+   - ALTER document_views ADD COLUMN visibility VARCHAR(20) DEFAULT 'private'
+   - ALTER document_views ADD COLUMN shared_with_groups TEXT[] DEFAULT '{}'
+   - Backfill existing documents with 'system' owner
+   - ALTER owner_kerberos_id SET NOT NULL (after backfill)
+   - Indexes: B-tree on owner, visibility; GIN on shared_with_groups
+
+Key Requirements:
+- Use PostgreSQL array types for groups and roles
+- GIN indexes for array columns (fast membership checks)
+- Backfill strategy: SET owner='system' WHERE owner IS NULL
+- Migration order: users → groups → audit_log → documents
+
+Testing:
+- Run migrations on clean database
+- Verify indexes created
+- Test backfill sets 'system' as owner
+- Verify NOT NULL constraint enforced after backfill
+
+Use standard PostgreSQL DDL, compatible with asyncpg.
+```
+
+**Completion Criteria**:
+- [ ] Migration scripts created and tested
+- [ ] users, groups, access_audit_log tables created
+- [ ] document_views extended with ownership columns
+- [ ] Indexes created for performance
+- [ ] Backfill strategy for existing documents
+
+---
+
+### 13.5 Infrastructure: Repositories and Projections (Week 2)
+
+**Duration**: 2-3 days
+
+**Files to Create**:
+```
+src/infrastructure/repositories/user_repository.py
+src/infrastructure/projections/user_projector.py
+src/infrastructure/queries/user_queries.py
+```
+
+**AI Agent Prompt for User Infrastructure**:
+```
+Implement User repository, projector, and queries following event sourcing patterns as specified in ADR-021.
+
+Context:
+- User is an event-sourced aggregate
+- Event store already exists (from Phase 2)
+- Need read model projection for fast queries
+- Auto-register users on first authentication
+
+Task:
+1. Create src/infrastructure/repositories/user_repository.py:
+   - Extend Repository[User] base class from src/infrastructure/repositories/base.py
+   - Implement get_by_kerberos_id(kerberos_id) → Optional[User]
+   - Implement get_or_create_from_auth(kerberos_id, groups, display_name, email):
+     * Get existing user from event store
+     * If not found, call User.register() and save
+     * If found, check if groups changed and update
+     * Return user
+
+2. Create src/infrastructure/projections/user_projector.py:
+   - Extend Projection base class
+   - Handle events: UserRegistered, UserGroupAdded, UserRoleGranted, UserDeactivated
+   - Update users table (read model)
+
+3. Create src/infrastructure/queries/user_queries.py:
+   - get_by_kerberos_id(id) → Optional[UserView]
+   - search_users(query, limit) → List[UserView]
+     * Search by kerberos_id, display_name, email
+
+Key Requirements:
+- get_or_create_from_auth() auto-registers new users
+- Update groups if changed since last login (sync with auth headers)
+- Projector maintains users table in sync with events
+- Queries use read model (users table) for fast access
+
+Testing:
+- Test get_or_create_from_auth() creates new user on first call
+- Test get_or_create_from_auth() updates groups on subsequent calls
+- Test projector updates users table correctly
+- Test search_users() finds by kerberos_id, name, email
+
+Reference src/infrastructure/repositories/document_repository.py for patterns.
+```
+
+**Completion Criteria**:
+- [ ] UserRepository with event sourcing
+- [ ] get_or_create_from_auth() for auto-registration
+- [ ] UserProjection updates read model
+- [ ] UserQueries for fast lookups
+- [ ] Integration tests with database
+
+---
+
+### 13.6 API Layer: Authentication Middleware (Week 3)
+
+**Duration**: 3-4 days
+
+**Files to Create**:
+```
+src/api/middleware/authentication.py        # Kerberos auth middleware
+src/api/dependencies/auth.py                # FastAPI dependencies
+src/api/schemas/auth.py                     # Auth DTOs
+src/api/routes/auth.py                      # Auth endpoints
+```
+
+**AI Agent Prompt for API Authentication**:
+```
+Implement Kerberos authentication middleware and FastAPI dependencies as specified in ADR-021.
+
+Context:
+- Authentication via HTTP headers (no password validation)
+- Headers: X-User-Kerberos (6-char ID), X-User-Groups (comma-separated)
+- Auto-register users on first request
+- Inject authenticated user into route handlers
+
+Task:
+1. Create src/api/middleware/authentication.py:
+   - KerberosAuthMiddleware extracts headers:
+     * X-User-Kerberos → request.state.kerberos_id
+     * X-User-Groups → request.state.user_groups (split by comma)
+   - Run on every request
+
+2. Create src/api/dependencies/auth.py:
+   - get_current_user() dependency:
+     * Extract kerberos_id from request.state
+     * Raise 401 if missing
+     * Call user_repo.get_or_create_from_auth()
+     * Raise 403 if user inactive
+     * Return User aggregate
+   - require_role(role) dependency factory:
+     * Check user.has_role(role)
+     * Raise 403 if lacking role
+   - Convenience: require_admin, require_contributor, require_auditor
+
+3. Create src/api/routes/auth.py:
+   - GET /api/v1/auth/me → CurrentUserResponse
+     * Return current user info (kerberos_id, display_name, groups, roles, permissions)
+
+4. Update src/api/routes/documents.py:
+   - Add user: User = Depends(get_current_user) to ALL endpoints
+   - Add authorization checks using AuthorizationService:
+     * Before get_document: check can_view_document()
+     * Before update/delete: check can_edit_document()
+   - Implement POST /documents/{id}/share:
+     * Body: ShareDocumentRequest (groups: List[str])
+     * Check can_share_document()
+     * Verify user in each group
+     * Call document.share_with_group() for each
+   - Implement POST /documents/{id}/make-private:
+     * Check can_share_document()
+     * Call document.make_private()
+
+Key Requirements:
+- Middleware runs on every request
+- get_current_user() raises 401 if no Kerberos header
+- get_current_user() raises 403 if user inactive
+- require_role() raises 403 if user lacks role
+- Authorization checks BEFORE business logic
+- Use uploaded_by=user._kerberos_id for ownership
+
+Testing:
+- Test requests without Kerberos header → 401
+- Test requests with valid Kerberos header → success
+- Test auto-registration on first request
+- Test group updates on subsequent requests
+- Test require_role() with matching/mismatching roles
+- Test document authorization (owner vs non-owner)
+
+Register middleware in src/api/main.py:
+app.add_middleware(KerberosAuthMiddleware)
+```
+
+**Completion Criteria**:
+- [ ] KerberosAuthMiddleware extracts auth headers
+- [ ] get_current_user() dependency with auto-registration
+- [ ] require_role() dependency factory
+- [ ] GET /auth/me endpoint
+- [ ] All document endpoints require authentication
+- [ ] Authorization checks implemented
+- [ ] POST /documents/{id}/share endpoint
+- [ ] POST /documents/{id}/make-private endpoint
+- [ ] Integration tests with mock auth headers
+
+---
+
+### 13.7 Frontend: Authentication Context (Week 3-4)
+
+**Duration**: 3-4 days
+
+**Files to Create**:
+```
+client/src/contexts/AuthContext.tsx         # Auth state management
+client/src/hooks/useAuth.ts                 # Auth hook
+client/src/components/auth/CurrentUser.tsx  # User display
+client/src/components/documents/ShareDialog.tsx  # Sharing UI
+```
+
+**AI Agent Prompt for Frontend Auth**:
+```
+Implement frontend authentication context and sharing UI as specified in ADR-021.
+
+Context:
+- Authentication handled by backend via Kerberos headers
+- Frontend receives current user info from GET /api/v1/auth/me
+- Need to display user info and enable document sharing
+
+Task:
+1. Create client/src/contexts/AuthContext.tsx:
+   - AuthProvider component with user state
+   - Fetch current user from GET /api/v1/auth/me on mount
+   - Provide helper functions:
+     * hasRole(role: string) → boolean
+     * hasPermission(permission: string) → boolean
+     * inGroup(group: string) → boolean
+   - Export useAuth() hook
+
+2. Create client/src/components/auth/CurrentUser.tsx:
+   - Display current user's name and groups in header
+   - Show user icon with dropdown
+   - Display roles and permissions in tooltip
+
+3. Create client/src/components/documents/ShareDialog.tsx:
+   - Modal dialog with checkboxes for user's groups
+   - Show current shared groups as checked
+   - POST /api/v1/documents/{id}/share with selected groups
+   - POST /api/v1/documents/{id}/make-private if no groups selected
+   - Show warning if making private
+
+4. Update client/src/pages/DocumentDetailPage.tsx:
+   - Add "Share" button (only if user can share)
+   - Open ShareDialog on click
+   - Show shared groups as badges
+
+Key Requirements:
+- AuthProvider wraps entire app (in App.tsx)
+- Fetch user once on app load
+- ShareDialog only shows user's own groups
+- Optimistic UI updates (update local state immediately)
+- Handle API errors gracefully
+
+Testing:
+- Mock /api/v1/auth/me in tests
+- Test hasRole/hasPermission/inGroup helpers
+- Test ShareDialog toggle behavior
+- Test save calls correct API endpoint
+
+Use existing shadcn/ui components: Dialog, Button, Checkbox, Badge, Tooltip.
+```
+
+**Completion Criteria**:
+- [ ] AuthContext with user state
+- [ ] useAuth() hook for components
+- [ ] CurrentUser component in header
+- [ ] ShareDialog with group checkboxes
+- [ ] Share button in document detail
+- [ ] Component tests with 85%+ coverage
+
+---
+
+### 13.8 Audit Logging (Week 4)
+
+**Duration**: 2-3 days
+
+**Files to Create**:
+```
+src/infrastructure/audit/audit_logger.py    # Audit log writer
+src/api/middleware/audit.py                 # Request audit middleware
+```
+
+**AI Agent Prompt for Audit Logging**:
+```
+Implement audit logging for all document access as specified in ADR-021.
+
+Context:
+- All document access must be logged for security audit
+- Log both successful and denied access attempts
+- Capture user, action, result, IP, user agent
+
+Task:
+1. Create src/infrastructure/audit/audit_logger.py:
+   - AuditLogger class with log_access() method:
+     * user_kerberos_id, document_id, action, result, reason
+     * ip_address, user_agent, occurred_at
+     * Write to access_audit_log table
+
+2. Create src/api/middleware/audit.py:
+   - AuditMiddleware class:
+     * Extract document_id from URL path
+     * Map HTTP method to action (GET=view, PUT=edit, DELETE=delete, POST /share=share)
+     * After request: log successful access
+     * On HTTPException 403: log denied access
+     * Capture request.client.host and request.headers["user-agent"]
+
+Key Requirements:
+- Log all document endpoint access
+- Log both allowed and denied results
+- Include reason for denied access (from HTTPException detail)
+- Middleware runs after authentication but wraps authorization
+
+Testing:
+- Test successful document view → logged as "allowed"
+- Test denied access (403) → logged as "denied" with reason
+- Test non-document endpoints → not logged
+- Verify IP and user agent captured
+
+Register middleware in src/api/main.py AFTER KerberosAuthMiddleware.
+```
+
+**Completion Criteria**:
+- [ ] AuditLogger writes to access_audit_log table
+- [ ] AuditMiddleware logs all document access
+- [ ] Successful and denied access both logged
+- [ ] IP address and user agent captured
+- [ ] Integration tests verify logging
+
+---
+
+### 13.9 Phase 13 Completion Criteria
+
+**Domain Layer**:
+- [ ] User aggregate with event sourcing
+- [ ] Document aggregate extended with ownership
+- [ ] AuthorizationService with permission checks
+- [ ] Unit tests with 90%+ coverage
+
+**Infrastructure Layer**:
+- [ ] Database migrations (users, groups, audit_log, document ownership)
+- [ ] UserRepository with auto-registration
+- [ ] User projector and queries
+- [ ] Integration tests with database
+
+**API Layer**:
+- [ ] KerberosAuthMiddleware extracts auth headers
+- [ ] get_current_user() dependency with auto-registration
+- [ ] All document endpoints require authentication
+- [ ] Authorization checks on all operations
+- [ ] share_document() and make_document_private() endpoints
+- [ ] AuditMiddleware logs all access
+- [ ] API tests with mock authentication
+
+**Frontend**:
+- [ ] AuthContext with user state
+- [ ] ShareDialog component
+- [ ] CurrentUser display in header
+- [ ] Component tests with 85%+ coverage
+
+**Documentation**:
+- [ ] ADR-021 fully implemented
+- [ ] API documentation updated (OpenAPI)
+- [ ] Migration guide for existing deployments
+
+**Success Metrics**:
+- 100% of endpoints require authentication
+- All document access checked via AuthorizationService
+- All access logged to audit trail
+- Zero unauthorized access in tests
+- Sharing workflow functional end-to-end
+
+---
+
+## Phase 14: Implementation Testing and Verification Framework
 
 **Duration**: 5-6 weeks  
 **Priority**: High (validates implementations match specifications)  

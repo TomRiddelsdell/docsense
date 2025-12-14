@@ -6,6 +6,8 @@ from .compliance_status import ComplianceStatus
 from .document_status import DocumentStatus
 from .feedback_status import FeedbackStatus
 from .section import Section
+from .feedback_item import FeedbackItem
+from .policy import Policy
 
 __all__ = [
     "DocumentId",
@@ -16,4 +18,6 @@ __all__ = [
     "DocumentStatus",
     "FeedbackStatus",
     "Section",
+    "FeedbackItem",
+    "Policy",
 ]

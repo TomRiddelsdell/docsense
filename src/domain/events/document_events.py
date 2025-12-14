@@ -11,6 +11,7 @@ class DocumentUploaded(DomainEvent):
     original_format: str = ""
     file_size_bytes: int = 0
     uploaded_by: str = ""
+    owner_kerberos_id: str = ""  # NEW: Document owner
     aggregate_type: str = field(default="Document")
 
 
@@ -52,4 +53,25 @@ class SemanticIRCurated(DomainEvent):
 class SemanticIRCurationFailed(DomainEvent):
     """Emitted when AI curation fails."""
     error_message: str = ""
+    aggregate_type: str = field(default="Document")
+
+
+@dataclass(frozen=True)
+class DocumentSharedWithGroup(DomainEvent):
+    """Emitted when a document is shared with a group.
+    
+    Sharing with a group automatically changes visibility to GROUP.
+    """
+    group: str = ""
+    shared_by: str = ""
+    aggregate_type: str = field(default="Document")
+
+
+@dataclass(frozen=True)
+class DocumentMadePrivate(DomainEvent):
+    """Emitted when a document visibility is changed to private.
+    
+    This removes all group sharing.
+    """
+    changed_by: str = ""
     aggregate_type: str = field(default="Document")

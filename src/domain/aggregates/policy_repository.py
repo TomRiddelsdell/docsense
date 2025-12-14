@@ -1,4 +1,4 @@
-from typing import List, Dict, Any, Set, Optional
+from typing import List, Set, Optional
 from uuid import UUID
 
 from .base import Aggregate
@@ -10,6 +10,7 @@ from src.domain.events.policy_events import (
 )
 from src.domain.exceptions.policy_exceptions import PolicyAlreadyExists, PolicyIdAlreadyExists
 from src.domain.exceptions.document_exceptions import DocumentAlreadyAssigned
+from src.domain.value_objects import Policy, RequirementType
 
 
 class PolicyRepository(Aggregate):
@@ -17,7 +18,7 @@ class PolicyRepository(Aggregate):
         super().__init__(repository_id)
         self._name: str = ""
         self._description: str = ""
-        self._policies: List[Dict[str, Any]] = []
+        self._policies: List[Policy] = []
         self._assigned_documents: Set[UUID] = set()
 
     @property
@@ -29,11 +30,13 @@ class PolicyRepository(Aggregate):
         return self._description
 
     @property
-    def policies(self) -> List[Dict[str, Any]]:
+    def policies(self) -> List[Policy]:
+        """Return copy of policies list (policies themselves are immutable)."""
         return self._policies.copy()
 
     @property
     def assigned_documents(self) -> Set[UUID]:
+        """Return copy of assigned documents set."""
         return self._assigned_documents.copy()
 
     def _init_state(self) -> None:
@@ -42,15 +45,17 @@ class PolicyRepository(Aggregate):
         self._policies = []
         self._assigned_documents = set()
 
-    def _find_policy_by_id(self, policy_id: UUID) -> Optional[Dict[str, Any]]:
+    def _find_policy_by_id(self, policy_id: UUID) -> Optional[Policy]:
+        """Find policy by ID."""
         for policy in self._policies:
-            if policy["policy_id"] == policy_id:
+            if policy.policy_id == policy_id:
                 return policy
         return None
 
-    def _find_policy_by_name(self, policy_name: str) -> Optional[Dict[str, Any]]:
+    def _find_policy_by_name(self, policy_name: str) -> Optional[Policy]:
+        """Find policy by name."""
         for policy in self._policies:
-            if policy["policy_name"] == policy_name:
+            if policy.policy_name == policy_name:
                 return policy
         return None
 
@@ -115,15 +120,25 @@ class PolicyRepository(Aggregate):
         )
 
     def _when(self, event: DomainEvent) -> None:
+        """
+        Apply event to aggregate state using immutable value objects.
+
+        Creates immutable Policy value objects instead of mutable dicts.
+        """
         if isinstance(event, PolicyRepositoryCreated):
             self._name = event.name
             self._description = event.description
+
         elif isinstance(event, PolicyAdded):
-            self._policies.append({
-                "policy_id": event.policy_id,
-                "policy_name": event.policy_name,
-                "policy_content": event.policy_content,
-                "requirement_type": event.requirement_type,
-            })
+            # Create immutable Policy value object
+            new_policy = Policy(
+                policy_id=event.policy_id,
+                policy_name=event.policy_name,
+                policy_content=event.policy_content,
+                requirement_type=RequirementType(event.requirement_type) if isinstance(event.requirement_type, str) else event.requirement_type,
+            )
+            self._policies.append(new_policy)
+
         elif isinstance(event, DocumentAssignedToPolicy):
+            # UUID is immutable, so adding to set is safe
             self._assigned_documents.add(event.document_id)
