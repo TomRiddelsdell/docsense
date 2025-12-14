@@ -1,0 +1,72 @@
+{
+  "document_id": "doc_08_inconsistent",
+  "title": "Quality Dividend Growth Index",
+  "version": "1.0",
+  "created_date": "2025-12-14T09:44:42.942128",
+  "complexity": "low",
+  "issue_count": 6,
+  "issues": [
+    {
+      "severity": "critical",
+      "category": "inconsistent_content",
+      "title": "Contradictory dividend payment history requirements",
+      "description": "Section 1 requires '10 years of consecutive dividend payments' but Section 2 requires only '5 consecutive years'",
+      "location": "Sections 1 and 2",
+      "original_text": "Section 1: '10 years' vs Section 2: '5 consecutive years'",
+      "suggested_fix": "Reconcile: Use consistent requirement throughout, e.g., 'minimum 10 years of consecutive dividend payments'",
+      "confidence": 0.98
+    },
+    {
+      "severity": "critical",
+      "category": "inconsistent_content",
+      "title": "Contradictory dividend yield requirements",
+      "description": "Section 1 allows yield 'between 2% and 6%' but Section 2 requires 'at least 3%'",
+      "location": "Sections 1 and 2",
+      "original_text": "Section 1: 'between 2% and 6%' vs Section 2: 'at least 3%'",
+      "suggested_fix": "Reconcile: Specify single consistent range, e.g., 'dividend yield between 3% and 6%'",
+      "confidence": 0.98
+    },
+    {
+      "severity": "critical",
+      "category": "inconsistent_content",
+      "title": "Contradictory payout ratio requirements",
+      "description": "Section 1 allows 'below 70%' but Section 2 requires 'not exceed 60%'",
+      "location": "Sections 1 and 2",
+      "original_text": "Section 1: 'below 70%' vs Section 2: 'not exceed 60%'",
+      "suggested_fix": "Reconcile: Use single threshold, e.g., 'payout ratio must not exceed 60%'",
+      "confidence": 0.98
+    },
+    {
+      "severity": "critical",
+      "category": "inconsistent_content",
+      "title": "Contradictory rebalancing frequency",
+      "description": "Section 3 states 'semi-annually' but also mentions 'quarterly' review",
+      "location": "Section 3 - Rebalancing",
+      "original_text": "'semi-annually' and 'quarterly'",
+      "suggested_fix": "Clarify: 'Index is rebalanced semi-annually (June and December). Constituents are reviewed quarterly for compliance, with changes effective at next semi-annual rebalancing'",
+      "confidence": 0.95
+    },
+    {
+      "severity": "critical",
+      "category": "inconsistent_content",
+      "title": "Contradictory weighting methodology",
+      "description": "Section 4 states both 'weighted by dividend yield' and 'equal weighting'",
+      "location": "Section 4 - Weighting",
+      "original_text": "'weighted by dividend yield' vs 'equal weighting'",
+      "suggested_fix": "Clarify: Choose one methodology: 'dividend-yield weighted with 5% cap per constituent' OR 'equal weighted across all constituents'",
+      "confidence": 0.98
+    },
+    {
+      "severity": "high",
+      "category": "ambiguous_methodology",
+      "title": "Unclear which criteria take precedence",
+      "description": "Two different sections specify selection criteria without clarifying if Section 1 or Section 2 takes precedence",
+      "location": "Sections 1 and 2",
+      "suggested_fix": "Add: 'Section 1 defines initial selection criteria. Section 2 defines ongoing eligibility requirements.' Or merge into single criteria section",
+      "confidence": 0.9
+    }
+  ],
+  "self_containment_score": 0.5,
+  "implementability_score": 0.3,
+  "notes": "Multiple critical internal contradictions make implementation impossible without clarification"
+}

@@ -1,0 +1,69 @@
+{
+  "document_id": "doc_10_missing_risks",
+  "title": "Leveraged Growth Stock Strategy",
+  "version": "1.0",
+  "created_date": "2025-12-14T09:44:42.985506",
+  "complexity": "low",
+  "issue_count": 5,
+  "issues": [
+    {
+      "severity": "critical",
+      "category": "compliance_gap",
+      "title": "No risk disclosure section",
+      "description": "Strategy uses leverage and concentration but completely lacks risk disclosures required for investor documents",
+      "location": "Throughout document",
+      "suggested_fix": "Add comprehensive Risk Disclosure section covering: leverage risks, concentration risk, sector risk, volatility risk, liquidity risk, regulatory risks",
+      "confidence": 0.98
+    },
+    {
+      "severity": "critical",
+      "category": "compliance_gap",
+      "title": "Leverage risks not disclosed",
+      "description": "Uses 1.5x leverage but doesn't disclose amplified downside risks, margin calls, forced liquidation",
+      "location": "Section 1 - Investment Approach",
+      "suggested_fix": "Add: 'Leverage Risk: 1.5x leverage amplifies both gains and losses. A 10% decline in underlying assets results in 15% portfolio loss. Margin calls may force liquidation at unfavorable prices.'",
+      "confidence": 0.95
+    },
+    {
+      "severity": "critical",
+      "category": "compliance_gap",
+      "title": "Concentration risk not disclosed",
+      "description": "Uses 'concentrated positions' but doesn't warn of concentration risk",
+      "location": "Section 2 - Portfolio Composition",
+      "suggested_fix": "Add: 'Concentration Risk: Top 20 holdings represent majority of portfolio. Poor performance of single holding can significantly impact returns.'",
+      "confidence": 0.93
+    },
+    {
+      "severity": "high",
+      "category": "compliance_gap",
+      "title": "Sector concentration risk not disclosed",
+      "description": "100% allocation to tech and biotech but no disclosure of sector concentration risk",
+      "location": "Section 2 - Portfolio Composition",
+      "suggested_fix": "Add: 'Sector Concentration Risk: Portfolio concentrated in technology and biotechnology sectors. Sector downturns will significantly impact performance.'",
+      "confidence": 0.9
+    },
+    {
+      "severity": "high",
+      "category": "compliance_gap",
+      "title": "No discussion of potential losses or maximum drawdown",
+      "description": "Shows performance targets but no disclosure of downside potential or historical drawdowns",
+      "location": "Section 3 - Performance Target",
+      "suggested_fix": "Add: 'Performance Risk: While targeting 25-30% annual returns, strategy may experience significant volatility. Historical maximum drawdown of 45% during 2022. Past performance does not predict future results.'",
+      "confidence": 0.88
+    }
+  ],
+  "compliance_assessment": {
+    "sec_compliance": "non_compliant",
+    "reason": "Missing required risk disclosures for leveraged strategy",
+    "required_additions": [
+      "Comprehensive risk disclosure section",
+      "Leverage amplification effects",
+      "Concentration and sector risks",
+      "Potential for substantial losses",
+      "Regulatory and tax considerations"
+    ]
+  },
+  "self_containment_score": 0.6,
+  "implementability_score": 0.7,
+  "notes": "Technically implementable but non-compliant for investor use without risk disclosures"
+}

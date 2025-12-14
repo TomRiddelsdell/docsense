@@ -1,0 +1,93 @@
+{
+  "document_id": "doc_07_missing_governance",
+  "title": "Quantitative Equity Long-Short Strategy",
+  "version": "1.0",
+  "created_date": "2025-12-14T09:44:42.915272",
+  "complexity": "medium",
+  "issue_count": 9,
+  "issues": [
+    {
+      "severity": "critical",
+      "category": "missing_governance",
+      "title": "No approval process for strategy changes",
+      "description": "Document doesn't specify who can approve changes to the strategy",
+      "location": "Throughout document",
+      "suggested_fix": "Add governance section: 'Strategy changes require approval from CIO and Risk Committee'",
+      "confidence": 0.92
+    },
+    {
+      "severity": "critical",
+      "category": "missing_governance",
+      "title": "No model validation procedure",
+      "description": "Uses 'quantitative models' but doesn't specify validation, testing, or approval process",
+      "location": "Section 1 - Strategy Description",
+      "suggested_fix": "Add: 'Models must pass backtesting requirements (Sharpe > 1.5, max drawdown < 20%) and receive Quant Review Committee approval before deployment'",
+      "confidence": 0.9
+    },
+    {
+      "severity": "high",
+      "category": "missing_governance",
+      "title": "No rebalancing decision authority",
+      "description": "Doesn't specify who makes rebalancing decisions or approval requirements",
+      "location": "Section 2 - Portfolio Construction",
+      "suggested_fix": "Add: 'Rebalancing executed automatically by trading system. Manual overrides require PM approval and Risk team notification'",
+      "confidence": 0.88
+    },
+    {
+      "severity": "high",
+      "category": "missing_governance",
+      "title": "No exception handling process",
+      "description": "No process for handling exceptional circumstances or model failures",
+      "location": "Throughout document",
+      "suggested_fix": "Add: 'Exception Handling: PM may override model signals with Risk Officer approval. All overrides logged and reported to Investment Committee monthly'",
+      "confidence": 0.85
+    },
+    {
+      "severity": "high",
+      "category": "missing_governance",
+      "title": "No review or audit procedures",
+      "description": "No specification of performance review, compliance audits, or documentation requirements",
+      "location": "Throughout document",
+      "suggested_fix": "Add: 'Monthly performance review by Investment Committee. Quarterly compliance audit. Annual model revalidation'",
+      "confidence": 0.83
+    },
+    {
+      "severity": "high",
+      "category": "undefined_parameter",
+      "title": "Volatility thresholds not specified",
+      "description": "States 'if volatility exceeds thresholds' but thresholds not defined",
+      "location": "Section 3 - Risk Management",
+      "suggested_fix": "Specify: 'If portfolio volatility exceeds 15% annualized, reduce leverage by 50%'",
+      "confidence": 0.9
+    },
+    {
+      "severity": "high",
+      "category": "undefined_parameter",
+      "title": "Stop loss levels not specified",
+      "description": "Mentions 'stop losses' but doesn't specify the loss threshold",
+      "location": "Section 3 - Risk Management",
+      "suggested_fix": "Specify: 'Individual position stop loss triggered at 5% loss from entry price'",
+      "confidence": 0.92
+    },
+    {
+      "severity": "medium",
+      "category": "ambiguous_methodology",
+      "title": "Market neutrality not precisely defined",
+      "description": "'Market neutrality' could mean dollar neutral, beta neutral, or sector neutral",
+      "location": "Section 1 - Strategy Description",
+      "suggested_fix": "Specify: 'Market neutrality maintained as dollar-neutral (long value = short value) and beta-neutral (portfolio beta target = 0 \u00b1 0.1)'",
+      "confidence": 0.85
+    },
+    {
+      "severity": "medium",
+      "category": "ambiguous_methodology",
+      "title": "Monitoring frequency for beta not specified",
+      "description": "States 'monitored daily' but doesn't specify time of day or action trigger",
+      "location": "Section 3 - Risk Management",
+      "suggested_fix": "Specify: 'Beta calculated at 16:00 ET using 60-day rolling window. If |beta| > 0.15, rebalancing initiated within 1 trading day'",
+      "confidence": 0.8
+    }
+  ],
+  "self_containment_score": 0.4,
+  "implementability_score": 0.5
+}

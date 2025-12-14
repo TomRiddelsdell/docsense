@@ -1,0 +1,121 @@
+{
+  "document_id": "doc_16_calendar_complex",
+  "title": "Asia-Pacific Multi-Market Strategy",
+  "version": "1.0",
+  "created_date": "2025-12-14T10:44:09.804988",
+  "complexity": "high",
+  "issue_count": 12,
+  "issues": [
+    {
+      "severity": "critical",
+      "category": "market_calendar",
+      "title": "Market-specific closing times not specified",
+      "description": "'end of trading day' differs across markets - Tokyo 15:00 JST, Hong Kong 16:00 HKT, etc.",
+      "location": "Section 2",
+      "suggested_fix": "Specify: 'Tokyo: 15:00 JST, Hong Kong: 16:00 HKT, Sydney: 16:00 AEDT/AEST, Singapore: 17:00 SGT, Mumbai: 15:30 IST'",
+      "confidence": 0.95
+    },
+    {
+      "severity": "critical",
+      "category": "market_calendar",
+      "title": "Timezone coordination not addressed",
+      "description": "Five markets in different timezones - signal timing relative to each market not clear",
+      "location": "Section 2",
+      "suggested_fix": "Specify: 'Signals calculated using local market closing prices on same calendar date in each market's local timezone'",
+      "confidence": 0.93
+    },
+    {
+      "severity": "critical",
+      "category": "market_calendar",
+      "title": "Market holiday handling not specified",
+      "description": "Different markets have different holidays - behavior when some markets closed not defined",
+      "location": "Section 2",
+      "suggested_fix": "Add: 'On local market holidays, no trades executed for that market. Signals recalculated on next trading day using most recent available prices'",
+      "confidence": 0.92
+    },
+    {
+      "severity": "critical",
+      "category": "market_calendar",
+      "title": "Simultaneous rebalancing impossible across timezones",
+      "description": "'All markets rebalanced simultaneously' physically impossible given timezone differences",
+      "location": "Section 3",
+      "suggested_fix": "Clarify: 'Rebalancing executed at market open in each market on last Friday of month (local timezone), or next trading day if Friday is market holiday'",
+      "confidence": 0.95
+    },
+    {
+      "severity": "critical",
+      "category": "market_calendar",
+      "title": "Last Friday definition ambiguous across timezones",
+      "description": "Last Friday of month in Tokyo timezone differs from Hong Kong/Sydney due to date line",
+      "location": "Section 3",
+      "suggested_fix": "Specify: 'Last Friday determined in UTC. Rebalancing occurs on that calendar date in each market's local timezone'",
+      "confidence": 0.9
+    },
+    {
+      "severity": "high",
+      "category": "market_calendar",
+      "title": "Order placement timing not specified",
+      "description": "'market open the next day' - opening times differ by market",
+      "location": "Section 2",
+      "suggested_fix": "Specify opening times: 'Tokyo: 09:00 JST, Hong Kong: 09:30 HKT, Sydney: 10:00 AEDT/AEST, Singapore: 09:00 SGT, Mumbai: 09:15 IST'",
+      "confidence": 0.88
+    },
+    {
+      "severity": "high",
+      "category": "market_calendar",
+      "title": "Trading day definition not provided",
+      "description": "'next trading day' behavior when Friday is holiday not specified",
+      "location": "Section 3",
+      "suggested_fix": "Add: 'If last Friday is market holiday, rebalancing occurs on next trading day for that market'",
+      "confidence": 0.85
+    },
+    {
+      "severity": "high",
+      "category": "market_calendar",
+      "title": "Daylight saving time not addressed",
+      "description": "Sydney observes DST (AEDT/AEST transition) affecting coordination with other markets",
+      "location": "Section 2",
+      "suggested_fix": "Add: 'Timezone adjustments account for DST transitions in relevant markets (Australia). Fixed UTC offsets: Tokyo +9, Hong Kong +8, Singapore +8, Mumbai +5:30'",
+      "confidence": 0.82
+    },
+    {
+      "severity": "high",
+      "category": "ambiguous_methodology",
+      "title": "Signal coordination timing not defined",
+      "description": "Markets close at different times - unclear if all signals wait for last market or calculated independently",
+      "location": "Section 2",
+      "suggested_fix": "Clarify: 'Signals calculated independently for each market immediately after local market close'",
+      "confidence": 0.8
+    },
+    {
+      "severity": "medium",
+      "category": "market_calendar",
+      "title": "Half-day trading sessions not addressed",
+      "description": "Some markets have half-day trading before holidays - handling not specified",
+      "location": "Section 2",
+      "suggested_fix": "Add: 'On half-day trading sessions, signals calculated using half-day closing price at earlier local close time'",
+      "confidence": 0.75
+    },
+    {
+      "severity": "medium",
+      "category": "market_calendar",
+      "title": "Trading halt procedures not specified",
+      "description": "Circuit breakers or trading halts would affect signal calculation",
+      "location": "Section 2",
+      "suggested_fix": "Add: 'If trading halted, use last available price. If market remains closed next day, no new orders for that market'",
+      "confidence": 0.7
+    },
+    {
+      "severity": "medium",
+      "category": "data_source_unspecified",
+      "title": "Calendar source not specified",
+      "description": "Need authoritative source for market holiday calendars across five exchanges",
+      "location": "Throughout",
+      "suggested_fix": "Specify: 'Market calendars from respective exchange official sources: JPX (Tokyo), HKEX (Hong Kong), ASX (Sydney), SGX (Singapore), NSE (Mumbai)'",
+      "confidence": 0.78
+    }
+  ],
+  "self_containment_score": 0.25,
+  "implementability_score": 0.2,
+  "notes": "Critical ADR-018 example - complex timezone and multi-market calendar coordination issues"
+}

@@ -1,0 +1,111 @@
+{
+  "document_id": "doc_09_ambiguous",
+  "title": "ESG Enhanced Index Strategy",
+  "version": "1.0",
+  "created_date": "2025-12-14T09:44:42.963762",
+  "complexity": "medium",
+  "issue_count": 11,
+  "issues": [
+    {
+      "severity": "critical",
+      "category": "ambiguous_methodology",
+      "title": "ESG scoring methodology not defined",
+      "description": "'Environmental, Social, and Governance factors' mentioned but no detail on what these factors are or how they're measured",
+      "location": "Section 1 - ESG Scoring",
+      "suggested_fix": "Specify: 'ESG scores from MSCI ESG Ratings (AAA to CCC scale) or detail proprietary methodology including: E - carbon emissions, water usage, waste; S - labor practices, diversity, community; G - board structure, executive pay, shareholder rights'",
+      "confidence": 0.95
+    },
+    {
+      "severity": "critical",
+      "category": "undefined_parameter",
+      "title": "'Higher scores' threshold not defined",
+      "description": "'Higher scores indicate better performance' but doesn't define what score qualifies as 'high'",
+      "location": "Section 1 - ESG Scoring",
+      "suggested_fix": "Specify: 'High ESG score defined as MSCI rating of A or above (on AAA to CCC scale)'",
+      "confidence": 0.92
+    },
+    {
+      "severity": "critical",
+      "category": "ambiguous_methodology",
+      "title": "'Periodically' update frequency not specified",
+      "description": "'Updated periodically' is vague - could be daily, monthly, quarterly, annually",
+      "location": "Section 1 - ESG Scoring",
+      "suggested_fix": "Specify: 'ESG scores updated monthly using MSCI ESG Ratings data feed'",
+      "confidence": 0.9
+    },
+    {
+      "severity": "critical",
+      "category": "undefined_parameter",
+      "title": "'Strong ESG scores' not defined",
+      "description": "'Strong ESG scores' is subjective without numerical threshold",
+      "location": "Section 2 - Index Construction",
+      "suggested_fix": "Specify: 'Strong ESG scores defined as MSCI ESG Rating of A or above, or top 50% of parent index by ESG score'",
+      "confidence": 0.93
+    },
+    {
+      "severity": "critical",
+      "category": "ambiguous_methodology",
+      "title": "'Controversial activities' not defined",
+      "description": "Exclusion based on 'controversial activities' without defining what activities qualify",
+      "location": "Section 2 - Index Construction",
+      "suggested_fix": "Define in Section 3 or specify: 'Controversial activities per MSCI Controversial Weapons Screen or specify: tobacco, weapons, gambling, adult entertainment'",
+      "confidence": 0.95
+    },
+    {
+      "severity": "critical",
+      "category": "ambiguous_methodology",
+      "title": "Weight tilting methodology not specified",
+      "description": "'Tilt weights toward high ESG scorers' without specifying the tilting algorithm or magnitude",
+      "location": "Section 2 - Index Construction",
+      "suggested_fix": "Specify: 'Weights calculated as (Market Cap \u00d7 ESG Score Multiplier) where multiplier ranges from 0.5 (lowest ESG) to 1.5 (highest ESG), normalized to 100%'",
+      "confidence": 0.9
+    },
+    {
+      "severity": "critical",
+      "category": "undefined_parameter",
+      "title": "'Reasonable tracking error' not defined",
+      "description": "'Reasonable tracking error' is subjective without numerical target",
+      "location": "Section 2 - Index Construction",
+      "suggested_fix": "Specify: 'Tracking error target of 1.5% annualized (1-year rolling), with maximum of 2.5%'",
+      "confidence": 0.92
+    },
+    {
+      "severity": "high",
+      "category": "undefined_parameter",
+      "title": "'Involved in controversial weapons' criteria missing",
+      "description": "Excludes controversial weapons but doesn't define what weapons qualify or revenue threshold",
+      "location": "Section 3 - Exclusions",
+      "suggested_fix": "Specify: 'Controversial weapons defined as nuclear weapons, cluster munitions, landmines per UN conventions. Companies excluded if >0% revenue from these weapons'",
+      "confidence": 0.88
+    },
+    {
+      "severity": "high",
+      "category": "undefined_parameter",
+      "title": "'Significant fossil fuel exposure' not quantified",
+      "description": "'Significant' exposure threshold not defined",
+      "location": "Section 3 - Exclusions",
+      "suggested_fix": "Specify: 'Significant fossil fuel exposure defined as >10% revenue from coal, oil, or natural gas extraction'",
+      "confidence": 0.9
+    },
+    {
+      "severity": "high",
+      "category": "undefined_parameter",
+      "title": "'Major ESG controversies' criteria missing",
+      "description": "'Major' controversies not defined - severity, recency, or impact unclear",
+      "location": "Section 3 - Exclusions",
+      "suggested_fix": "Specify: 'Major controversies defined as MSCI ESG Controversy Score of 0-2 (Red Flag) within past 3 years'",
+      "confidence": 0.85
+    },
+    {
+      "severity": "medium",
+      "category": "data_source_unspecified",
+      "title": "Parent index not identified",
+      "description": "References 'parent index' but doesn't specify which index",
+      "location": "Section 2 - Index Construction",
+      "suggested_fix": "Specify: 'Parent index: S&P 500' or other specific index",
+      "confidence": 0.88
+    }
+  ],
+  "self_containment_score": 0.25,
+  "implementability_score": 0.2
+}

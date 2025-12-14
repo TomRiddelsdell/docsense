@@ -1,0 +1,94 @@
+{
+  "document_id": "doc_18_edge_cases",
+  "title": "Covered Call Writing Strategy",
+  "version": "1.0",
+  "created_date": "2025-12-14T10:44:09.849320",
+  "complexity": "high",
+  "issue_count": 9,
+  "issues": [
+    {
+      "severity": "critical",
+      "category": "undefined_parameter",
+      "title": "Strike price offset not specified",
+      "description": "'above current stock price' - how far above not defined",
+      "location": "Section 2",
+      "suggested_fix": "Specify: 'Strike price 5% above current stock price, rounded to nearest standard strike'",
+      "confidence": 0.9
+    },
+    {
+      "severity": "critical",
+      "category": "undefined_parameter",
+      "title": "Option expiration period not specified",
+      "description": "'standard expiration dates' - weekly, monthly, quarterly not specified",
+      "location": "Section 2",
+      "suggested_fix": "Specify: 'Monthly options expiring on third Friday of each month, 30-45 days to expiration at initiation'",
+      "confidence": 0.92
+    },
+    {
+      "severity": "critical",
+      "category": "ambiguous_methodology",
+      "title": "'If necessary' roll criteria not defined",
+      "description": "When to roll vs let assignment occur not specified",
+      "location": "Section 1",
+      "suggested_fix": "Define: 'Roll if option in-the-money by <$2 at 5 days before expiration. Otherwise allow assignment'",
+      "confidence": 0.88
+    },
+    {
+      "severity": "high",
+      "category": "ambiguous_methodology",
+      "title": "Assignment handling not detailed",
+      "description": "'called away' handling - timing of replacement not specified",
+      "location": "Section 3",
+      "suggested_fix": "Specify: 'Upon assignment, replacement position established within 2 trading days. New call sold when replacement position established'",
+      "confidence": 0.85
+    },
+    {
+      "severity": "high",
+      "category": "ambiguous_methodology",
+      "title": "Early assignment handling not addressed",
+      "description": "Options can be assigned early (dividend capture) - handling not specified",
+      "location": "Section 3",
+      "suggested_fix": "Add: 'If early assignment occurs, follow standard assignment procedure. Monitor for high early assignment risk before ex-dividend dates'",
+      "confidence": 0.82
+    },
+    {
+      "severity": "high",
+      "category": "undefined_parameter",
+      "title": "Option contract quantity not specified",
+      "description": "How many calls to sell per 100 shares not defined (1:1, partial coverage, etc.)",
+      "location": "Section 1",
+      "suggested_fix": "Specify: 'Sell 1 call contract per 100 shares owned (100% coverage)'",
+      "confidence": 0.9
+    },
+    {
+      "severity": "medium",
+      "category": "ambiguous_methodology",
+      "title": "Dividend impact on roll decision not addressed",
+      "description": "Dividends affect call pricing and assignment risk",
+      "location": "Section 1",
+      "suggested_fix": "Add: 'Evaluate early assignment risk when ex-dividend date falls before expiration. Roll to post-dividend expiration if assignment risk high'",
+      "confidence": 0.75
+    },
+    {
+      "severity": "medium",
+      "category": "ambiguous_methodology",
+      "title": "Odd lot handling not specified",
+      "description": "Position sizes not divisible by 100 shares - handling not addressed",
+      "location": "Section 1",
+      "suggested_fix": "Specify: 'Round down to nearest 100 shares for option coverage. Odd lots held uncovered or excluded from strategy'",
+      "confidence": 0.78
+    },
+    {
+      "severity": "medium",
+      "category": "ambiguous_methodology",
+      "title": "Corporate action handling not specified",
+      "description": "Stock splits, mergers, spinoffs affect options - adjustments not specified",
+      "location": "Section 3",
+      "suggested_fix": "Add: 'Corporate actions: Follow OCC adjustment memos for option contract adjustments. Reestablish standard contracts at next expiration'",
+      "confidence": 0.8
+    }
+  ],
+  "self_containment_score": 0.4,
+  "implementability_score": 0.45,
+  "notes": "Common edge cases not addressed - would encounter issues in real-world execution"
+}

@@ -1,0 +1,57 @@
+{
+  "document_id": "doc_17_moderate",
+  "title": "U.S. Dividend Aristocrats Index",
+  "version": "1.0",
+  "created_date": "2025-12-14T10:44:09.826874",
+  "complexity": "medium",
+  "issue_count": 5,
+  "issues": [
+    {
+      "severity": "medium",
+      "category": "undefined_parameter",
+      "title": "Dividend increase measurement not specified",
+      "description": "'increased dividends' - unclear if absolute or percentage increase, and measurement basis",
+      "location": "Section 1",
+      "suggested_fix": "Specify: 'Increased annual dividend per share by any positive amount year-over-year for 25 consecutive fiscal years'",
+      "confidence": 0.85
+    },
+    {
+      "severity": "high",
+      "category": "ambiguous_methodology",
+      "title": "Size adjustment methodology not specified",
+      "description": "'adjustments for company size' without defining the adjustment formula",
+      "location": "Section 2",
+      "suggested_fix": "Specify: 'Weight = (Dividend_Yield \u00d7 Market_Cap^0.5) / Sum of all (Dividend_Yield \u00d7 Market_Cap^0.5)' or other explicit formula",
+      "confidence": 0.88
+    },
+    {
+      "severity": "critical",
+      "category": "undefined_parameter",
+      "title": "Maximum weight cap not specified",
+      "description": "'capped' but cap level not defined",
+      "location": "Section 2",
+      "suggested_fix": "Specify: 'Maximum 5% weight per constituent at reconstitution'",
+      "confidence": 0.92
+    },
+    {
+      "severity": "high",
+      "category": "undefined_parameter",
+      "title": "Annual reconstitution date not specified",
+      "description": "'annually' but specific month/day not defined",
+      "location": "Section 3",
+      "suggested_fix": "Specify: 'Annual reconstitution effective after close on third Friday in December'",
+      "confidence": 0.9
+    },
+    {
+      "severity": "medium",
+      "category": "ambiguous_methodology",
+      "title": "Dividend cut vs freeze distinction unclear",
+      "description": "'cut or suspend' - unclear if maintaining flat dividend (not increasing) triggers removal",
+      "location": "Section 3",
+      "suggested_fix": "Clarify: 'Removal triggered by dividend reduction or suspension. Flat dividend (no increase) does not trigger removal, but company cannot qualify for future addition until 25-year streak resumes'",
+      "confidence": 0.8
+    }
+  ],
+  "self_containment_score": 0.65,
+  "implementability_score": 0.6
+}

@@ -1,0 +1,132 @@
+{
+  "document_id": "doc_03_undefined_parameters",
+  "title": "Low Volatility Equity Portfolio Strategy",
+  "version": "1.0",
+  "created_date": "2025-12-14T09:41:29.026683",
+  "complexity": "medium",
+  "issue_count": 12,
+  "issues": [
+    {
+      "severity": "critical",
+      "category": "undefined_parameter",
+      "title": "Volatility threshold not specified",
+      "description": "Requires 'volatility below the threshold' but threshold value is not defined",
+      "location": "Section 2 - Stock Selection",
+      "original_text": "Volatility is below the threshold",
+      "suggested_fix": "Specify: 'Annualized volatility (60-day rolling standard deviation of daily returns) is below 15%'",
+      "confidence": 0.95
+    },
+    {
+      "severity": "critical",
+      "category": "undefined_parameter",
+      "title": "Maximum beta not specified",
+      "description": "Requires 'beta less than the maximum allowed' but maximum is not defined",
+      "location": "Section 2 - Stock Selection",
+      "original_text": "Beta is less than the maximum allowed",
+      "suggested_fix": "Specify: 'Beta relative to S&P 500 is less than 0.8 (calculated using 12-month daily returns)'",
+      "confidence": 0.95
+    },
+    {
+      "severity": "critical",
+      "category": "undefined_parameter",
+      "title": "Liquidity minimum requirement not specified",
+      "description": "Requires 'liquidity exceeds the minimum requirement' but minimum is not defined",
+      "location": "Section 2 - Stock Selection",
+      "original_text": "Liquidity exceeds the minimum requirement",
+      "suggested_fix": "Specify: 'Average daily trading volume exceeds $5 million over the past 90 calendar days'",
+      "confidence": 0.95
+    },
+    {
+      "severity": "critical",
+      "category": "undefined_parameter",
+      "title": "Market cap cutoff not specified",
+      "description": "Requires 'market cap above the cutoff' but cutoff value is not defined",
+      "location": "Section 2 - Stock Selection",
+      "original_text": "Market cap is above the cutoff",
+      "suggested_fix": "Specify: 'Market capitalization exceeds $2 billion USD'",
+      "confidence": 0.95
+    },
+    {
+      "severity": "critical",
+      "category": "undefined_parameter",
+      "title": "Maximum position size cap not specified",
+      "description": "States 'maximum position size is capped' but doesn't specify the cap",
+      "location": "Section 3 - Position Sizing",
+      "original_text": "Maximum position size is capped to prevent concentration",
+      "suggested_fix": "Specify: 'Maximum position size is capped at 5% of portfolio value'",
+      "confidence": 0.95
+    },
+    {
+      "severity": "critical",
+      "category": "undefined_parameter",
+      "title": "Minimum position size not specified",
+      "description": "States 'minimum position size is enforced' but doesn't specify the minimum",
+      "location": "Section 3 - Position Sizing",
+      "original_text": "Minimum position size is enforced",
+      "suggested_fix": "Specify: 'Minimum position size is 0.5% of portfolio value'",
+      "confidence": 0.95
+    },
+    {
+      "severity": "critical",
+      "category": "undefined_parameter",
+      "title": "Drift tolerance threshold not specified",
+      "description": "Rebalancing triggered when 'drift exceeds tolerance threshold' but threshold not defined",
+      "location": "Section 4 - Rebalancing",
+      "original_text": "drift exceeds the tolerance threshold",
+      "suggested_fix": "Specify: 'drift exceeds 2 percentage points from target weight'",
+      "confidence": 0.95
+    },
+    {
+      "severity": "high",
+      "category": "undefined_parameter",
+      "title": "Regular rebalancing interval not specified",
+      "description": "States 'regular intervals' but doesn't specify the interval",
+      "location": "Section 4 - Rebalancing",
+      "original_text": "regular intervals",
+      "suggested_fix": "Specify: 'quarterly intervals (last trading day of March, June, September, December)'",
+      "confidence": 0.9
+    },
+    {
+      "severity": "high",
+      "category": "ambiguous_methodology",
+      "title": "Benchmark not specified",
+      "description": "Mentions 'outperforms the benchmark' but doesn't identify which benchmark",
+      "location": "Section 1 - Objective",
+      "original_text": "outperforms the benchmark",
+      "suggested_fix": "Specify: 'outperforms the S&P 500 Total Return Index'",
+      "confidence": 0.92
+    },
+    {
+      "severity": "high",
+      "category": "ambiguous_methodology",
+      "title": "Volatility calculation methodology not specified",
+      "description": "References volatility but doesn't specify calculation method, lookback period, or frequency",
+      "location": "Section 2 - Stock Selection",
+      "original_text": "Volatility is below the threshold",
+      "suggested_fix": "Specify: 'Annualized volatility calculated as standard deviation of daily returns over rolling 60-day window, using close-to-close returns'",
+      "confidence": 0.88
+    },
+    {
+      "severity": "medium",
+      "category": "ambiguous_methodology",
+      "title": "Transaction cost calculation not specified",
+      "description": "Mentions 'transaction costs are considered' but doesn't specify how they're calculated",
+      "location": "Section 4 - Rebalancing",
+      "original_text": "Transaction costs are considered",
+      "suggested_fix": "Specify: 'Transaction costs estimated as 0.1% of trade value (including commissions, market impact, and spread)'",
+      "confidence": 0.85
+    },
+    {
+      "severity": "medium",
+      "category": "ambiguous_methodology",
+      "title": "Cost-benefit calculation not specified",
+      "description": "States 'expected benefit exceeds the cost' but doesn't define how benefit is calculated",
+      "location": "Section 4 - Rebalancing",
+      "original_text": "expected benefit exceeds the cost",
+      "suggested_fix": "Specify: 'Expected tracking error reduction must exceed transaction costs by at least 0.05%'",
+      "confidence": 0.8
+    }
+  ],
+  "self_containment_score": 0.3,
+  "implementability_score": 0.25
+}

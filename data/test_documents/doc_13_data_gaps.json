@@ -1,0 +1,110 @@
+{
+  "document_id": "doc_13_data_gaps",
+  "title": "Emerging Markets Local Currency Bond Strategy",
+  "version": "1.0",
+  "created_date": "2025-12-14T10:44:09.735438",
+  "complexity": "medium",
+  "issue_count": 7,
+  "issues": [
+    {
+      "severity": "critical",
+      "category": "data_source_unspecified",
+      "title": "Emerging markets list source not specified",
+      "description": "'emerging markets list' referenced but source not identified (MSCI, FTSE, JP Morgan, etc.)",
+      "location": "Section 2 - Country Selection",
+      "suggested_fix": "Specify: 'Countries included in JP Morgan EMBI Global Diversified Index'",
+      "confidence": 0.93
+    },
+    {
+      "severity": "critical",
+      "category": "undefined_parameter",
+      "title": "Minimum credit rating not specified",
+      "description": "'minimum credit rating' mentioned but threshold not defined",
+      "location": "Section 2 - Country Selection",
+      "suggested_fix": "Specify: 'Minimum sovereign credit rating of B- (S&P) or B3 (Moody's)'",
+      "confidence": 0.92
+    },
+    {
+      "severity": "critical",
+      "category": "undefined_parameter",
+      "title": "Market depth criteria not defined",
+      "description": "'sufficient market depth' is subjective without quantitative threshold",
+      "location": "Section 2 - Country Selection",
+      "suggested_fix": "Specify: 'Minimum $5 billion outstanding local currency government debt and $100 million average daily trading volume'",
+      "confidence": 0.88
+    },
+    {
+      "severity": "critical",
+      "category": "data_source_unspecified",
+      "title": "Pricing service not identified",
+      "description": "'pricing service' mentioned but vendor not specified",
+      "location": "Section 3 - Bond Selection",
+      "suggested_fix": "Specify: 'Bond prices from Bloomberg Generic Prices (BGN) or Interactive Data Evaluated Pricing Service (IDEPS)'",
+      "confidence": 0.9
+    },
+    {
+      "severity": "high",
+      "category": "ambiguous_methodology",
+      "title": "Yield calculation methodology not specified",
+      "description": "'standard methodology' could mean yield-to-maturity, yield-to-call, or other",
+      "location": "Section 3 - Bond Selection",
+      "suggested_fix": "Specify: 'Yield-to-maturity calculated using semi-annual compounding convention or specify country-specific conventions'",
+      "confidence": 0.85
+    },
+    {
+      "severity": "high",
+      "category": "data_source_unspecified",
+      "title": "Credit rating source not specified",
+      "description": "References credit ratings but doesn't specify rating agency (S&P, Moody's, Fitch)",
+      "location": "Section 2 - Country Selection",
+      "suggested_fix": "Specify: 'Credit ratings from S&P Global Ratings; if unavailable, use Moody's or Fitch composite rating'",
+      "confidence": 0.88
+    },
+    {
+      "severity": "medium",
+      "category": "data_source_unspecified",
+      "title": "Trading volume data source not specified",
+      "description": "Market depth assessment requires volume data but source not identified",
+      "location": "Section 2 - Country Selection",
+      "suggested_fix": "Specify: 'Trading volume data from Bloomberg or local exchange reporting'",
+      "confidence": 0.82
+    }
+  ],
+  "undefined_dependencies": [
+    {
+      "name": "Emerging markets classification",
+      "type": "reference_data",
+      "specs_missing": [
+        "Provider",
+        "Update frequency"
+      ]
+    },
+    {
+      "name": "Bond pricing service",
+      "type": "data_feed",
+      "specs_missing": [
+        "Vendor",
+        "Pricing methodology",
+        "Update time"
+      ]
+    },
+    {
+      "name": "Credit ratings",
+      "type": "external_system",
+      "specs_missing": [
+        "Rating agency",
+        "Update frequency"
+      ]
+    },
+    {
+      "name": "Trading volume data",
+      "type": "data_feed",
+      "specs_missing": [
+        "Data source",
+        "Aggregation method"
+      ]
+    }
+  ],
+  "self_containment_score": 0.35,
+  "implementability_score": 0.3
+}

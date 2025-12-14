@@ -1,0 +1,148 @@
+{
+  "document_id": "doc_14_complex_multi",
+  "title": "Global Macro Tactical Asset Allocation Model",
+  "version": "1.0",
+  "created_date": "2025-12-14T10:44:09.755859",
+  "complexity": "high",
+  "issue_count": 15,
+  "issues": [
+    {
+      "severity": "critical",
+      "category": "undefined_parameter",
+      "title": "Asset class definitions missing",
+      "description": "'equities, bonds, commodities, alternatives' mentioned but no specification of what instruments represent each",
+      "location": "Section 1",
+      "suggested_fix": "Define: Equities = MSCI ACWI, Bonds = Bloomberg Global Agg, Commodities = Bloomberg Commodity Index, Alternatives = specify exact instruments",
+      "confidence": 0.93
+    },
+    {
+      "severity": "critical",
+      "category": "data_source_unspecified",
+      "title": "Economic indicators not specified",
+      "description": "'economic indicators' referenced but no list of which indicators",
+      "location": "Section 2",
+      "suggested_fix": "List specific indicators: GDP growth, inflation (CPI), unemployment rate, PMI, yield curve, etc.",
+      "confidence": 0.92
+    },
+    {
+      "severity": "critical",
+      "category": "ambiguous_methodology",
+      "title": "Technical analysis methodology not defined",
+      "description": "'technical analysis' mentioned but no specification of indicators or rules",
+      "location": "Section 2",
+      "suggested_fix": "Specify: Moving average crossovers (50/200 day), RSI thresholds, or other specific technical indicators with parameters",
+      "confidence": 0.9
+    },
+    {
+      "severity": "critical",
+      "category": "data_source_unspecified",
+      "title": "Sentiment measures not specified",
+      "description": "'sentiment measures' referenced without identifying sources",
+      "location": "Section 2",
+      "suggested_fix": "Specify: AAII Sentiment Survey, VIX level, put/call ratios, or other specific sentiment indicators",
+      "confidence": 0.9
+    },
+    {
+      "severity": "critical",
+      "category": "undefined_parameter",
+      "title": "Significant signal levels not defined",
+      "description": "'significant levels' is subjective without numerical thresholds",
+      "location": "Section 2",
+      "suggested_fix": "Define: 'Significant when composite signal exceeds \u00b11.5 standard deviations from historical mean'",
+      "confidence": 0.88
+    },
+    {
+      "severity": "critical",
+      "category": "incomplete_formula",
+      "title": "Signal combination methodology missing",
+      "description": "Multiple signal types mentioned but no formula for combining them",
+      "location": "Section 2",
+      "suggested_fix": "Provide formula: Composite_Signal = w1\u00d7Economic + w2\u00d7Technical + w3\u00d7Sentiment, with weights specified",
+      "confidence": 0.9
+    },
+    {
+      "severity": "critical",
+      "category": "ambiguous_methodology",
+      "title": "Weight change magnitude not specified",
+      "description": "'Weight changes' but doesn't specify how much allocation shifts",
+      "location": "Section 2",
+      "suggested_fix": "Specify: 'Allocation shifts by 10% of portfolio toward highest-signal asset class'",
+      "confidence": 0.85
+    },
+    {
+      "severity": "critical",
+      "category": "undefined_parameter",
+      "title": "Rebalancing frequency not specified",
+      "description": "'periodically' is vague",
+      "location": "Section 3",
+      "suggested_fix": "Specify: 'Rebalance monthly on first business day' or other specific frequency",
+      "confidence": 0.92
+    },
+    {
+      "severity": "critical",
+      "category": "ambiguous_methodology",
+      "title": "'Where appropriate' criteria not defined",
+      "description": "Derivatives usage conditional on 'appropriate' without defining criteria",
+      "location": "Section 3",
+      "suggested_fix": "Define: 'Use futures when transaction costs < 15 bps vs physical securities or for leverage efficiency'",
+      "confidence": 0.88
+    },
+    {
+      "severity": "critical",
+      "category": "external_dependency",
+      "title": "External manager not identified",
+      "description": "'external manager' referenced but not identified",
+      "location": "Section 3",
+      "suggested_fix": "Specify: Name external manager or define 'complex trades' that trigger external manager consultation",
+      "confidence": 0.85
+    },
+    {
+      "severity": "high",
+      "category": "missing_governance",
+      "title": "No approval process for manager consultation",
+      "description": "External manager involvement mentioned but no governance around this decision",
+      "location": "Section 3",
+      "suggested_fix": "Add: 'External manager consultation requires CIO approval for trades exceeding $10M notional'",
+      "confidence": 0.8
+    },
+    {
+      "severity": "high",
+      "category": "ambiguous_methodology",
+      "title": "Baseline asset allocation not specified",
+      "description": "TAA model without specifying neutral/strategic allocation",
+      "location": "Section 1",
+      "suggested_fix": "Define neutral allocation: 'Strategic baseline: 40% equities, 35% bonds, 15% commodities, 10% alternatives'",
+      "confidence": 0.88
+    },
+    {
+      "severity": "high",
+      "category": "undefined_parameter",
+      "title": "Asset allocation bounds not specified",
+      "description": "No min/max limits on asset class weights",
+      "location": "Section 1",
+      "suggested_fix": "Specify ranges: 'Equities 20-60%, Bonds 15-55%, Commodities 0-30%, Alternatives 0-20%'",
+      "confidence": 0.9
+    },
+    {
+      "severity": "medium",
+      "category": "data_source_unspecified",
+      "title": "Data frequency not specified",
+      "description": "Economic and technical data update frequency not defined",
+      "location": "Section 2",
+      "suggested_fix": "Specify: 'Economic indicators updated monthly, technical indicators daily, sentiment weekly'",
+      "confidence": 0.75
+    },
+    {
+      "severity": "medium",
+      "category": "compliance_gap",
+      "title": "No leverage or derivatives limits disclosed",
+      "description": "Mentions derivatives but no disclosure of leverage limits or derivatives exposure caps",
+      "location": "Section 3",
+      "suggested_fix": "Add: 'Maximum gross exposure 150% of NAV. Derivatives notional limited to 100% of portfolio value'",
+      "confidence": 0.82
+    }
+  ],
+  "self_containment_score": 0.15,
+  "implementability_score": 0.1,
+  "notes": "Severely underspecified across all dimensions - requires comprehensive revision"
+}

@@ -1,0 +1,112 @@
+{
+  "document_id": "doc_04_incomplete_formulas",
+  "title": "Momentum Factor Index Methodology",
+  "version": "1.0",
+  "created_date": "2025-12-14T09:41:29.053253",
+  "complexity": "medium",
+  "issue_count": 10,
+  "issues": [
+    {
+      "severity": "critical",
+      "category": "incomplete_formula",
+      "title": "Lookback period for Historical Price not specified",
+      "description": "Formula uses 'Historical Price from the lookback period' but lookback period duration is not specified",
+      "location": "Section 1 - Momentum Score Calculation",
+      "original_text": "Historical Price is the price from the lookback period",
+      "suggested_fix": "Specify: 'Historical Price is the closing price from 12 months prior (252 NYSE trading days)'",
+      "confidence": 0.95
+    },
+    {
+      "severity": "critical",
+      "category": "incomplete_formula",
+      "title": "Price definition ambiguous - which price?",
+      "description": "Formula uses 'Current Price' and 'Historical Price' but doesn't specify if these are closing, opening, or average prices",
+      "location": "Section 1 - Momentum Score Calculation",
+      "original_text": "Current Price / Historical Price",
+      "suggested_fix": "Specify: 'Closing prices adjusted for splits and dividends'",
+      "confidence": 0.9
+    },
+    {
+      "severity": "critical",
+      "category": "incomplete_formula",
+      "title": "Volatility calculation not specified",
+      "description": "Risk-adjusted momentum formula uses Volatility but doesn't specify how it's calculated",
+      "location": "Section 2 - Risk-Adjusted Momentum",
+      "original_text": "Momentum / Volatility",
+      "suggested_fix": "Specify: 'Volatility is the annualized standard deviation of daily returns over the past 60 trading days'",
+      "confidence": 0.95
+    },
+    {
+      "severity": "critical",
+      "category": "incomplete_formula",
+      "title": "Factor1, Factor2, Factor3 not defined",
+      "description": "Composite score formula references Factor1, Factor2, Factor3 but these are not defined anywhere",
+      "location": "Section 3 - Composite Score",
+      "original_text": "w1 \u00d7 Factor1 + w2 \u00d7 Factor2 + w3 \u00d7 Factor3",
+      "suggested_fix": "Define each factor explicitly, e.g., 'Factor1 = Momentum Score, Factor2 = Risk-Adjusted Momentum, Factor3 = Value Score'",
+      "confidence": 0.98
+    },
+    {
+      "severity": "critical",
+      "category": "incomplete_formula",
+      "title": "Weights w1, w2, w3 not specified",
+      "description": "Formula uses weights w1, w2, w3 but their values are not provided",
+      "location": "Section 3 - Composite Score",
+      "original_text": "w1 \u00d7 Factor1 + w2 \u00d7 Factor2 + w3 \u00d7 Factor3",
+      "suggested_fix": "Specify: 'w1 = 0.50, w2 = 0.30, w3 = 0.20'",
+      "confidence": 0.98
+    },
+    {
+      "severity": "high",
+      "category": "incomplete_formula",
+      "title": "Missing division by zero handling",
+      "description": "Risk-adjusted momentum divides by volatility with no specification for zero volatility case",
+      "location": "Section 2 - Risk-Adjusted Momentum",
+      "original_text": "Momentum / Volatility",
+      "suggested_fix": "Add: 'If Volatility = 0, set Risk-Adjusted Momentum = 0 or exclude from index'",
+      "confidence": 0.85
+    },
+    {
+      "severity": "high",
+      "category": "incomplete_formula",
+      "title": "Negative momentum handling not specified",
+      "description": "Formula can produce negative momentum values but downstream handling is not specified",
+      "location": "Section 1 - Momentum Score Calculation",
+      "original_text": "Momentum Score = (Current Price / Historical Price) - 1",
+      "suggested_fix": "Specify: 'Negative momentum stocks receive zero weight' or 'Use absolute value' or 'Allow negative weights'",
+      "confidence": 0.82
+    },
+    {
+      "severity": "high",
+      "category": "ambiguous_methodology",
+      "title": "Score normalization not specified",
+      "description": "Weight calculation assumes raw scores but doesn't specify if scores should be normalized first",
+      "location": "Section 4 - Index Weight Calculation",
+      "original_text": "Weight = Score / Sum(Scores)",
+      "suggested_fix": "Specify: 'Scores are used as-is (no normalization)' or 'Scores are normalized to [0,1] range before weighting'",
+      "confidence": 0.8
+    },
+    {
+      "severity": "medium",
+      "category": "incomplete_formula",
+      "title": "Rounding/precision not specified",
+      "description": "Formulas don't specify decimal precision or rounding rules",
+      "location": "All formula sections",
+      "original_text": "Various formulas",
+      "suggested_fix": "Specify: 'All calculations performed with float64 precision, final weights rounded to 4 decimal places using banker's rounding'",
+      "confidence": 0.75
+    },
+    {
+      "severity": "medium",
+      "category": "data_source_unspecified",
+      "title": "Price data source not specified",
+      "description": "Formulas use prices but don't specify data source or handling of missing data",
+      "location": "Section 1 - Momentum Score Calculation",
+      "original_text": "Current Price / Historical Price",
+      "suggested_fix": "Specify: 'Prices from Bloomberg end-of-day feed. If price missing, use last available closing price within 5 trading days'",
+      "confidence": 0.78
+    }
+  ],
+  "self_containment_score": 0.35,
+  "implementability_score": 0.3
+}

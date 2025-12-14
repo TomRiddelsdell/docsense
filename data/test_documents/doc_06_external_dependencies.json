@@ -1,0 +1,131 @@
+{
+  "document_id": "doc_06_external_dependencies",
+  "title": "Credit Spread Trading Strategy",
+  "version": "1.0",
+  "created_date": "2025-12-14T09:44:42.894718",
+  "complexity": "medium",
+  "issue_count": 8,
+  "issues": [
+    {
+      "severity": "critical",
+      "category": "external_dependency",
+      "title": "Pricing vendor not identified",
+      "description": "References 'pricing vendor' for corporate bond yields but doesn't identify which vendor",
+      "location": "Section 2 - Data Requirements",
+      "suggested_fix": "Specify: 'Corporate bond yields from Bloomberg BVAL (Bloomberg Valuation)'",
+      "confidence": 0.95
+    },
+    {
+      "severity": "critical",
+      "category": "external_dependency",
+      "title": "Treasury data provider not specified",
+      "description": "References 'data provider' for Treasury yields without specifying source",
+      "location": "Section 2 - Data Requirements",
+      "suggested_fix": "Specify: 'Treasury yields from U.S. Department of Treasury Daily Treasury Yield Curve Rates'",
+      "confidence": 0.95
+    },
+    {
+      "severity": "critical",
+      "category": "external_dependency",
+      "title": "Rating agency not specified",
+      "description": "References 'rating agency' but doesn't specify which one (Moody's, S&P, Fitch)",
+      "location": "Section 2 - Data Requirements",
+      "suggested_fix": "Specify: 'Credit ratings from S&P Global Ratings, using composite rating if multiple available'",
+      "confidence": 0.93
+    },
+    {
+      "severity": "critical",
+      "category": "external_dependency",
+      "title": "Risk model not identified",
+      "description": "References 'risk model' for default probabilities without identifying the model",
+      "location": "Section 2 - Data Requirements",
+      "suggested_fix": "Specify: 'Default probabilities from Moody's KMV Expected Default Frequency (EDF) model'",
+      "confidence": 0.92
+    },
+    {
+      "severity": "critical",
+      "category": "external_dependency",
+      "title": "Analytics platform not specified",
+      "description": "References 'analytics platform' for liquidity metrics without identification",
+      "location": "Section 2 - Data Requirements",
+      "suggested_fix": "Specify: 'Liquidity metrics from Bloomberg LOQS (Liquidity and Quote Score)'",
+      "confidence": 0.9
+    },
+    {
+      "severity": "high",
+      "category": "undefined_parameter",
+      "title": "Historical average lookback period not specified",
+      "description": "Uses 'historical average' without specifying the lookback period",
+      "location": "Section 3 - Signal Generation",
+      "suggested_fix": "Specify: 'Historical average calculated over the past 252 trading days'",
+      "confidence": 0.88
+    },
+    {
+      "severity": "high",
+      "category": "undefined_parameter",
+      "title": "Investment grade definition not provided",
+      "description": "Requires 'investment grade' rating but doesn't define the threshold",
+      "location": "Section 3 - Signal Generation",
+      "suggested_fix": "Specify: 'Investment grade defined as S&P rating of BBB- or higher'",
+      "confidence": 0.9
+    },
+    {
+      "severity": "high",
+      "category": "undefined_parameter",
+      "title": "Sufficient liquidity not defined",
+      "description": "Requires 'sufficient liquidity' but doesn't specify the threshold or metric",
+      "location": "Section 3 - Signal Generation",
+      "suggested_fix": "Specify: 'Sufficient liquidity defined as Bloomberg LOQS score >= 7 out of 10'",
+      "confidence": 0.85
+    }
+  ],
+  "undefined_dependencies": [
+    {
+      "name": "Pricing vendor",
+      "type": "data_feed",
+      "specs_missing": [
+        "Vendor name",
+        "Data frequency",
+        "Update time"
+      ]
+    },
+    {
+      "name": "Treasury data provider",
+      "type": "data_feed",
+      "specs_missing": [
+        "Source",
+        "Maturity points",
+        "Update frequency"
+      ]
+    },
+    {
+      "name": "Rating agency",
+      "type": "external_system",
+      "specs_missing": [
+        "Agency name",
+        "Rating scale",
+        "Update frequency"
+      ]
+    },
+    {
+      "name": "Risk model",
+      "type": "external_system",
+      "specs_missing": [
+        "Model name",
+        "Calculation methodology",
+        "Update frequency"
+      ]
+    },
+    {
+      "name": "Analytics platform",
+      "type": "external_system",
+      "specs_missing": [
+        "Platform name",
+        "Metrics definition",
+        "Data source"
+      ]
+    }
+  ],
+  "self_containment_score": 0.3,
+  "implementability_score": 0.25
+}

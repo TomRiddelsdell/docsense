@@ -1,0 +1,72 @@
+{
+  "document_id": "doc_02_missing_appendix",
+  "title": "Emerging Markets Dividend Growth Strategy",
+  "version": "1.0",
+  "created_date": "2025-12-14T09:41:29.005642",
+  "complexity": "medium",
+  "issue_count": 4,
+  "issues": [
+    {
+      "severity": "critical",
+      "category": "missing_reference",
+      "title": "Appendix A referenced but not included",
+      "description": "Document references 'Appendix A' for proprietary scoring model, which is essential for implementation but not included",
+      "location": "Section 1 - Strategy Overview",
+      "original_text": "proprietary scoring model detailed in Appendix A",
+      "suggested_fix": "Include Appendix A or incorporate the scoring model details directly in the methodology section",
+      "confidence": 0.98
+    },
+    {
+      "severity": "critical",
+      "category": "missing_reference",
+      "title": "Appendix B referenced but not included",
+      "description": "Document references 'Appendix B for country list' but appendix is not included. Cannot determine which countries qualify as emerging markets",
+      "location": "Section 2 - Universe Definition",
+      "original_text": "see Appendix B for country list",
+      "suggested_fix": "List emerging market countries directly or include Appendix B",
+      "confidence": 0.98
+    },
+    {
+      "severity": "critical",
+      "category": "missing_reference",
+      "title": "Appendix C referenced but not included",
+      "description": "Detailed scoring methodology in Appendix C is not included, making implementation impossible",
+      "location": "Section 3 - Portfolio Construction",
+      "original_text": "Detailed scoring methodology is provided in Appendix C",
+      "suggested_fix": "Include Appendix C with complete scoring formulas and examples",
+      "confidence": 0.98
+    },
+    {
+      "severity": "high",
+      "category": "undefined_parameter",
+      "title": "Inflation rate source and calculation not specified",
+      "description": "Document requires 'dividend growth rate greater than inflation rate' but doesn't specify which inflation measure or data source",
+      "location": "Section 2 - Universe Definition",
+      "original_text": "Dividend growth rate greater than inflation rate",
+      "suggested_fix": "Specify: 'Dividend growth rate greater than the country-specific Consumer Price Index (CPI) as published by the IMF World Economic Outlook database'",
+      "confidence": 0.9
+    }
+  ],
+  "missing_documents": [
+    {
+      "referenced_name": "Appendix A - Proprietary Scoring Model",
+      "reference_location": "Section 1",
+      "purpose": "Details the proprietary scoring model",
+      "criticality": "critical"
+    },
+    {
+      "referenced_name": "Appendix B - Emerging Market Country List",
+      "reference_location": "Section 2",
+      "purpose": "Defines which countries qualify as emerging markets",
+      "criticality": "critical"
+    },
+    {
+      "referenced_name": "Appendix C - Detailed Scoring Methodology",
+      "reference_location": "Section 3",
+      "purpose": "Provides detailed scoring formulas and calculations",
+      "criticality": "critical"
+    }
+  ],
+  "self_containment_score": 0.2,
+  "implementability_score": 0.15
+}

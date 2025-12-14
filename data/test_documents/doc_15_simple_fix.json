@@ -1,0 +1,40 @@
+{
+  "document_id": "doc_15_simple_fix",
+  "title": "U.S. Treasury Bond Index",
+  "version": "1.0",
+  "created_date": "2025-12-14T10:44:09.776153",
+  "complexity": "low",
+  "issue_count": 3,
+  "issues": [
+    {
+      "severity": "low",
+      "category": "undefined_parameter",
+      "title": "Maturity range endpoint ambiguity",
+      "description": "'between 1 and 10 years' - unclear if inclusive or exclusive of endpoints",
+      "location": "Section 1",
+      "suggested_fix": "Clarify: 'Maturities greater than or equal to 1 year and less than or equal to 10 years' or 'Maturities \u22651 year and \u226410 years'",
+      "confidence": 0.75
+    },
+    {
+      "severity": "low",
+      "category": "ambiguous_methodology",
+      "title": "Market close time not specified",
+      "description": "'market close' could be interpreted as Treasury market close or equity market close",
+      "location": "Section 3",
+      "suggested_fix": "Specify: 'Market close defined as 15:00 ET (Treasury market close)' or '16:00 ET'",
+      "confidence": 0.72
+    },
+    {
+      "severity": "low",
+      "category": "ambiguous_methodology",
+      "title": "Treatment of newly auctioned bonds unclear during month",
+      "description": "'added at next rebalancing' but handling between auction and rebalancing not specified",
+      "location": "Section 2",
+      "suggested_fix": "Clarify: 'Newly auctioned bonds not included in index until next monthly rebalancing. No intra-month additions.'",
+      "confidence": 0.7
+    }
+  ],
+  "self_containment_score": 0.92,
+  "implementability_score": 0.9,
+  "notes": "Minor clarifications needed - easily implementable with minimal changes"
+}

@@ -1,0 +1,31 @@
+{
+  "document_id": "doc_01_clean",
+  "title": "S&P Technology Sector Equal Weight Index Methodology",
+  "version": "1.0",
+  "created_date": "2025-12-14T09:41:28.983117",
+  "complexity": "low",
+  "issue_count": 1,
+  "issues": [
+    {
+      "severity": "low",
+      "category": "data_source_unspecified",
+      "title": "NYSE trading day specification could be more explicit",
+      "description": "Document mentions '5 NYSE trading days' but doesn't explicitly state this excludes NYSE holidays",
+      "location": "Section 4 - Rebalancing Procedure",
+      "original_text": "5 NYSE trading days prior to effective date",
+      "suggested_fix": "5 NYSE trading days (excluding weekends and NYSE market holidays) prior to effective date",
+      "confidence": 0.65
+    }
+  ],
+  "strengths": [
+    "Clear constituent selection criteria with specific thresholds",
+    "Complete rebalancing procedure with specific dates and times",
+    "Comprehensive corporate action handling",
+    "Explicit index calculation formula with all variables defined",
+    "All data sources specified with vendor names",
+    "Timezone specified for market close",
+    "All parameters have specific numeric values"
+  ],
+  "self_containment_score": 0.95,
+  "implementability_score": 0.98
+}

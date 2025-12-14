@@ -1,0 +1,85 @@
+{
+  "document_id": "doc_12_formula_precision",
+  "title": "Quantitative Mean Reversion Strategy",
+  "version": "1.0",
+  "created_date": "2025-12-14T10:44:09.716500",
+  "complexity": "high",
+  "issue_count": 8,
+  "issues": [
+    {
+      "severity": "critical",
+      "category": "incomplete_formula",
+      "title": "Historical lookback period not specified",
+      "description": "'historical prices' used in z-score but lookback period not defined",
+      "location": "Section 1, formula",
+      "original_text": "z = (current_price - mean_price) / std_dev",
+      "suggested_fix": "Specify: 'mean_price and std_dev calculated using 60 trading days of daily closing prices'",
+      "confidence": 0.93
+    },
+    {
+      "severity": "critical",
+      "category": "undefined_parameter",
+      "title": "Entry threshold not specified",
+      "description": "'drops below threshold' but threshold value not defined",
+      "location": "Section 2 - Trading Rules",
+      "suggested_fix": "Specify: 'Buy when z-score < -2.0'",
+      "confidence": 0.95
+    },
+    {
+      "severity": "critical",
+      "category": "undefined_parameter",
+      "title": "Exit threshold not specified",
+      "description": "'exceeds upper threshold' but value not defined",
+      "location": "Section 2 - Trading Rules",
+      "suggested_fix": "Specify: 'Sell when z-score > +2.0'",
+      "confidence": 0.95
+    },
+    {
+      "severity": "high",
+      "category": "ambiguous_methodology",
+      "title": "Position sizing formula not provided",
+      "description": "'Position size based on signal strength' but no formula given",
+      "location": "Section 2 - Trading Rules",
+      "suggested_fix": "Specify: 'Position size = Base_Size \u00d7 min(|z-score| / 2, 1.5)' or other explicit formula",
+      "confidence": 0.88
+    },
+    {
+      "severity": "critical",
+      "category": "undefined_parameter",
+      "title": "Maximum position size not defined",
+      "description": "'reasonable level' is subjective",
+      "location": "Section 3 - Risk Controls",
+      "suggested_fix": "Specify: 'Maximum 5% of portfolio value per position'",
+      "confidence": 0.92
+    },
+    {
+      "severity": "critical",
+      "category": "undefined_parameter",
+      "title": "Stop loss level not specified",
+      "description": "'exceeds limit' but limit not defined",
+      "location": "Section 3 - Risk Controls",
+      "suggested_fix": "Specify: 'Stop loss at 3% loss from entry price'",
+      "confidence": 0.9
+    },
+    {
+      "severity": "high",
+      "category": "incomplete_formula",
+      "title": "Price type not specified in formula",
+      "description": "Formula uses 'current_price' but doesn't specify if using close, VWAP, mid-price, etc.",
+      "location": "Section 1, formula",
+      "suggested_fix": "Specify: 'current_price = daily closing price at 16:00 ET'",
+      "confidence": 0.85
+    },
+    {
+      "severity": "medium",
+      "category": "ambiguous_methodology",
+      "title": "Mean calculation method not specified",
+      "description": "Could be arithmetic mean, geometric mean, or other",
+      "location": "Section 1, formula",
+      "suggested_fix": "Specify: 'mean_price = arithmetic mean of daily closing prices over lookback period'",
+      "confidence": 0.8
+    }
+  ],
+  "self_containment_score": 0.4,
+  "implementability_score": 0.35
+}

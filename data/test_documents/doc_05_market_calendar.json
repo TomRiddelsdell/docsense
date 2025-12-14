@@ -1,0 +1,123 @@
+{
+  "document_id": "doc_05_market_calendar",
+  "title": "Global Multi-Asset Tactical Allocation Strategy",
+  "version": "1.0",
+  "created_date": "2025-12-14T09:41:29.075399",
+  "complexity": "high",
+  "issue_count": 11,
+  "issues": [
+    {
+      "severity": "critical",
+      "category": "market_calendar",
+      "title": "Market calendar not specified for 'last day of month'",
+      "description": "States 'last day of each month' but doesn't specify which market's calendar determines trading days",
+      "location": "Section 1 - Rebalancing Schedule",
+      "original_text": "last day of each month",
+      "suggested_fix": "Specify: 'last NYSE trading day of each calendar month'",
+      "confidence": 0.95
+    },
+    {
+      "severity": "critical",
+      "category": "market_calendar",
+      "title": "'Next available day' ambiguous across markets",
+      "description": "If month-end is non-trading, uses 'next available day' but doesn't specify which market's next trading day",
+      "location": "Section 1 - Rebalancing Schedule",
+      "original_text": "next available day",
+      "suggested_fix": "Specify: 'next NYSE trading day (even if it falls in the following calendar month)'",
+      "confidence": 0.92
+    },
+    {
+      "severity": "critical",
+      "category": "market_calendar",
+      "title": "60 days ambiguous - trading or calendar days?",
+      "description": "Momentum uses 'previous 60 days' but doesn't specify if these are trading days or calendar days",
+      "location": "Section 2 - Momentum Calculation",
+      "original_text": "previous 60 days",
+      "suggested_fix": "Specify: 'previous 60 trading days (NYSE calendar)' or 'previous 60 calendar days'",
+      "confidence": 0.96
+    },
+    {
+      "severity": "critical",
+      "category": "market_calendar",
+      "title": "1-month period ambiguous",
+      "description": "'1-month return' could mean 20 trading days, 30 calendar days, or 1 calendar month",
+      "location": "Section 2 - Momentum Calculation",
+      "original_text": "1-month return",
+      "suggested_fix": "Specify: '1-month return calculated over 21 NYSE trading days'",
+      "confidence": 0.94
+    },
+    {
+      "severity": "critical",
+      "category": "market_calendar",
+      "title": "3-month period ambiguous",
+      "description": "'3-month return' could mean 60 trading days, 90 calendar days, or 3 calendar months",
+      "location": "Section 2 - Momentum Calculation",
+      "original_text": "3-month return",
+      "suggested_fix": "Specify: '3-month return calculated over 63 NYSE trading days'",
+      "confidence": 0.94
+    },
+    {
+      "severity": "critical",
+      "category": "market_calendar",
+      "title": "6-month period ambiguous",
+      "description": "'6-month return' could mean 120 trading days, 180 calendar days, or 6 calendar months",
+      "location": "Section 2 - Momentum Calculation",
+      "original_text": "6-month return",
+      "suggested_fix": "Specify: '6-month return calculated over 126 NYSE trading days'",
+      "confidence": 0.94
+    },
+    {
+      "severity": "critical",
+      "category": "market_calendar",
+      "title": "90 days for correlation matrix - trading or calendar?",
+      "description": "Correlation matrix uses 'past 90 days' without specifying trading vs calendar days",
+      "location": "Section 3 - Correlation Matrix",
+      "original_text": "past 90 days",
+      "suggested_fix": "Specify: 'past 90 calendar days of available daily returns (excluding weekends and holidays)'",
+      "confidence": 0.93
+    },
+    {
+      "severity": "critical",
+      "category": "market_calendar",
+      "title": "Cross-market alignment strategy not specified",
+      "description": "US equities and Japanese bonds have different market calendars and holidays. Alignment strategy not specified.",
+      "location": "Section 4 - Cross-Asset Analysis",
+      "original_text": "align the data using common trading days",
+      "suggested_fix": "Specify: 'Use only dates when both NYSE and TSE are open (intersection)' or 'Use all available data with forward-fill for market closures' or 'Align to NYSE calendar, forward-fill Japanese data'",
+      "confidence": 0.97
+    },
+    {
+      "severity": "high",
+      "category": "ambiguous_methodology",
+      "title": "Multi-asset implies multiple calendars not addressed",
+      "description": "Strategy is 'Global Multi-Asset' but doesn't specify how to handle different market calendars for different assets",
+      "location": "Section 1 - Rebalancing Schedule",
+      "original_text": "Global Multi-Asset Tactical Allocation Strategy",
+      "suggested_fix": "Add section specifying primary market calendar for rebalancing and how to handle assets from other markets",
+      "confidence": 0.88
+    },
+    {
+      "severity": "high",
+      "category": "market_calendar",
+      "title": "Timezone not specified for rebalancing",
+      "description": "Rebalancing occurs 'on the last day' but doesn't specify time or timezone, important for global assets",
+      "location": "Section 1 - Rebalancing Schedule",
+      "original_text": "rebalanced monthly, on the last day of each month",
+      "suggested_fix": "Specify: 'Rebalancing executed at 16:00 America/New_York (NYSE close)'",
+      "confidence": 0.85
+    },
+    {
+      "severity": "medium",
+      "category": "market_calendar",
+      "title": "Holiday handling for different markets not specified",
+      "description": "Global strategy but no specification for handling holidays that differ across markets",
+      "location": "Section 2 - Momentum Calculation",
+      "original_text": "previous 60 days",
+      "suggested_fix": "Specify: 'For assets on different exchanges, use asset-specific trading days. Exclude days when that specific market is closed.'",
+      "confidence": 0.8
+    }
+  ],
+  "self_containment_score": 0.25,
+  "implementability_score": 0.2,
+  "notes": "This document exemplifies the critical market calendar issues identified in ADR-018"
+}

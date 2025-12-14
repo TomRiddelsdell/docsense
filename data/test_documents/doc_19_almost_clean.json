@@ -1,0 +1,31 @@
+{
+  "document_id": "doc_19_almost_clean",
+  "title": "Bloomberg Barclays U.S. Aggregate Bond Index Replication",
+  "version": "1.0",
+  "created_date": "2025-12-14T10:44:09.870768",
+  "complexity": "low",
+  "issue_count": 2,
+  "issues": [
+    {
+      "severity": "low",
+      "category": "undefined_parameter",
+      "title": "Bond count target range could be more precise",
+      "description": "'300-400 bonds' is a range - specific target or decision rule for exact count not provided",
+      "location": "Section 2",
+      "suggested_fix": "Consider specifying: 'Target 350 bonds, range 300-400 based on optimization results' or provide decision rule for selecting exact count",
+      "confidence": 0.7
+    },
+    {
+      "severity": "low",
+      "category": "ambiguous_methodology",
+      "title": "Tracking error measurement window not specified",
+      "description": "'annualized' tracking error but rolling window period not defined",
+      "location": "Section 3",
+      "suggested_fix": "Specify: '15 basis points annualized calculated on 60-day rolling window' or other specific measurement period",
+      "confidence": 0.72
+    }
+  ],
+  "self_containment_score": 0.93,
+  "implementability_score": 0.92,
+  "notes": "Very minor issues - essentially production-ready with tiny clarifications"
+}
