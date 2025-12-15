@@ -131,75 +131,115 @@ class TestTestResult:
 
     def test_passed_test_result(self):
         """Test creating a passed test result."""
-        result = TestResult(
-            test_case_id='test-001',
-            passed=True,
-            actual_output=Decimal('30'),
+        test_case = TestCase(
+            id='test-001',
+            name='Test',
+            category=TestCategory.NORMAL,
+            inputs={'x': 10, 'y': 20},
             expected_output=Decimal('30'),
-            execution_time_ms=15.5,
-            discrepancy=None,
-            error_message=None
+            description='Addition test'
         )
         
-        assert result.test_case_id == 'test-001'
+        result = TestResult(
+            test_case=test_case,
+            implementation_name='test_impl',
+            actual_output=Decimal('30'),
+            match=True,
+            execution_time_ms=15.5
+        )
+        
+        assert result.test_case.id == 'test-001'
         assert result.passed is True
         assert result.actual_output == Decimal('30')
-        assert result.expected_output == Decimal('30')
         assert result.execution_time_ms == 15.5
-        assert result.discrepancy is None
-        assert result.error_message is None
+        assert result.error_message == ""
 
     def test_failed_test_result_with_discrepancy(self):
         """Test creating a failed test result with discrepancy."""
-        result = TestResult(
-            test_case_id='test-002',
-            passed=False,
-            actual_output=Decimal('30.001'),
+        test_case = TestCase(
+            id='test-002',
+            name='Test',
+            category=TestCategory.NORMAL,
+            inputs={'x': 10},
             expected_output=Decimal('30'),
-            execution_time_ms=12.3,
-            discrepancy=Decimal('0.001'),
-            error_message=None
+            description='Test'
+        )
+        
+        result = TestResult(
+            test_case=test_case,
+            implementation_name='test_impl',
+            actual_output=Decimal('30.001'),
+            match=False,
+            discrepancy=0.001,
+            execution_time_ms=12.3
         )
         
         assert result.passed is False
-        assert result.discrepancy == Decimal('0.001')
+        assert result.discrepancy == 0.001
 
     def test_failed_test_result_with_error(self):
         """Test creating a failed test result with error."""
-        result = TestResult(
-            test_case_id='test-003',
-            passed=False,
-            actual_output=None,
+        test_case = TestCase(
+            id='test-003',
+            name='Test',
+            category=TestCategory.ERROR,
+            inputs={'x': -1},
             expected_output=Decimal('30'),
-            execution_time_ms=5.0,
-            discrepancy=None,
-            error_message='ValueError: Invalid input'
+            description='Error test'
+        )
+        
+        result = TestResult(
+            test_case=test_case,
+            implementation_name='test_impl',
+            actual_output=None,
+            actual_exception=ValueError("Invalid input"),
+            match=False,
+            error_message='ValueError: Invalid input',
+            execution_time_ms=5.0
         )
         
         assert result.passed is False
         assert result.actual_output is None
         assert result.error_message == 'ValueError: Invalid input'
 
-    def test_test_result_immutability(self):
-        """Test that TestResult is immutable."""
-        result = TestResult(
-            test_case_id='test-004',
-            passed=True,
-            actual_output=100,
+    def test_test_result_properties(self):
+        """Test TestResult computed properties."""
+        test_case = TestCase(
+            id='test-004',
+            name='Test',
+            category=TestCategory.NORMAL,
+            inputs={'x': 10},
             expected_output=100,
+            description='Test'
+        )
+        
+        passed_result = TestResult(
+            test_case=test_case,
+            implementation_name='test_impl',
+            actual_output=100,
+            match=True,
             execution_time_ms=10.0
         )
         
-        with pytest.raises(AttributeError):
-            result.passed = False
+        assert passed_result.passed is True
+        assert passed_result.failed is False
 
     def test_test_result_with_zero_execution_time(self):
         """Test result with zero execution time."""
-        result = TestResult(
-            test_case_id='test-005',
-            passed=True,
-            actual_output=1,
+        test_case = TestCase(
+            id='test-005',
+            name='Fast test',
+            category=TestCategory.NORMAL,
+            inputs={'x': 1},
             expected_output=1,
+            description='Quick test'
+        )
+        
+        result = TestResult(
+            test_case=test_case,
+            implementation_name='test_impl',
+            actual_output=1,
+            match=True,
             execution_time_ms=0.0
         )
         
@@ -207,14 +247,23 @@ class TestTestResult:
 
     def test_test_result_with_large_discrepancy(self):
         """Test result with large discrepancy."""
-        result = TestResult(
-            test_case_id='test-006',
-            passed=False,
-            actual_output=Decimal('1000'),
+        test_case = TestCase(
+            id='test-006',
+            name='Big diff test',
+            category=TestCategory.NORMAL,
+            inputs={'x': 10},
             expected_output=Decimal('100'),
-            execution_time_ms=8.5,
-            discrepancy=Decimal('900')
+            description='Large discrepancy test'
         )
         
-        assert result.discrepancy == Decimal('900')
+        result = TestResult(
+            test_case=test_case,
+            implementation_name='test_impl',
+            actual_output=Decimal('1000'),
+            match=False,
+            discrepancy=900.0,
+            execution_time_ms=8.5
+        )
+        
+        assert result.discrepancy == 900.0
         assert result.passed is False

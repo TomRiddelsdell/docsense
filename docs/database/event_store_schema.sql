@@ -15,6 +15,7 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 -- Core event store table - append-only, immutable
 CREATE TABLE events (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    sequence BIGSERIAL NOT NULL UNIQUE,
     aggregate_id UUID NOT NULL,
     aggregate_type VARCHAR(100) NOT NULL,
     event_type VARCHAR(100) NOT NULL,
@@ -22,7 +23,7 @@ CREATE TABLE events (
     payload JSONB NOT NULL,
     metadata JSONB DEFAULT '{}',
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    
+
     CONSTRAINT unique_aggregate_version UNIQUE (aggregate_id, event_version)
 );
 
@@ -30,6 +31,7 @@ CREATE INDEX idx_events_aggregate_id ON events(aggregate_id);
 CREATE INDEX idx_events_aggregate_type ON events(aggregate_type);
 CREATE INDEX idx_events_event_type ON events(event_type);
 CREATE INDEX idx_events_created_at ON events(created_at);
+CREATE INDEX idx_events_sequence ON events(sequence);
 
 -- Event snapshots for performance optimization
 CREATE TABLE snapshots (
@@ -213,6 +215,33 @@ CREATE INDEX idx_audit_log_document_id ON audit_log_views(document_id);
 CREATE INDEX idx_audit_log_timestamp ON audit_log_views(timestamp);
 CREATE INDEX idx_audit_log_user_id ON audit_log_views(user_id);
 
+-- Semantic IR Read Model (ADR-014)
+CREATE TABLE semantic_ir (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    document_id UUID NOT NULL REFERENCES document_views(id) ON DELETE CASCADE,
+    ir_type VARCHAR(50) NOT NULL,
+    name VARCHAR(500),
+    expression TEXT,
+    variables JSONB,
+    definition TEXT,
+    term VARCHAR(500),
+    context TEXT,
+    table_data JSONB,
+    row_count INTEGER,
+    column_count INTEGER,
+    target VARCHAR(500),
+    reference_type VARCHAR(100),
+    location TEXT,
+    metadata JSONB,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT semantic_ir_document_fk FOREIGN KEY (document_id)
+        REFERENCES document_views(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_semantic_ir_document_id ON semantic_ir(document_id);
+CREATE INDEX idx_semantic_ir_type ON semantic_ir(ir_type);
+CREATE INDEX idx_semantic_ir_name ON semantic_ir(name) WHERE name IS NOT NULL;
+
 -- ============================================================================
 -- PROJECTION CHECKPOINTS
 -- ============================================================================
@@ -309,6 +338,7 @@ CREATE OR REPLACE FUNCTION get_aggregate_events(
 )
 RETURNS TABLE (
     id UUID,
+    sequence BIGINT,
     event_type VARCHAR(100),
     event_version INTEGER,
     payload JSONB,
@@ -317,8 +347,9 @@ RETURNS TABLE (
 ) AS $$
 BEGIN
     RETURN QUERY
-    SELECT 
+    SELECT
         e.id,
+        e.sequence,
         e.event_type,
         e.event_version,
         e.payload,

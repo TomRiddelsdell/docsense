@@ -5,7 +5,7 @@ Generates Python functions directly from semantic IR specifications,
 including precision handling, edge cases, and calendar operations.
 """
 
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal, ROUND_HALF_UP
 from typing import Any, Callable, Dict, List, Optional
 import math

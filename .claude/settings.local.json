@@ -69,7 +69,9 @@
       "Bash(poetry add:*)",
       "Bash(poetry run python3:*)",
       "Bash(DATABASE_URL=\"postgresql://docsense:docsense_local_dev@localhost:5432/docsense\" PYTHONPATH=/workspaces poetry run pytest:*)",
-      "Bash(PYTHONPATH=/workspaces doppler run -- poetry run pytest:*)"
+      "Bash(PYTHONPATH=/workspaces doppler run -- poetry run pytest:*)",
+      "Bash(PYTHONPATH=/workspaces doppler run -- python3:*)",
+      "Bash(PYTHONPATH=/workspaces doppler run:*)"
     ],
     "deny": [],
     "ask": []

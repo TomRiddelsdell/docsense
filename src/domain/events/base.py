@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
 from datetime import datetime
+from typing import Optional
 from uuid import UUID, uuid4
 
 
@@ -10,6 +11,7 @@ class DomainEvent:
     occurred_at: datetime = field(default_factory=datetime.utcnow)
     aggregate_type: str = field(default="")
     version: int = field(default=1)
+    sequence: Optional[int] = field(default=None)  # Populated by EventStore from database
 
     @property
     def event_type(self) -> str:

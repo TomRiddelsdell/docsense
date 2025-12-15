@@ -102,6 +102,22 @@ class DocumentProjection(Projection):
 
     async def _handle_converted(self, event: DocumentConverted) -> None:
         async with self._pool.acquire() as conn:
+            # Ensure document row exists first (handle race condition)
+            doc_exists = await conn.fetchval(
+                "SELECT EXISTS(SELECT 1 FROM document_views WHERE id = $1)",
+                event.aggregate_id
+            )
+
+            if not doc_exists:
+                logger.warning(
+                    f"Document {event.aggregate_id} not in document_views table, "
+                    f"skipping DocumentConverted projection. This may indicate events are "
+                    f"being processed out of order."
+                )
+                # Optionally retry after a delay or raise an error
+                # For now, skip and let event replay handle it
+                return
+
             await conn.execute(
                 """
                 UPDATE document_views

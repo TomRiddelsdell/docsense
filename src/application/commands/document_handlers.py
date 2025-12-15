@@ -14,6 +14,17 @@ from src.infrastructure.converters.converter_factory import ConverterFactory
 from src.application.services.event_publisher import EventPublisher
 from src.infrastructure.semantic import IRBuilder
 
+# Import metrics (will be None if not in API context)
+try:
+    from src.api.metrics import (
+        documents_uploaded_total,
+        documents_converted_total
+    )
+    METRICS_AVAILABLE = True
+except ImportError:
+    METRICS_AVAILABLE = False
+    logger.debug("Metrics not available - running outside API context")
+
 
 class UploadDocumentHandler(CommandHandler[UploadDocument, DocumentId]):
     def __init__(
@@ -49,6 +60,10 @@ class UploadDocumentHandler(CommandHandler[UploadDocument, DocumentId]):
             logger.info(f"Conversion result: success={result.success}, errors={result.errors}")
 
             if result.success:
+                # Track successful conversion
+                if METRICS_AVAILABLE:
+                    documents_converted_total.labels(status="success").inc()
+
                 # Generate semantic IR from conversion result
                 try:
                     logger.info("Generating semantic IR...")
@@ -67,6 +82,10 @@ class UploadDocumentHandler(CommandHandler[UploadDocument, DocumentId]):
                 )
                 logger.info("Document conversion applied")
             else:
+                # Track failed conversion
+                if METRICS_AVAILABLE:
+                    documents_converted_total.labels(status="failed").inc()
+
                 logger.error(f"Conversion failed: {result.errors}")
                 raise InvalidDocumentFormat(
                     provided_format=command.content_type,
@@ -85,8 +104,16 @@ class UploadDocumentHandler(CommandHandler[UploadDocument, DocumentId]):
                 await self._publisher.publish_all(events)
                 logger.info("Events published successfully")
 
+            # Track successful upload
+            if METRICS_AVAILABLE:
+                documents_uploaded_total.labels(status="success").inc()
+
             return document_id
         except Exception as e:
+            # Track failed upload
+            if METRICS_AVAILABLE:
+                documents_uploaded_total.labels(status="failed").inc()
+
             logger.exception(f"Error uploading document: {e}")
             raise
 

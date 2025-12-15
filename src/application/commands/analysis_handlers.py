@@ -15,6 +15,14 @@ from src.application.services.event_publisher import EventPublisher
 
 logger = logging.getLogger(__name__)
 
+# Import metrics (will be None if not in API context)
+try:
+    from src.api.metrics import analyses_completed_total
+    METRICS_AVAILABLE = True
+except ImportError:
+    METRICS_AVAILABLE = False
+    logger.debug("Metrics not available - running outside API context")
+
 
 class StartAnalysisHandler(CommandHandler[StartAnalysis, UUID]):
     def __init__(
@@ -97,17 +105,25 @@ class StartAnalysisHandler(CommandHandler[StartAnalysis, UUID]):
                 findings = []
                 if result.analysis_result:
                     findings = [issue.to_dict() for issue in result.analysis_result.issues]
-                
+
                 document.complete_analysis(
                     findings_count=result.total_issues,
                     compliance_score=result.overall_score,
                     findings=findings,
                     processing_time_ms=result.processing_time_ms,
                 )
+
+                # Track successful analysis
+                if METRICS_AVAILABLE:
+                    analyses_completed_total.labels(status="success").inc()
             else:
                 error_msg = "; ".join(result.errors) if result.errors else "Unknown analysis error"
                 document.fail_analysis(reason=error_msg)
                 logger.error(f"Analysis failed for document {command.document_id}: {error_msg}")
+
+                # Track failed analysis
+                if METRICS_AVAILABLE:
+                    analyses_completed_total.labels(status="failed").inc()
 
             completion_events = list(document.pending_events)
             await self._documents.save(document)

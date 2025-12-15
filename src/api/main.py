@@ -9,10 +9,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
+# Structured logging will be configured in create_app() after loading settings
+# Configure minimal logging for startup
+logging.basicConfig(level=logging.INFO)
 logging.getLogger('pdfminer').setLevel(logging.WARNING)
 logging.getLogger('pdfplumber').setLevel(logging.WARNING)
 
@@ -20,8 +19,8 @@ from .middleware.error_handler import add_exception_handlers
 from .middleware.request_id import RequestIdMiddleware
 from .middleware.authentication import KerberosAuthMiddleware
 from .routes import (
-    documents, analysis, feedback, policies, audit, health, 
-    chat, parameters, analysis_logs, projection_health, projection_admin, auth, testing
+    documents, analysis, feedback, policies, audit, health,
+    chat, parameters, analysis_logs, projection_health, projection_admin, auth, testing, metrics
 )
 from .dependencies import Container
 
@@ -54,16 +53,20 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
 
 def create_app() -> FastAPI:
+    # Get validated settings first
+    from .config import get_settings
+    settings = get_settings()
+
+    # Configure structured logging
+    from .logging_config import setup_logging
+    setup_logging(log_level=settings.LOG_LEVEL, log_format=settings.LOG_FORMAT)
+
     app = FastAPI(
         title="Trading Algorithm Document Analyzer API",
         description="API for analyzing trading algorithm documentation with AI-powered feedback.",
         version="1.0.0",
         lifespan=lifespan,
     )
-
-    # Get validated settings
-    from .config import get_settings
-    settings = get_settings()
 
     # CORS configuration from validated settings
     cors_origins = settings.get_cors_origins_list()
@@ -100,6 +103,18 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
+    # Add correlation ID tracking for request tracing
+    from .middleware.correlation import CorrelationIDMiddleware
+    app.add_middleware(CorrelationIDMiddleware)
+
+    # Add request/response logging with performance tracking
+    from .middleware.request_logging import RequestLoggingMiddleware
+    app.add_middleware(RequestLoggingMiddleware)
+
+    # Add Prometheus metrics collection
+    from .middleware.metrics_middleware import MetricsMiddleware
+    app.add_middleware(MetricsMiddleware)
+
     app.add_middleware(RequestIdMiddleware)
     app.add_middleware(KerberosAuthMiddleware)
 
@@ -128,6 +143,9 @@ def create_app() -> FastAPI:
         logging.warning(f"Could not initialize audit middleware: {e}")
 
     add_exception_handlers(app)
+
+    # Metrics endpoint (no prefix - accessible at /metrics)
+    app.include_router(metrics.router, tags=["metrics"])
 
     app.include_router(health.router, prefix="/api/v1", tags=["health"])
     app.include_router(auth.router, prefix="/api/v1", tags=["authentication"])
