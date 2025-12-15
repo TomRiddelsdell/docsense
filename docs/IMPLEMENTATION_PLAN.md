@@ -7916,7 +7916,284 @@ Validation:
 
 ---
 
-### 16.9 Phase 16 Completion Criteria
+### 16.9 Local Development Auth Bypass Mode (Priority: 7/10)
+
+**Duration**: 4-6 hours  
+**Status**: 🟡 DEVELOPER EXPERIENCE - Improves local development workflow
+
+**Problem**: Developers must set up Kerberos headers or authentication proxy to test locally. This creates friction for quick testing, demos, and new developer onboarding.
+
+**Related**: [ADR-023: Local Development Auth Bypass](decisions/023-local-development-auth-bypass.md)
+
+**Files to Create/Modify**:
+```
+src/api/config.py                          # Add DEV_AUTH_BYPASS settings
+src/api/middleware/auth.py                 # Add bypass logic
+src/infrastructure/dev/test_data_loader.py # Test data seeding
+docs/processes/LOCAL_DEV_SETUP.md         # Updated documentation
+```
+
+**AI Agent Prompt**:
+```
+You are implementing a development-mode authentication bypass that allows frictionless local testing.
+
+Context:
+- Current auth requires X-User-Kerberos headers
+- Developers can't quickly test without auth setup
+- Need zero-friction local development experience
+- Must be 100% safe (disabled in production)
+
+Your task:
+1. Add configuration in src/api/config.py:
+   ```python
+   class Settings(BaseSettings):
+       # ... existing settings ...
+       
+       # Development Mode Authentication Bypass
+       DEV_AUTH_BYPASS: bool = Field(
+           default=False,
+           description="Enable auth bypass for local development (NEVER use in production)"
+       )
+       
+       DEV_TEST_USER_KERBEROS: str = Field(
+           default="testuser",
+           description="Test user Kerberos ID for development mode"
+       )
+       
+       DEV_TEST_USER_NAME: str = Field(
+           default="Test User",
+           description="Test user display name"
+       )
+       
+       DEV_TEST_USER_EMAIL: str = Field(
+           default="testuser@local.dev",
+           description="Test user email"
+       )
+       
+       DEV_TEST_USER_GROUPS: str = Field(
+           default="testing",
+           description="Comma-separated test user groups"
+       )
+       
+       @model_validator(mode='after')
+       def validate_dev_bypass(self) -> 'Settings':
+           """Ensure bypass is NEVER enabled in production."""
+           if self.DEV_AUTH_BYPASS and self.ENVIRONMENT == "production":
+               raise ValueError(
+                   "CRITICAL SECURITY ERROR: DEV_AUTH_BYPASS cannot be enabled "
+                   "in production environment!"
+               )
+           return self
+   ```
+
+2. Modify src/api/middleware/auth.py:
+   ```python
+   class KerberosAuthMiddleware(BaseHTTPMiddleware):
+       async def dispatch(self, request: Request, call_next):
+           # Production: Strict auth required
+           if settings.ENVIRONMENT == "production":
+               kerberos_id = request.headers.get("X-User-Kerberos")
+               if not kerberos_id:
+                   return JSONResponse(
+                       status_code=401,
+                       content={"detail": "Authentication required"}
+                   )
+               request.state.kerberos_id = kerberos_id
+               # ... extract groups, etc.
+           
+           # Development with bypass: Auto-inject test user
+           elif settings.DEV_AUTH_BYPASS:
+               kerberos_id = request.headers.get("X-User-Kerberos")
+               
+               if not kerberos_id:
+                   # No header: Use test user
+                   logger.info("DEV MODE: Using test user (no auth header)")
+                   request.state.kerberos_id = settings.DEV_TEST_USER_KERBEROS
+                   request.state.user_groups = set(
+                       settings.DEV_TEST_USER_GROUPS.split(',')
+                   )
+                   request.state.display_name = settings.DEV_TEST_USER_NAME
+                   request.state.email = settings.DEV_TEST_USER_EMAIL
+                   request.state.dev_mode = True
+               else:
+                   # Header provided: Use that user
+                   request.state.kerberos_id = kerberos_id
+                   request.state.user_groups = set(
+                       request.headers.get("X-User-Groups", "").split(',')
+                   )
+                   request.state.dev_mode = True
+           
+           # Development without bypass: Require headers like production
+           else:
+               kerberos_id = request.headers.get("X-User-Kerberos")
+               if not kerberos_id:
+                   return JSONResponse(
+                       status_code=401,
+                       content={
+                           "detail": "Authentication required. "
+                           "Set DEV_AUTH_BYPASS=true for test user."
+                       }
+                   )
+               request.state.kerberos_id = kerberos_id
+           
+           response = await call_next(request)
+           
+           # Add dev mode indicator
+           if getattr(request.state, "dev_mode", False):
+               response.headers["X-Dev-Mode"] = "enabled"
+               response.headers["X-Dev-User"] = request.state.kerberos_id
+           
+           return response
+   ```
+
+3. Create src/infrastructure/dev/test_data_loader.py:
+   ```python
+   class TestDataLoader:
+       """Loads test documents for development mode."""
+       
+       async def ensure_test_data_loaded(self, user_kerberos_id: str):
+           """
+           Load test documents for the test user if not already present.
+           
+           Loads from data/test_documents/ directory.
+           """
+           # Check if test data already exists
+           existing_docs = await self._get_user_documents(user_kerberos_id)
+           if any(d.get("metadata", {}).get("dev_test_data") for d in existing_docs):
+               logger.info(f"Test data already exists for {user_kerberos_id}")
+               return
+           
+           # Load test documents
+           test_docs_dir = Path("data/test_documents")
+           if not test_docs_dir.exists():
+               logger.warning("Test documents directory not found, skipping test data")
+               return
+           
+           logger.info(f"Loading test documents for {user_kerberos_id}...")
+           
+           # Load sample documents
+           for i, json_file in enumerate(test_docs_dir.glob("doc_*.json"), 1):
+               if i > 10:  # Limit to 10 test docs
+                   break
+               
+               # Load document content
+               with open(json_file) as f:
+                   doc_data = json.load(f)
+               
+               # Upload as test user
+               await self._upload_test_document(
+                   user_kerberos_id=user_kerberos_id,
+                   title=doc_data.get("title", f"Test Document {i}"),
+                   content=doc_data,
+                   metadata={"dev_test_data": True}
+               )
+           
+           logger.info(f"Loaded {i} test documents for {user_kerberos_id}")
+   ```
+
+4. Update src/api/main.py startup:
+   ```python
+   @app.on_event("startup")
+   async def startup_event():
+       """Application startup."""
+       
+       await Container.get_instance()
+       
+       # Development mode: Show warning and load test data
+       if settings.ENVIRONMENT == "development" and settings.DEV_AUTH_BYPASS:
+           logger.warning("=" * 60)
+           logger.warning("🚨 DEVELOPMENT MODE: Auth bypass enabled")
+           logger.warning(f"   Test User: {settings.DEV_TEST_USER_KERBEROS}")
+           logger.warning(f"   Groups: {settings.DEV_TEST_USER_GROUPS}")
+           logger.warning("   All requests without auth headers use test user")
+           logger.warning("=" * 60)
+           
+           # Load test documents
+           test_loader = TestDataLoader()
+           await test_loader.ensure_test_data_loaded(
+               user_kerberos_id=settings.DEV_TEST_USER_KERBEROS
+           )
+   ```
+
+5. Update .env.example:
+   ```bash
+   # Authentication
+   # For local development: Set DEV_AUTH_BYPASS=true to use test user
+   ENVIRONMENT=development
+   DEV_AUTH_BYPASS=true
+   
+   # Optional: Customize test user (defaults shown)
+   # DEV_TEST_USER_KERBEROS=testuser
+   # DEV_TEST_USER_NAME="Test User"
+   # DEV_TEST_USER_EMAIL=testuser@local.dev
+   # DEV_TEST_USER_GROUPS=testing,dev
+   ```
+
+6. Create frontend dev mode banner (client/src/components/DevModeBanner.tsx):
+   ```tsx
+   export function DevModeBanner() {
+     const [devMode, setDevMode] = useState(false);
+     
+     useEffect(() => {
+       fetch('/api/v1/health')
+         .then(res => setDevMode(res.headers.get('X-Dev-Mode') === 'enabled'));
+     }, []);
+     
+     if (!devMode) return null;
+     
+     return (
+       <div className="bg-yellow-100 border-b border-yellow-300 px-4 py-2">
+         <span className="font-semibold">🚨 Development Mode</span>
+         {' - '}
+         Authenticated as test user with sample documents
+       </div>
+     );
+   }
+   ```
+
+Best Practices:
+- NEVER enable in production (validation enforced)
+- Log loudly when bypass is active
+- Add response headers to indicate dev mode
+- Test data clearly marked in metadata
+- Still maintain full audit trail
+- Allow header override for testing different users
+
+Security Checklist:
+- [ ] Production validation prevents bypass
+- [ ] Startup warning is loud and clear
+- [ ] Dev mode headers added to responses
+- [ ] Test data marked in metadata
+- [ ] Audit trail still maintained
+- [ ] Documentation warns about production
+
+Validation:
+- Start app with DEV_AUTH_BYPASS=true
+- Access http://localhost:5000 without auth headers
+- Should see test user documents
+- Should see dev mode banner
+- Try with ENVIRONMENT=production (should fail with validation error)
+```
+
+**Completion Criteria**:
+- [ ] DEV_AUTH_BYPASS configuration added
+- [ ] Middleware implements bypass logic
+- [ ] Test data loader created
+- [ ] Startup loads test documents
+- [ ] Frontend dev mode banner added
+- [ ] Documentation updated
+- [ ] Production safety validated
+
+**Benefits**:
+✅ Zero-friction local development  
+✅ New developers productive immediately  
+✅ Easy demos without auth setup  
+✅ Integration tests simplified  
+✅ Production safety enforced  
+
+---
+
+### 16.10 Phase 16 Completion Criteria
 
 **Critical Blockers Resolved**:
 - [x] Phase 14 tests: All 65 tests passing
