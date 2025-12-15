@@ -40,6 +40,17 @@ exclude = [".cache"]
 select = ['E', 'W', 'F', 'I', 'B', 'C4', 'ARG', 'SIM']
 ignore = ['W291', 'W292', 'W293']
 
+[tool.pytest.ini_options]
+# Only collect tests from tests/ directory
+testpaths = ["tests"]
+# Don't collect tests from source code directories - include defaults
+norecursedirs = [".*", "src", "client", "node_modules", "__pycache__", "build", "dist", "venv", "*.egg"]
+# Filter collection and runtime warnings
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::pytest.PytestCollectionWarning",
+]
+
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
