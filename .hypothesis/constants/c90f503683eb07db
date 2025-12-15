@@ -1,0 +1,4 @@
+# file: /workspaces/src/domain/value_objects/user_role.py
+# hypothesis_version: 6.148.7
+
+[', ', 'UserRole', 'admin', 'auditor', 'contributor', 'viewer']

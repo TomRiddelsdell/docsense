@@ -1,0 +1,4 @@
+# file: /workspaces/src/api/middleware/authentication.py
+# hypothesis_version: 6.148.7
+
+[',', 'X-User-Display-Name', 'X-User-Email', 'X-User-Groups', 'X-User-Kerberos']

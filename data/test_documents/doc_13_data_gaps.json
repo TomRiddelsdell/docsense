@@ -106,5 +106,11 @@
     }
   ],
   "self_containment_score": 0.35,
-  "implementability_score": 0.3
+  "implementability_score": 0.3,
+  "expected_semantic_ir": {
+    "definitions": [],
+    "formulae": [],
+    "tables": [],
+    "cross_references": []
+  }
 }

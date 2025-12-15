@@ -1,0 +1,4 @@
+# file: /workspaces/src/infrastructure/repositories/document_repository.py
+# hypothesis_version: 6.148.7
+
+['Document', 'compliance_score', 'current_version', 'filename', 'findings', 'id', 'major', 'markdown_content', 'metadata', 'minor', 'original_format', 'owner_kerberos_id', 'patch', 'policy_repository_id', 'private', 'sections', 'shared_with_groups', 'status', 'system', 'version', 'visibility']

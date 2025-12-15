@@ -1,0 +1,4 @@
+# file: /workspaces/src/infrastructure/persistence/event_upcaster.py
+# hypothesis_version: 6.148.7
+
+[300, 'AnalysisStarted', 'DocumentConverted', 'DocumentUploaded', 'ai_provider', 'claude', 'converter_version', 'event_type', 'file_size', 'system', 'unknown', 'uploaded_by_user_id', 'version']

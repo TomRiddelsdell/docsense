@@ -36,7 +36,11 @@ class DocumentRepository(Repository[Document]):
                 "major": aggregate.current_version.major,
                 "minor": aggregate.current_version.minor,
                 "patch": aggregate.current_version.patch,
-            }
+            },
+            # Access control fields (Phase 13)
+            "owner_kerberos_id": aggregate._owner_kerberos_id,
+            "visibility": aggregate._visibility,
+            "shared_with_groups": list(aggregate._shared_with_groups),  # Convert set to list for JSON
         }
 
     def _deserialize_aggregate(self, state: dict) -> Document:
@@ -70,4 +74,10 @@ class DocumentRepository(Repository[Document]):
             version_data["minor"],
             version_data["patch"]
         )
+        
+        # Restore access control fields (Phase 13) - default for old snapshots
+        document._owner_kerberos_id = state.get("owner_kerberos_id", "system")
+        document._visibility = state.get("visibility", "private")
+        document._shared_with_groups = set(state.get("shared_with_groups", []))  # Convert list to set
+        
         return document

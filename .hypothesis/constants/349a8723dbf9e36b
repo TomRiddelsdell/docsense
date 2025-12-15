@@ -1,0 +1,4 @@
+# file: /workspaces/src/infrastructure/repositories/feedback_repository.py
+# hypothesis_version: 6.148.7
+
+['FeedbackSession', 'applied_change', 'confidence_score', 'document_id', 'feedback_id', 'feedback_items', 'id', 'issue_description', 'modified_change', 'policy_reference', 'rejection_reason', 'section_reference', 'status', 'suggested_change', 'version']

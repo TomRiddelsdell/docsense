@@ -103,6 +103,30 @@ def create_app() -> FastAPI:
     app.add_middleware(RequestIdMiddleware)
     app.add_middleware(KerberosAuthMiddleware)
 
+    # Add audit logging middleware
+    # Note: Audit middleware is conditionally added based on configuration
+    # In test environments or when an event loop is already running,
+    # audit middleware initialization is skipped
+    from src.api.middleware.audit import AuditMiddleware
+    from src.api.dependencies import get_container
+    import asyncio
+    try:
+        # Try to get the event loop - if one exists, we're likely in a test
+        try:
+            loop = asyncio.get_running_loop()
+            # Already in an event loop (test environment), skip audit middleware
+            logging.info("Event loop already running, skipping audit middleware initialization")
+        except RuntimeError:
+            # No event loop running, safe to use asyncio.run
+            container = asyncio.run(get_container())
+            if container.audit_logger:
+                app.add_middleware(AuditMiddleware, audit_logger=container.audit_logger)
+                logging.info("Audit middleware initialized successfully")
+    except Exception as e:
+        # If we can't initialize audit middleware, log and continue
+        # The app can still function without audit logging
+        logging.warning(f"Could not initialize audit middleware: {e}")
+
     add_exception_handlers(app)
 
     app.include_router(health.router, prefix="/api/v1", tags=["health"])

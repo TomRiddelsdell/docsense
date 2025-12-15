@@ -71,13 +71,17 @@ class PostgresEventStore(EventStore):
         async with self._pool.acquire() as conn:
             async with conn.transaction():
                 # Lock aggregate rows to prevent concurrent modifications
-                # Using FOR UPDATE ensures only one transaction can check/insert at a time
+                # Using FOR UPDATE in a subquery ensures only one transaction can check/insert at a time
+                # We use a subquery because FOR UPDATE cannot be used directly with aggregate functions
                 current = await conn.fetchval(
                     """
                     SELECT COALESCE(MAX(event_version), 0)
-                    FROM events
-                    WHERE aggregate_id = $1
-                    FOR UPDATE
+                    FROM (
+                        SELECT event_version
+                        FROM events
+                        WHERE aggregate_id = $1
+                        FOR UPDATE
+                    ) AS locked_events
                     """,
                     aggregate_id
                 )

@@ -119,5 +119,33 @@
   ],
   "self_containment_score": 0.25,
   "implementability_score": 0.2,
-  "notes": "This document exemplifies the critical market calendar issues identified in ADR-018"
+  "notes": "This document exemplifies the critical market calendar issues identified in ADR-018",
+  "expected_semantic_ir": {
+    "definitions": [
+      {
+        "id": "term_1",
+        "term": "The portfolio",
+        "definition": "rebalanced monthly, on the last day of each month",
+        "location": "Paragraph 3",
+        "aliases": []
+      },
+      {
+        "id": "term_2",
+        "term": "Asset momentum",
+        "definition": "calculated using returns over the previous 60 days",
+        "location": "Paragraph 5",
+        "aliases": []
+      },
+      {
+        "id": "term_3",
+        "term": "correlation matrix",
+        "definition": "computed using the past 90 days of daily returns for all assets",
+        "location": "Paragraph 7",
+        "aliases": []
+      }
+    ],
+    "formulae": [],
+    "tables": [],
+    "cross_references": []
+  }
 }

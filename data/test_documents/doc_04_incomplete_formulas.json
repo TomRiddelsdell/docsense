@@ -108,5 +108,117 @@
     }
   ],
   "self_containment_score": 0.35,
-  "implementability_score": 0.3
+  "implementability_score": 0.3,
+  "expected_semantic_ir": {
+    "definitions": [
+      {
+        "id": "term_1",
+        "term": "The momentum score for each stock",
+        "definition": "calculated as:",
+        "location": "Paragraph 3",
+        "aliases": []
+      },
+      {
+        "id": "term_2",
+        "term": "Where Historical Price",
+        "definition": "the price from the lookback period",
+        "location": "Paragraph 5",
+        "aliases": []
+      },
+      {
+        "id": "term_3",
+        "term": "adjusted momentum",
+        "definition": "calculated by dividing momentum by volatility:",
+        "location": "Paragraph 7",
+        "aliases": []
+      },
+      {
+        "id": "term_4",
+        "term": "weight",
+        "definition": "proportional to its score:",
+        "location": "Paragraph 14",
+        "aliases": []
+      }
+    ],
+    "formulae": [
+      {
+        "id": "formula_1",
+        "name": "Momentum Score",
+        "expression": "Momentum Score = (Current Price / Historical Price) - 1",
+        "location": "Paragraph 4",
+        "variables": [
+          {
+            "name": "Price",
+            "source": null
+          },
+          {
+            "name": "Current",
+            "source": null
+          },
+          {
+            "name": "Historical",
+            "source": null
+          }
+        ],
+        "parameters": []
+      },
+      {
+        "id": "formula_2",
+        "name": "Risk-Adjusted Momentum",
+        "expression": "Risk-Adjusted Momentum = Momentum / Volatility",
+        "location": "Paragraph 8",
+        "variables": [
+          {
+            "name": "Volatility",
+            "source": null
+          },
+          {
+            "name": "Momentum",
+            "source": null
+          }
+        ],
+        "parameters": []
+      },
+      {
+        "id": "formula_3",
+        "name": "Composite Score",
+        "expression": "Composite Score = w1 \u00d7 Factor1 + w2 \u00d7 Factor2 + w3 \u00d7 Factor3",
+        "location": "Paragraph 11",
+        "variables": [
+          {
+            "name": "w3",
+            "source": null
+          },
+          {
+            "name": "w1",
+            "source": null
+          },
+          {
+            "name": "w2",
+            "source": null
+          }
+        ],
+        "parameters": []
+      },
+      {
+        "id": "formula_4",
+        "name": "Weight",
+        "expression": "Weight = Score / Sum(Scores)",
+        "location": "Paragraph 15",
+        "variables": [
+          {
+            "name": "Score",
+            "source": null
+          },
+          {
+            "name": "Scores",
+            "source": null
+          }
+        ],
+        "parameters": []
+      }
+    ],
+    "tables": [],
+    "cross_references": []
+  }
 }

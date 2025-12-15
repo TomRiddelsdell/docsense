@@ -291,3 +291,164 @@ Design approach where all functionality is exposed through the REST API, with th
 ### API Client
 
 Any external system that integrates with the document analyzer through the REST API.
+
+## Terms from other projects
+**Reference Data**: Timeseries data that which we may consume in a QIS Strategy. It may have one or more Data Sources which will produce Data Values for each Snap. Once all sources are reconciled for a given Snap we refer to the Data Value as an Official Data Value.
+
+**Reference Data ID**: A uniquely name for some timeseries data.
+
+**Data Source**: A provider of data producing a stream of Data Values at different Snaps
+
+**Snap**: The Event Time associated with a Data Value. This Data Value arrives in the application at the Processing Time
+
+**As Of Time**: This is the Processing Time for a Data Value
+
+**Official Data Value**: A Data Value that has been reconciled across many sources for which we have high trust in its accuracy
+
+**Publication**: A Data Value may be published for a specific Snap to be made available to 3rd parties
+
+**Restatement**: The changing and republication of an Official Data Value once it's already been published.
+
+**Remark**: The changing of a Data Value.
+
+**Data Lineage**: The complete path and transformation history of data from source to consumption
+
+**Data Quality Metric**: Measurable criteria used to assess the reliability and accuracy of data
+
+**Corporate Action**: Events like dividends, splits, mergers, or other corporate events affecting instrument valuations
+
+**Market Data Snapshot**: A complete set of market data captured at a specific point in time
+
+### Strategy Framework
+
+**Signal**: A piece of market data that may be used to determine Target Weights
+
+**Target Weights**: The percentage allocation in the Strategy's Constituents using valuations as of the Observation Snap (there may be a lag between the Observation Snap and the Target Weight Generation Time to facilitate looking forward to upcoming rebalances to enable hedging)
+
+**Effective Weights**: The percentage allocation in the Strategy's Constituents using the most recent available valuations as of the Snap
+
+**Constituent**: An Instrument a Strategy holds at a specific Snap
+
+**Position**: The number of units a Strategy holds of an Instrument at a specific Snap
+
+**Instrument**: Something a Strategy may trade. It could be a directly observable market instrument (e.g. stock, bond, future, option, ETF) or an indirectly observable instrument (e.g. another Strategy, a combination of other Instruments)
+
+**Trade**: The process of generating an Order on an Instrument and having it Filled at specific prices
+
+**Order**: The representation of the intention to buy or sell a specific number of units in line with an Execution Instruction
+
+**Execution Instruction**: The methodology with which the Order should be Executed in the Market. Different Execution Instructions will result in different Fill Prices and Execution Fractions
+
+**Price**: The Data Value representing the value of an Instrument at a Snap as specified by a specific Data Source
+
+**Holdings**: The set of Instruments and Units/Quantities held in the Strategy's Portfolio at a specific Snap
+
+**Denomination Currency**: The currency in which the Strategy Value is quoted
+
+### Module Framework
+
+**Module**: The representation of a specific part of the Strategy Definition. A Module should have well-defined Module Parameters, Module Methodology, Sub Modules, Data Dependencies, and Module Outputs. A Module should be "documentable" and independent of other Modules that are not specified as Sub Modules
+
+**Module Parameters**: The configuration of a Module that doesn't change throughout the life of a Strategy
+
+**Module Methodology**: The definition of the Module Outputs w.r.t. its Parameters, Sub Module Outputs, Data Dependencies and Snap Schedule
+
+**Module Output**: The Data Values produced by a Module for Snaps in the Snap Schedule
+
+**Snap Schedule**: The set of Snaps for which the Module Output is well defined and expected to be calculated
+
+**Sub Module/Child Module**: The Module Output of a Sub Module for a specific Snap is used to compute the Module Output of the Parent Module
+
+**Data Dependency**: A Data Value or Values required by a Module in order to compute the Module Output
+
+**Trading Module**: Specific module types for which the Module Output is sets of Orders
+
+### Strategy Lifecycle
+
+**Live Period**: The set of snaps after and including the Strategy Inception
+
+**Strategy Inception**: The first Snap at which the Strategy starts evolving
+
+**Backtest**: An extended set of Snaps and Levels starting earlier than the Strategy Inception in order to gain insight of the strategy's evolution over a the longest possible period of time
+
+**Backtest Assumptions**: The set of assumptions made in order to extend the strategy calculation back to the Backtest Start Date
+
+**Backtest Merge Date**: The date on which the Backtest can be merged with the Live Period; usually after any Ramp Up Period in the Live Period
+
+**Ramp Up Period**: The set of snaps from the Strategy Inception where the Strategy is building up it's positions gradually in order to limit initial Market Impact
+
+**Observation Time**: A snap at which Data Values are taken to compute a derived Data Value
+
+**Observation Window**: A set of snaps from which a derived Data Value is taken
+
+### Implementation & Validation
+
+**Implementation**: A Data Source for a Strategy's Official Value. Strategies may be Double Implemented to increase trust in the accuracy of the Strategy Value
+
+**Strategy Value**: A valuation of a Strategy at a specific Snap
+
+**Double Implementation**: 2 independent parties implementing a Strategy and reconciling the Strategy Values produced at all snaps in the Publication Schedule
+
+### Risk Management
+
+**Risk Factor**: A market variable that explains returns across instruments
+
+**Factor Exposure**: The sensitivity of a strategy or instrument to a risk factor
+
+**Value at Risk (VaR)**: The maximum expected loss over a specific time horizon at a given confidence level
+
+**Tracking Error**: The standard deviation of the difference between strategy returns and benchmark returns
+
+**Maximum Drawdown**: The maximum observed loss from peak to trough during any period
+
+**Risk Budget**: The allocation of risk across different factors, instruments, or sub-strategies
+
+**Stress Test**: Analysis of portfolio performance under extreme market scenarios
+
+**Risk Limit**: A constraint on the maximum allowable risk exposure for the strategy
+
+### Performance Analytics
+
+**Alpha**: The excess return generated by the strategy beyond market exposure (benchmark)
+
+**Beta**: The sensitivity of the strategy to market movements
+
+**Sharpe Ratio**: Risk-adjusted return metric calculated as excess return divided by volatility
+
+**Information Ratio**: Excess return per unit of tracking error
+
+**Attribution**: The decomposition of returns into contributions from different sources
+
+**Benchmark**: A reference portfolio or index used to evaluate strategy performance
+
+**Factor Model**: A mathematical model expressing returns as linear combinations of factors
+
+### Trading & Execution
+
+**Fill**: The actual execution of an order at a specific price and quantity
+
+**Execution Fraction**: The percentage of an order that was successfully executed
+
+**Market Impact**: The effect of trading on market prices
+
+**Turnover**: The rate at which the strategy's holdings change over time
+
+**Rebalance**: The process of adjusting portfolio weights to match target allocations
+
+**Settlement**: The process of transferring ownership and payment for trades
+
+**Slippage**: The difference between expected and actual execution prices
+
+### Operations & Compliance
+
+**NAV (Net Asset Value)**: The per-unit value of the strategy calculated as total assets minus liabilities
+
+**Mark-to-Market**: The process of valuing positions at current market prices
+
+**Reconciliation**: The process of matching internal records with external sources
+
+**Audit Trail**: Complete traceability of all decisions, trades, and data changes
+
+**Regulatory Reporting**: Required disclosures and reports for compliance with financial regulations
+
+**Universe**: The set of instruments available for investment by the strategy

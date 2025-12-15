@@ -27,5 +27,11 @@
   ],
   "self_containment_score": 0.93,
   "implementability_score": 0.92,
-  "notes": "Very minor issues - essentially production-ready with tiny clarifications"
+  "notes": "Very minor issues - essentially production-ready with tiny clarifications",
+  "expected_semantic_ir": {
+    "definitions": [],
+    "formulae": [],
+    "tables": [],
+    "cross_references": []
+  }
 }

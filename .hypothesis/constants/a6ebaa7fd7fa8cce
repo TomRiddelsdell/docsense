@@ -1,0 +1,4 @@
+# file: /workspaces/src/domain/events/document_events.py
+# hypothesis_version: 6.148.7
+
+['Document', 'claude']

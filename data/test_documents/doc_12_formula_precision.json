@@ -81,5 +81,20 @@
     }
   ],
   "self_containment_score": 0.4,
-  "implementability_score": 0.35
+  "implementability_score": 0.35,
+  "expected_semantic_ir": {
+    "definitions": [],
+    "formulae": [
+      {
+        "id": "formula_1",
+        "name": "z",
+        "expression": "z = (current_price - mean_price) / std_dev",
+        "location": "Paragraph 4",
+        "variables": [],
+        "parameters": []
+      }
+    ],
+    "tables": [],
+    "cross_references": []
+  }
 }

@@ -8,5 +8,11 @@
   "issues": [],
   "self_containment_score": 0.98,
   "implementability_score": 0.98,
-  "notes": "Exemplary document with complete specifications - ideal reference example"
+  "notes": "Exemplary document with complete specifications - ideal reference example",
+  "expected_semantic_ir": {
+    "definitions": [],
+    "formulae": [],
+    "tables": [],
+    "cross_references": []
+  }
 }

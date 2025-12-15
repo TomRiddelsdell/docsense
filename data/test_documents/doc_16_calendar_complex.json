@@ -117,5 +117,11 @@
   ],
   "self_containment_score": 0.25,
   "implementability_score": 0.2,
-  "notes": "Critical ADR-018 example - complex timezone and multi-market calendar coordination issues"
+  "notes": "Critical ADR-018 example - complex timezone and multi-market calendar coordination issues",
+  "expected_semantic_ir": {
+    "definitions": [],
+    "formulae": [],
+    "tables": [],
+    "cross_references": []
+  }
 }

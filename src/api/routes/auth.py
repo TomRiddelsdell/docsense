@@ -5,8 +5,7 @@ from fastapi import APIRouter, Depends
 
 from src.domain.aggregates.user import User
 from src.domain.services.authorization_service import AuthorizationService
-from src.api.dependencies.auth import get_current_user
-from src.api.dependencies import get_authorization_service
+from src.api.dependencies import get_current_user, get_authorization_service
 from src.api.schemas.auth import CurrentUserResponse
 
 logger = logging.getLogger(__name__)

@@ -72,3 +72,23 @@ class DocumentListResponse(BaseModel):
     total: int
     page: int = 1
     per_page: int = 20
+
+
+class ShareDocumentRequest(BaseModel):
+    """Request to share document with groups."""
+    groups: List[str] = Field(..., min_items=1, max_items=20, description="Groups to share document with")
+
+
+class ShareDocumentResponse(BaseModel):
+    """Response after sharing document."""
+    document_id: UUID
+    shared_with_groups: List[str]
+    visibility: str
+    message: str
+
+
+class MakePrivateResponse(BaseModel):
+    """Response after making document private."""
+    document_id: UUID
+    visibility: str
+    message: str

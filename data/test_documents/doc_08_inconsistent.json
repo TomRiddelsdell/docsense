@@ -68,5 +68,19 @@
   ],
   "self_containment_score": 0.5,
   "implementability_score": 0.3,
-  "notes": "Multiple critical internal contradictions make implementation impossible without clarification"
+  "notes": "Multiple critical internal contradictions make implementation impossible without clarification",
+  "expected_semantic_ir": {
+    "definitions": [
+      {
+        "id": "term_1",
+        "term": "The index",
+        "definition": "rebalanced semi-annually in June and December",
+        "location": "Paragraph 7",
+        "aliases": []
+      }
+    ],
+    "formulae": [],
+    "tables": [],
+    "cross_references": []
+  }
 }

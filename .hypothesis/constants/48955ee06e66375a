@@ -1,0 +1,4 @@
+# file: /workspaces/src/domain/value_objects/policy.py
+# hypothesis_version: 6.148.7
+
+['Policy', 'policy_content', 'policy_id', 'policy_name', 'requirement_type']

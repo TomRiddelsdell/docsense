@@ -1,0 +1,4 @@
+# file: /workspaces/src/domain/value_objects/document_visibility.py
+# hypothesis_version: 6.148.7
+
+[', ', 'DocumentVisibility', 'group', 'organization', 'private', 'public']

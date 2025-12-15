@@ -1,0 +1,4 @@
+# file: /workspaces/src/infrastructure/converters/pdf_converter.py
+# hypothesis_version: 6.148.7
+
+[0.5, 0.8, 100, 1024, ' |', ' | ', '## Extracted Tables', '---', ':', 'Cambria-Math', 'CambriaMath', 'Latin Modern Math', 'MT Extra', 'MathJax', 'PDF', 'STIX', 'Symbol', 'SymbolMT', '\\Delta', '\\alpha', '\\approx', '\\ast', '\\beta', '\\delta', '\\div', '\\epsilon', '\\gamma', '\\geq', '\\infty', '\\int', '\\lambda', '\\leq', '\\mu', '\\nabla', '\\neq', '\\omega', '\\partial', '\\phi', '\\pi', '\\pm', '\\prod', '\\sigma', '\\sqrt', '\\sum', '\\tau', '\\theta', '\\times', '_', 'author', 'blocks', 'corrupt', 'creationDate', 'damaged', 'dict', 'encrypted', 'error', 'filename', 'font', 'format', 'limit_mb', 'lines', 'modDate', 'password', 'pdf', 'rb', 'size', 'size_mb', 'spans', 'text', 'title', 'type', '| ', '±', '×', '÷', 'α', 'β', 'γ', 'δ', 'ε', 'θ', 'λ', 'μ', 'π', 'σ', 'τ', 'φ', 'ω', '∂', '∆', '∇', '∏', '∑', '∗', '√', '∞', '∫', '≈', '≠', '≤', '≥']

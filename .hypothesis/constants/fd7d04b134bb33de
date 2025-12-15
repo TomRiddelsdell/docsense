@@ -1,0 +1,4 @@
+# file: /workspaces/src/api/routes/health.py
+# hypothesis_version: 6.148.7
+
+[100, 500, ' on ', '/health', '/health/database', '1.0.0', 'SELECT version()', 'active_connections', 'connected', 'critical', 'current_size', 'database', 'healthy', 'idle_connections', 'max_size', 'message', 'min_size', 'pool', 'status', 'total_connections', 'unhealthy', 'utilization_percent', 'version', 'warning']

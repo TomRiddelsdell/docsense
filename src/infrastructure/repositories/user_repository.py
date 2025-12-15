@@ -5,6 +5,7 @@ from uuid import UUID, uuid5, NAMESPACE_DNS
 import logging
 
 from src.domain.aggregates.user import User
+from src.domain.value_objects.user_role import UserRole
 from src.infrastructure.repositories.base import Repository
 from src.infrastructure.persistence.event_store import EventStore
 from src.infrastructure.persistence.snapshot_store import SnapshotStore
@@ -95,13 +96,13 @@ class UserRepository(Repository[User]):
             logger.info(f"Auto-registering new user: {kerberos_id}")
             user = User.register(
                 kerberos_id=kerberos_id,
-                groups=groups,
+                groups=list(groups),  # Convert set to list for event
                 display_name=display_name,
                 email=email
             )
             await self.save_user(user)
             return user
-        
+
         # Existing user - sync groups if changed
         current_groups = user.groups
         if current_groups != groups:
@@ -109,23 +110,75 @@ class UserRepository(Repository[User]):
                 f"Syncing groups for user {kerberos_id}: "
                 f"{current_groups} -> {groups}"
             )
-            user.sync_groups(groups)
+            user.sync_groups(list(groups))  # Convert set to list for event
             await self.save_user(user)
         
         return user
     
     async def save_user(self, user: User) -> None:
         """Save user aggregate.
-        
+
         Note: We need to set the aggregate.id to the UUID derived from kerberos_id
         before saving, since the base Repository.save() expects aggregate.id to be set.
-        
+
         Args:
             user: User aggregate to save
         """
         # Set the aggregate ID to the UUID derived from kerberos_id
         # This is required for the event store which uses UUIDs
         user._id = kerberos_id_to_uuid(user.kerberos_id)
-        
+
         # Use base class save() method
         await self.save(user)
+
+    def _serialize_aggregate(self, aggregate: User) -> dict:
+        """Serialize User aggregate state for snapshot.
+
+        Captures all User fields to enable snapshot-based restoration
+        without replaying all events.
+
+        Args:
+            aggregate: User aggregate to serialize
+
+        Returns:
+            Dictionary containing serialized state
+        """
+        return {
+            "id": str(aggregate.id),
+            "version": aggregate.version,
+            "kerberos_id": aggregate.kerberos_id,
+            "groups": list(aggregate.groups),  # Convert set to list for JSON serialization
+            "roles": [role.value for role in aggregate.roles],  # Serialize UserRole enums
+            "display_name": aggregate.display_name,
+            "email": aggregate.email,
+            "is_active": aggregate.is_active,
+        }
+
+    def _deserialize_aggregate(self, state: dict) -> User:
+        """Deserialize User aggregate state from snapshot.
+
+        Restores User aggregate from serialized snapshot state.
+
+        Args:
+            state: Dictionary containing serialized state
+
+        Returns:
+            Restored User aggregate
+        """
+        # Create User instance without calling __init__ to avoid event generation
+        user = User.__new__(User)
+
+        # Restore base aggregate fields
+        user._id = UUID(state["id"])
+        user._version = state["version"]
+        user._pending_events = []
+
+        # Restore User-specific fields
+        user._kerberos_id = state["kerberos_id"]
+        user._groups = set(state.get("groups", []))  # Convert list back to set
+        user._roles = {UserRole.from_string(role) for role in state.get("roles", ["viewer"])}
+        user._display_name = state.get("display_name", "")
+        user._email = state.get("email", "")
+        user._is_active = state.get("is_active", True)
+
+        return user

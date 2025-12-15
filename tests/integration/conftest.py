@@ -57,6 +57,30 @@ async def client(reset_container) -> AsyncGenerator[AsyncClient, None]:
 
 
 @pytest.fixture
+def auth_headers():
+    """Default authentication headers for test requests."""
+    return {
+        "X-User-Kerberos": "test01",
+        "X-User-Groups": "test-group,developers",
+        "X-User-Display-Name": "Test User",
+        "X-User-Email": "test01@example.com",
+    }
+
+
+@pytest_asyncio.fixture
+async def authenticated_client(reset_container, auth_headers) -> AsyncGenerator[AsyncClient, None]:
+    """Create an async test client with authentication headers."""
+    app = create_app()
+    transport = ASGITransport(app=app)
+    async with AsyncClient(
+        transport=transport,
+        base_url="http://test",
+        headers=auth_headers
+    ) as ac:
+        yield ac
+
+
+@pytest.fixture
 def sample_markdown_file():
     content = b"""# Trading Algorithm Specification
 

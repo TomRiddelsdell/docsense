@@ -1,0 +1,4 @@
+# file: /workspaces/src/domain/value_objects/feedback_item.py
+# hypothesis_version: 6.148.7
+
+[0.0, 1.0, 'FeedbackItem', 'applied_change', 'confidence_score', 'feedback_id', 'issue_description', 'modified_change', 'policy_reference', 'rejection_reason', 'section_reference', 'status', 'suggested_change']

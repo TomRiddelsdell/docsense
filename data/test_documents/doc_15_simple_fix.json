@@ -36,5 +36,11 @@
   ],
   "self_containment_score": 0.92,
   "implementability_score": 0.9,
-  "notes": "Minor clarifications needed - easily implementable with minimal changes"
+  "notes": "Minor clarifications needed - easily implementable with minimal changes",
+  "expected_semantic_ir": {
+    "definitions": [],
+    "formulae": [],
+    "tables": [],
+    "cross_references": []
+  }
 }

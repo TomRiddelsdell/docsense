@@ -14,6 +14,9 @@ from src.api.schemas.documents import (
     DocumentUpdateRequest,
     ExportDocumentRequest,
     AssignPolicyRepositoryRequest,
+    ShareDocumentRequest,
+    ShareDocumentResponse,
+    MakePrivateResponse,
 )
 from src.api.dependencies import (
     get_upload_document_handler,
@@ -24,7 +27,11 @@ from src.api.dependencies import (
     get_list_documents_handler,
     get_count_documents_handler,
     get_container,
+    get_authorization_service,
+    get_document_repository,
+    get_current_user,
 )
+from src.domain.aggregates.user import User
 from src.api.config import get_settings
 from src.api.utils.validation import validate_upload_file
 from src.domain.commands import UploadDocument, ExportDocument, DeleteDocument
@@ -56,6 +63,7 @@ async def upload_document(
     title: str = Form(...),
     description: Optional[str] = Form(None),
     policy_repository_id: Optional[UUID] = Form(None),
+    current_user: User = Depends(get_current_user),
     upload_handler=Depends(get_upload_document_handler),
     query_handler=Depends(get_document_by_id_handler),
 ):
@@ -125,7 +133,7 @@ async def upload_document(
         filename=sanitized_filename,
         content=content,
         content_type=file.content_type or "application/octet-stream",
-        uploaded_by="anonymous",
+        uploaded_by=current_user.kerberos_id,
         policy_repository_id=policy_repository_id,
     )
 
@@ -202,7 +210,10 @@ async def list_documents(
 @router.get("/documents/{document_id}", response_model=DocumentDetailResponse)
 async def get_document(
     document_id: UUID,
+    current_user: User = Depends(get_current_user),
     handler=Depends(get_document_by_id_handler),
+    auth_service=Depends(get_authorization_service),
+    doc_repo=Depends(get_document_repository),
 ):
     query = GetDocumentById(document_id=document_id)
     document = await handler.handle(query)
@@ -211,6 +222,24 @@ async def get_document(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Document with ID {document_id} not found",
+        )
+    
+    # Load document aggregate for authorization check
+    doc_aggregate = await doc_repo.get_by_id(document_id)
+    if doc_aggregate is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Document with ID {document_id} not found",
+        )
+    
+    # Check authorization
+    if not auth_service.can_view_document(current_user, doc_aggregate):
+        logger.warning(
+            f"User {current_user.kerberos_id} denied access to document {document_id}"
+        )
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to view this document",
         )
 
     sections = None
@@ -246,7 +275,10 @@ async def get_document(
 async def update_document(
     document_id: UUID,
     request: DocumentUpdateRequest,
+    current_user: User = Depends(get_current_user),
     handler=Depends(get_document_by_id_handler),
+    auth_service=Depends(get_authorization_service),
+    doc_repo=Depends(get_document_repository),
 ):
     query = GetDocumentById(document_id=document_id)
     document = await handler.handle(query)
@@ -255,6 +287,24 @@ async def update_document(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Document with ID {document_id} not found",
+        )
+    
+    # Load document aggregate for authorization check
+    doc_aggregate = await doc_repo.get_by_id(document_id)
+    if doc_aggregate is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Document with ID {document_id} not found",
+        )
+    
+    # Check authorization
+    if not auth_service.can_edit_document(current_user, doc_aggregate):
+        logger.warning(
+            f"User {current_user.kerberos_id} denied edit access to document {document_id}"
+        )
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to edit this document",
         )
 
     return DocumentResponse(
@@ -273,19 +323,200 @@ async def update_document(
 @router.delete("/documents/{document_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_document(
     document_id: UUID,
+    current_user: User = Depends(get_current_user),
     handler=Depends(get_delete_document_handler),
+    auth_service=Depends(get_authorization_service),
+    doc_repo=Depends(get_document_repository),
 ):
-    command = DeleteDocument(document_id=document_id, deleted_by="anonymous")
+    # Load document aggregate for authorization check
+    doc_aggregate = await doc_repo.get_by_id(document_id)
+    if doc_aggregate is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Document with ID {document_id} not found",
+        )
+    
+    # Check authorization
+    if not auth_service.can_delete_document(current_user, doc_aggregate):
+        logger.warning(
+            f"User {current_user.kerberos_id} denied delete access to document {document_id}"
+        )
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to delete this document",
+        )
+    
+    command = DeleteDocument(document_id=document_id, deleted_by=current_user.kerberos_id)
     await handler.handle(command)
     return None
+
+
+@router.post("/documents/{document_id}/share", response_model=ShareDocumentResponse)
+async def share_document(
+    document_id: UUID,
+    request: ShareDocumentRequest,
+    current_user: User = Depends(get_current_user),
+    auth_service=Depends(get_authorization_service),
+    doc_repo=Depends(get_document_repository),
+):
+    """
+    Share document with specified groups.
+    
+    Only document owner or admins can share documents.
+    Users can only share with groups they belong to (unless admin).
+    
+    Args:
+        document_id: UUID of document to share
+        request: ShareDocumentRequest with list of groups
+        current_user: Authenticated user
+        
+    Returns:
+        ShareDocumentResponse with updated sharing status
+        
+    Raises:
+        HTTPException 404: Document not found
+        HTTPException 403: User cannot share document or not in specified groups
+        HTTPException 400: Invalid group names
+    """
+    # Load document aggregate
+    doc_aggregate = await doc_repo.get_by_id(document_id)
+    if doc_aggregate is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Document with ID {document_id} not found",
+        )
+    
+    # Check if user can share this document
+    if not auth_service.can_share_document(current_user, doc_aggregate):
+        logger.warning(
+            f"User {current_user.kerberos_id} denied share access to document {document_id}"
+        )
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to share this document",
+        )
+    
+    # Validate that user is in all specified groups (unless admin)
+    from src.domain.value_objects.user_role import UserRole
+    if not current_user.has_role(UserRole.ADMIN):
+        user_groups_set = set(current_user.groups)
+        requested_groups_set = set(request.groups)
+        invalid_groups = requested_groups_set - user_groups_set
+        
+        if invalid_groups:
+            logger.warning(
+                f"User {current_user.kerberos_id} attempted to share document {document_id} "
+                f"with groups they don't belong to: {invalid_groups}"
+            )
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"You can only share with groups you belong to. Invalid groups: {', '.join(invalid_groups)}",
+            )
+    
+    # Share with each group
+    for group in request.groups:
+        doc_aggregate.share_with_group(group, current_user.kerberos_id)
+    
+    # Save the aggregate (which publishes events)
+    await doc_repo.save(doc_aggregate)
+    
+    logger.info(
+        f"User {current_user.kerberos_id} shared document {document_id} "
+        f"with groups: {', '.join(request.groups)}"
+    )
+    
+    return ShareDocumentResponse(
+        document_id=document_id,
+        shared_with_groups=list(doc_aggregate.shared_with_groups),
+        visibility=doc_aggregate.visibility,
+        message=f"Document shared with {len(request.groups)} group(s)",
+    )
+
+
+@router.post("/documents/{document_id}/make-private", response_model=MakePrivateResponse)
+async def make_document_private(
+    document_id: UUID,
+    current_user: User = Depends(get_current_user),
+    auth_service=Depends(get_authorization_service),
+    doc_repo=Depends(get_document_repository),
+):
+    """
+    Make document private (remove all group sharing).
+    
+    Only document owner or admins can make documents private.
+    
+    Args:
+        document_id: UUID of document to make private
+        current_user: Authenticated user
+        
+    Returns:
+        MakePrivateResponse with updated status
+        
+    Raises:
+        HTTPException 404: Document not found
+        HTTPException 403: User cannot modify sharing for this document
+    """
+    # Load document aggregate
+    doc_aggregate = await doc_repo.get_by_id(document_id)
+    if doc_aggregate is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Document with ID {document_id} not found",
+        )
+    
+    # Check if user can share/modify sharing for this document
+    if not auth_service.can_share_document(current_user, doc_aggregate):
+        logger.warning(
+            f"User {current_user.kerberos_id} denied permission to make document {document_id} private"
+        )
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to modify sharing for this document",
+        )
+    
+    # Make document private
+    doc_aggregate.make_private(current_user.kerberos_id)
+    
+    # Save the aggregate (which publishes events)
+    await doc_repo.save(doc_aggregate)
+    
+    logger.info(
+        f"User {current_user.kerberos_id} made document {document_id} private"
+    )
+    
+    return MakePrivateResponse(
+        document_id=document_id,
+        visibility=doc_aggregate.visibility,
+        message="Document is now private",
+    )
 
 
 @router.get("/documents/{document_id}/content", response_model=DocumentContentResponse)
 async def get_document_content(
     document_id: UUID,
     format: str = Query("markdown", pattern="^(markdown|original)$"),
+    current_user: User = Depends(get_current_user),
     handler=Depends(get_document_by_id_handler),
+    auth_service=Depends(get_authorization_service),
+    doc_repo=Depends(get_document_repository),
 ):
+    # Check authorization first
+    doc_aggregate = await doc_repo.get_by_id(document_id)
+    if doc_aggregate is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Document with ID {document_id} not found",
+        )
+    
+    if not auth_service.can_view_document(current_user, doc_aggregate):
+        logger.warning(
+            f"User {current_user.kerberos_id} denied access to content of document {document_id}"
+        )
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to view this document",
+        )
+    
     query = GetDocumentById(document_id=document_id)
     document = await handler.handle(query)
 
@@ -320,12 +551,32 @@ async def get_document_content(
 async def export_document(
     document_id: UUID,
     request: ExportDocumentRequest,
+    current_user: User = Depends(get_current_user),
     handler=Depends(get_export_document_handler),
+    auth_service=Depends(get_authorization_service),
+    doc_repo=Depends(get_document_repository),
 ):
+    # Check authorization first
+    doc_aggregate = await doc_repo.get_by_id(document_id)
+    if doc_aggregate is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Document with ID {document_id} not found",
+        )
+    
+    if not auth_service.can_view_document(current_user, doc_aggregate):
+        logger.warning(
+            f"User {current_user.kerberos_id} denied export access to document {document_id}"
+        )
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to export this document",
+        )
+    
     command = ExportDocument(
         document_id=document_id,
         export_format=request.format,
-        exported_by="anonymous",
+        exported_by=current_user.kerberos_id,
     )
 
     await handler.handle(command)
@@ -336,9 +587,29 @@ async def export_document(
 @router.get("/documents/{document_id}/download")
 async def download_original_document(
     document_id: UUID,
+    current_user: User = Depends(get_current_user),
     handler=Depends(get_document_by_id_handler),
+    auth_service=Depends(get_authorization_service),
+    doc_repo=Depends(get_document_repository),
 ):
     """Download the original uploaded document file."""
+    # Check authorization first
+    doc_aggregate = await doc_repo.get_by_id(document_id)
+    if doc_aggregate is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Document with ID {document_id} not found",
+        )
+    
+    if not auth_service.can_view_document(current_user, doc_aggregate):
+        logger.warning(
+            f"User {current_user.kerberos_id} denied download access to document {document_id}"
+        )
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to download this document",
+        )
+    
     query = GetDocumentById(document_id=document_id)
     document = await handler.handle(query)
 

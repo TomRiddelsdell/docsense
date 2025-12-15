@@ -1,0 +1,4 @@
+# file: /workspaces/src/api/dependencies.py
+# hypothesis_version: 6.148.7
+
+['Container', 'Kerberos', 'WWW-Authenticate', 'display_name', 'email', 'kerberos_id', 'user_groups']

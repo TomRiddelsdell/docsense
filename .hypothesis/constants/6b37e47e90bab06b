@@ -1,0 +1,4 @@
+# file: /workspaces/src/infrastructure/repositories/policy_repository.py
+# hypothesis_version: 6.148.7
+
+['PolicyRepository', 'assigned_documents', 'description', 'id', 'name', 'policies', 'policy_content', 'policy_id', 'policy_name', 'requirement_type', 'version']

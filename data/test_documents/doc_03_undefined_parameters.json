@@ -128,5 +128,33 @@
     }
   ],
   "self_containment_score": 0.3,
-  "implementability_score": 0.25
+  "implementability_score": 0.25,
+  "expected_semantic_ir": {
+    "definitions": [
+      {
+        "id": "term_1",
+        "term": "Volatility",
+        "definition": "below the threshold",
+        "location": "Paragraph 5",
+        "aliases": []
+      },
+      {
+        "id": "term_2",
+        "term": "Each position",
+        "definition": "weighted based on its inverse volatility. Maximum position size",
+        "location": "Paragraph 7",
+        "aliases": []
+      },
+      {
+        "id": "term_3",
+        "term": "The portfolio",
+        "definition": "rebalanced when drift exceeds the tolerance threshold or at",
+        "location": "Paragraph 9",
+        "aliases": []
+      }
+    ],
+    "formulae": [],
+    "tables": [],
+    "cross_references": []
+  }
 }

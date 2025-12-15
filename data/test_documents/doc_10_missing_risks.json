@@ -65,5 +65,19 @@
   },
   "self_containment_score": 0.6,
   "implementability_score": 0.7,
-  "notes": "Technically implementable but non-compliant for investor use without risk disclosures"
+  "notes": "Technically implementable but non-compliant for investor use without risk disclosures",
+  "expected_semantic_ir": {
+    "definitions": [
+      {
+        "id": "term_1",
+        "term": "Target leverage",
+        "definition": "1.5x net asset value",
+        "location": "Paragraph 3",
+        "aliases": []
+      }
+    ],
+    "formulae": [],
+    "tables": [],
+    "cross_references": []
+  }
 }

@@ -1,0 +1,4 @@
+# file: /workspaces/src/api/utils/validation.py
+# hypothesis_version: 6.148.7
+
+[255, 2000, '\x00', '.', '..', '.doc', '.docx', '.markdown', '.md', '.pdf', '.rest', '.rst', '/', ';', 'Filename is required', '[\\x00-\\x1f]', '\\', '\\.{2,}', 'application/msword', 'application/pdf', 'text/markdown', 'text/x-rst']

@@ -51,6 +51,8 @@ import ChatPanel from '@/components/ChatPanel';
 import ParameterGraph from '@/components/ParameterGraph';
 import AnalysisLogPanel from '@/components/AnalysisLogPanel';
 import SemanticIRPanel from '@/components/SemanticIRPanel';
+import { ShareDialog } from '@/components/documents/ShareDialog';
+import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 import type { FeedbackItem } from '@/types/api';
 
@@ -82,6 +84,27 @@ const feedbackStatusColors: Record<string, string> = {
   accepted: 'bg-green-100 text-green-800',
   rejected: 'bg-gray-100 text-gray-800',
 };
+
+// Wrapper component to handle share dialog with authorization
+function ShareDialogWrapper({ documentId, onShareUpdate }: { documentId: string; onShareUpdate: () => void }) {
+  const { user, hasPermission } = useAuth();
+  
+  // Only show share button if user can share documents
+  if (!user || !hasPermission('SHARE')) {
+    return null;
+  }
+
+  // Note: Additional owner check will be done on the backend
+  // Frontend just checks if user has the SHARE permission
+  return (
+    <ShareDialog
+      documentId={documentId}
+      currentSharedGroups={[]} // Will be populated from document data
+      currentVisibility="private" // Will be populated from document data
+      onShareUpdate={onShareUpdate}
+    />
+  );
+}
 
 function FeedbackRow({
   item,
@@ -571,6 +594,10 @@ export default function DocumentDetailPage() {
           </div>
 
           <div className="flex gap-2">
+            <ShareDialogWrapper 
+              documentId={document.id}
+              onShareUpdate={refetch}
+            />
             <Button 
               onClick={handleAnalyze} 
               disabled={analyzeMutation.isPending || document.status === 'analyzing'}

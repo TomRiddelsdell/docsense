@@ -27,5 +27,135 @@
     "All parameters have specific numeric values"
   ],
   "self_containment_score": 0.95,
-  "implementability_score": 0.98
+  "implementability_score": 0.98,
+  "expected_semantic_ir": {
+    "definitions": [
+      {
+        "id": "term_1",
+        "term": "The index",
+        "definition": "rebalanced quarterly on the",
+        "location": "Paragraph 3",
+        "aliases": []
+      },
+      {
+        "id": "term_2",
+        "term": "The equal weight",
+        "definition": "calculated as:",
+        "location": "Paragraph 7",
+        "aliases": []
+      },
+      {
+        "id": "term_3",
+        "term": "The index",
+        "definition": "rebalanced quarterly according to the following schedule:",
+        "location": "Paragraph 9",
+        "aliases": []
+      },
+      {
+        "id": "term_4",
+        "term": "If acquirer",
+        "definition": "an index constituent: Combined entity weight equals sum of both constituents",
+        "location": "Paragraph 11",
+        "aliases": []
+      },
+      {
+        "id": "term_5",
+        "term": "The index level",
+        "definition": "calculated using the following formula:",
+        "location": "Paragraph 13",
+        "aliases": []
+      }
+    ],
+    "formulae": [
+      {
+        "id": "formula_1",
+        "name": null,
+        "expression": "All constituents receive equal weight at each rebalancing date. The equal weight is calculated as:\n\nWeight per constituent = 100% / Number of constituents\n\nAs of the December 2024 rebalancing, there are 75 constituents, resulting in each constituent \nhaving a weight of 1.333%.",
+        "location": "Paragraph 7",
+        "variables": [
+          {
+            "name": "Number",
+            "source": null
+          },
+          {
+            "name": "As",
+            "source": null
+          },
+          {
+            "name": "December",
+            "source": null
+          }
+        ],
+        "parameters": []
+      },
+      {
+        "id": "formula_2",
+        "name": "Index Level",
+        "expression": "Index Level = (Current Market Value / Base Market Value) \u00d7 Base Level",
+        "location": "Paragraph 14",
+        "variables": [
+          {
+            "name": "Level",
+            "source": null
+          },
+          {
+            "name": "Value",
+            "source": null
+          },
+          {
+            "name": "Base",
+            "source": null
+          },
+          {
+            "name": "Current",
+            "source": null
+          },
+          {
+            "name": "Market",
+            "source": null
+          }
+        ],
+        "parameters": []
+      },
+      {
+        "id": "formula_3",
+        "name": "Where:\n- Current Market Value",
+        "expression": "Where:\n- Current Market Value = Sum of (Price_i \u00d7 Shares_i \u00d7 Weight_i) for all constituents\n- Base Market Value = Market value at base date (January 1, 2020)\n- Base Level = 1000 (set at inception)\n- Price_i = Current price of constituent i in USD\n- Shares_i = Outstanding shares of constituent i\n- Weight_i = Current weight of constituent i",
+        "location": "Paragraph 15",
+        "variables": [
+          {
+            "name": "Level",
+            "source": null
+          },
+          {
+            "name": "Current",
+            "source": null
+          },
+          {
+            "name": "January",
+            "source": null
+          },
+          {
+            "name": "Value",
+            "source": null
+          },
+          {
+            "name": "Outstanding",
+            "source": null
+          },
+          {
+            "name": "Base",
+            "source": null
+          },
+          {
+            "name": "Market",
+            "source": null
+          }
+        ],
+        "parameters": []
+      }
+    ],
+    "tables": [],
+    "cross_references": []
+  }
 }

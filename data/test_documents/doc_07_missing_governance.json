@@ -89,5 +89,19 @@
     }
   ],
   "self_containment_score": 0.4,
-  "implementability_score": 0.5
+  "implementability_score": 0.5,
+  "expected_semantic_ir": {
+    "definitions": [
+      {
+        "id": "term_1",
+        "term": "Portfolio beta",
+        "definition": "monitored daily. Leverage is adjusted if volatility exceeds thresholds",
+        "location": "Paragraph 7",
+        "aliases": []
+      }
+    ],
+    "formulae": [],
+    "tables": [],
+    "cross_references": []
+  }
 }

@@ -1,0 +1,4 @@
+# file: /workspaces/src/api/schemas/auth.py
+# hypothesis_version: 6.148.7
+
+['Document ID', 'John Smith', 'Permissions user has', "User's display name", "User's email address", 'analyze', 'contributor', 'display_name', 'document_id', 'edit', 'email', 'equity-trading', 'example', 'export', 'group', 'groups', 'is_active', 'jsmith', 'kerberos_id', 'permissions', 'private', 'risk-mgmt', 'roles', 'share', 'shared_with_groups', 'view', 'visibility']

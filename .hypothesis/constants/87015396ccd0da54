@@ -1,0 +1,4 @@
+# file: /workspaces/src/api/routes/auth.py
+# hypothesis_version: 6.148.7
+
+['/auth', '/me', 'authentication']

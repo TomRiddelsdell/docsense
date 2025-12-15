@@ -68,5 +68,51 @@
     }
   ],
   "self_containment_score": 0.2,
-  "implementability_score": 0.15
+  "implementability_score": 0.15,
+  "expected_semantic_ir": {
+    "definitions": [
+      {
+        "id": "term_1",
+        "term": "The portfolio",
+        "definition": "constructed using a proprietary scoring model detailed in Appendix A",
+        "location": "Paragraph 3",
+        "aliases": []
+      },
+      {
+        "id": "term_2",
+        "term": "Detailed scoring methodology",
+        "definition": "provided in Appendix C",
+        "location": "Paragraph 7",
+        "aliases": []
+      }
+    ],
+    "formulae": [],
+    "tables": [],
+    "cross_references": [
+      {
+        "id": "ref_1",
+        "source_location": "Paragraph 3",
+        "target": "Appendix A",
+        "reference_text": "Appendix A"
+      },
+      {
+        "id": "ref_2",
+        "source_location": "Paragraph 5",
+        "target": "see Appendix B",
+        "reference_text": "see Appendix B"
+      },
+      {
+        "id": "ref_3",
+        "source_location": "Paragraph 5",
+        "target": "Appendix B",
+        "reference_text": "Appendix B"
+      },
+      {
+        "id": "ref_4",
+        "source_location": "Paragraph 7",
+        "target": "Appendix C",
+        "reference_text": "Appendix C"
+      }
+    ]
+  }
 }

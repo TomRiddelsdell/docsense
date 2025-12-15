@@ -127,5 +127,19 @@
     }
   ],
   "self_containment_score": 0.3,
-  "implementability_score": 0.25
+  "implementability_score": 0.25,
+  "expected_semantic_ir": {
+    "definitions": [
+      {
+        "id": "term_1",
+        "term": "Credit rating",
+        "definition": "investment grade",
+        "location": "Paragraph 7",
+        "aliases": []
+      }
+    ],
+    "formulae": [],
+    "tables": [],
+    "cross_references": []
+  }
 }

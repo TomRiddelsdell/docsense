@@ -144,5 +144,11 @@
   ],
   "self_containment_score": 0.15,
   "implementability_score": 0.1,
-  "notes": "Severely underspecified across all dimensions - requires comprehensive revision"
+  "notes": "Severely underspecified across all dimensions - requires comprehensive revision",
+  "expected_semantic_ir": {
+    "definitions": [],
+    "formulae": [],
+    "tables": [],
+    "cross_references": []
+  }
 }

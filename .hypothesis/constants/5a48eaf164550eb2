@@ -1,0 +1,4 @@
+# file: /workspaces/src/domain/value_objects/permission.py
+# hypothesis_version: 6.148.7
+
+[', ', 'Permission', 'analyze', 'delete', 'edit', 'export', 'manage_users', 'share', 'view', 'view_audit']

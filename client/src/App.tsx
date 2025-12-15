@@ -5,6 +5,7 @@ import DocumentListPage from '@/pages/DocumentListPage';
 import DocumentUploadPage from '@/pages/DocumentUploadPage';
 import DocumentDetailPage from '@/pages/DocumentDetailPage';
 import { Toaster } from '@/components/ui/sonner';
+import { AuthProvider } from '@/contexts/AuthContext';
 
 function AuditPage() {
   return (
@@ -26,7 +27,7 @@ function NotFoundPage() {
 
 function App() {
   return (
-    <>
+    <AuthProvider>
       <Routes>
         <Route path="/" element={<Layout />}>
           <Route index element={<HomePage />} />
@@ -39,7 +40,7 @@ function App() {
         </Route>
       </Routes>
       <Toaster />
-    </>
+    </AuthProvider>
   );
 }
 

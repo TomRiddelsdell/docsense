@@ -2,6 +2,7 @@ import { Link, Outlet, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { FileText, Upload, FolderOpen, History } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { CurrentUser } from '@/components/auth/CurrentUser';
 
 const navItems = [
   { href: '/documents', label: 'Documents', shortLabel: 'Docs', icon: FolderOpen },
@@ -20,7 +21,7 @@ export default function Layout() {
             <FileText className="h-6 w-6 text-primary" />
             <span className="text-lg sm:text-xl font-semibold hidden xs:inline">DocSense</span>
           </Link>
-          <nav className="flex items-center gap-1 sm:gap-2">
+          <nav className="flex items-center gap-1 sm:gap-2 flex-1 justify-center">
             {navItems.map((item) => {
               const isActive = location.pathname === item.href || 
                 (item.href !== '/' && location.pathname.startsWith(item.href));
@@ -42,6 +43,9 @@ export default function Layout() {
               );
             })}
           </nav>
+          <div className="shrink-0">
+            <CurrentUser />
+          </div>
         </div>
       </header>
 

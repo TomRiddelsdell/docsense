@@ -90,5 +90,11 @@
   ],
   "self_containment_score": 0.4,
   "implementability_score": 0.45,
-  "notes": "Common edge cases not addressed - would encounter issues in real-world execution"
+  "notes": "Common edge cases not addressed - would encounter issues in real-world execution",
+  "expected_semantic_ir": {
+    "definitions": [],
+    "formulae": [],
+    "tables": [],
+    "cross_references": []
+  }
 }
