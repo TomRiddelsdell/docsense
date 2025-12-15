@@ -45,6 +45,10 @@ ignore = ['W291', 'W292', 'W293']
 testpaths = ["tests"]
 # Don't collect tests from source code directories - include defaults
 norecursedirs = [".*", "src", "client", "node_modules", "__pycache__", "build", "dist", "venv", "*.egg"]
+# Register custom markers
+markers = [
+    "integration: marks tests as integration tests (deselect with '-m \"not integration\"')",
+]
 # Filter collection and runtime warnings
 filterwarnings = [
     "ignore::DeprecationWarning",
