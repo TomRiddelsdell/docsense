@@ -39,7 +39,7 @@ class TestCaseRequest(BaseModel):
     count_per_category: Optional[Dict[str, int]] = Field(
         None,
         description="Number of tests per category",
-        example={"normal": 10, "boundary": 5, "edge": 3, "error": 2}
+        json_schema_extra={\"example\": {\"normal\": 10, \"boundary\": 5, \"edge\": 3, \"error\": 2}}
     )
 
 

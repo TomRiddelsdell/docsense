@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Optional, List, Any
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
 
 class DocumentUploadRequest(BaseModel):
@@ -33,6 +33,8 @@ class PolicyRepositorySummary(BaseModel):
 
 
 class DocumentResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    
     id: UUID
     title: str
     description: Optional[str] = None
@@ -43,9 +45,6 @@ class DocumentResponse(BaseModel):
     compliance_status: Optional[str] = None
     created_at: datetime
     updated_at: datetime
-
-    class Config:
-        from_attributes = True
 
 
 class SectionResponse(BaseModel):
@@ -76,7 +75,7 @@ class DocumentListResponse(BaseModel):
 
 class ShareDocumentRequest(BaseModel):
     """Request to share document with groups."""
-    groups: List[str] = Field(..., min_items=1, max_items=20, description="Groups to share document with")
+    groups: List[str] = Field(..., min_length=1, max_length=20, description="Groups to share document with")
 
 
 class ShareDocumentResponse(BaseModel):

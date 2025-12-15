@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Optional, List
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class RejectFeedbackRequest(BaseModel):
@@ -10,6 +10,8 @@ class RejectFeedbackRequest(BaseModel):
 
 
 class FeedbackItemResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    
     id: UUID
     document_id: UUID
     section_id: Optional[str] = None
@@ -24,9 +26,6 @@ class FeedbackItemResponse(BaseModel):
     rejection_reason: Optional[str] = None
     processed_at: Optional[datetime] = None
     created_at: datetime
-
-    class Config:
-        from_attributes = True
 
 
 class FeedbackListResponse(BaseModel):
