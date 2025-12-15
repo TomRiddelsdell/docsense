@@ -181,6 +181,11 @@ class Container:
         return PolicyRepositoryRepository(self.event_store, self.snapshot_store)
 
     @property
+    def user_repository(self):
+        from src.infrastructure.repositories.user_repository import UserRepository
+        return UserRepository(self.event_store, self.snapshot_store)
+
+    @property
     def document_queries(self) -> Optional[DocumentQueries]:
         if self._pool:
             return DocumentQueries(self._pool)
@@ -355,3 +360,15 @@ async def get_audit_trail_handler() -> GetRecentAuditLogsHandler:
 async def get_document_audit_handler() -> GetAuditLogByDocumentHandler:
     container = await get_container()
     return GetAuditLogByDocumentHandler(audit_queries=container.audit_queries)
+
+
+async def get_user_repository():
+    """Get UserRepository for dependency injection."""
+    container = await get_container()
+    return container.user_repository
+
+
+async def get_authorization_service():
+    """Get AuthorizationService for dependency injection."""
+    from src.domain.services.authorization_service import AuthorizationService
+    return AuthorizationService()

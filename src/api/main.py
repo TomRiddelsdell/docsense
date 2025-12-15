@@ -18,9 +18,10 @@ logging.getLogger('pdfplumber').setLevel(logging.WARNING)
 
 from .middleware.error_handler import add_exception_handlers
 from .middleware.request_id import RequestIdMiddleware
+from .middleware.authentication import KerberosAuthMiddleware
 from .routes import (
     documents, analysis, feedback, policies, audit, health, 
-    chat, parameters, analysis_logs, projection_health, projection_admin
+    chat, parameters, analysis_logs, projection_health, projection_admin, auth
 )
 from .dependencies import Container
 
@@ -100,10 +101,12 @@ def create_app() -> FastAPI:
     )
 
     app.add_middleware(RequestIdMiddleware)
+    app.add_middleware(KerberosAuthMiddleware)
 
     add_exception_handlers(app)
 
     app.include_router(health.router, prefix="/api/v1", tags=["health"])
+    app.include_router(auth.router, prefix="/api/v1", tags=["authentication"])
     app.include_router(documents.router, prefix="/api/v1", tags=["documents"])
     app.include_router(analysis.router, prefix="/api/v1", tags=["analysis"])
     app.include_router(feedback.router, prefix="/api/v1", tags=["feedback"])
