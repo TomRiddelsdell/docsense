@@ -4,7 +4,7 @@ import pytest
 from decimal import Decimal
 from uuid import uuid4
 from src.domain.testing.cross_validator import CrossValidator
-from src.domain.testing.validation_report import ValidationReport
+from src.domain.testing.validation_report import ValidationReport, ComparisonResult
 from src.domain.testing.test_case import TestCase, TestCategory, TestResult
 from tests.fixtures.testing_factories import TestCaseFactory, FunctionFactory
 
@@ -359,19 +359,44 @@ class TestValidationReport:
 
 
 class TestComparisonResult:
-    """Tests for ComparisonResult (if exists in validation_report.py)."""
+    """Tests for ComparisonResult."""
 
     def test_comparison_result_creation(self):
         """Test creating a comparison result."""
-        # This test assumes ComparisonResult exists
-        # If not, it can be skipped
-        try:
-            result = ComparisonResult(
-                implementation_name='impl1',
-                passed=True,
-                discrepancy=None
-            )
-            assert result.implementation_name == 'impl1'
-            assert result.passed is True
-        except (NameError, ImportError):
-            pytest.skip("ComparisonResult not defined")
+        result = ComparisonResult(
+            test_case_name='test_simple_calculation',
+            outputs={'impl1': 150.0, 'impl2': 150.0},
+            consistent=True,
+            max_discrepancy=0.0
+        )
+        assert result.test_case_name == 'test_simple_calculation'
+        assert result.consistent is True
+        assert result.max_discrepancy == 0.0
+        assert len(result.outputs) == 2
+    
+    def test_comparison_result_with_discrepancy(self):
+        """Test creating a comparison result with discrepancy."""
+        result = ComparisonResult(
+            test_case_name='test_with_error',
+            outputs={'impl1': 150.0, 'impl2': 149.5},
+            consistent=False,
+            max_discrepancy=0.5,
+            error_message='Implementations produced different results'
+        )
+        assert result.test_case_name == 'test_with_error'
+        assert result.consistent is False
+        assert result.max_discrepancy == 0.5
+        assert 'different results' in result.error_message
+    
+    def test_get_output_summary(self):
+        """Test getting output summary."""
+        result = ComparisonResult(
+            test_case_name='test_summary',
+            outputs={'impl1': 100.0, 'impl2': 100.5, 'impl3': 100.0},
+            consistent=False,
+            max_discrepancy=0.5
+        )
+        summary = result.get_output_summary()
+        assert 'impl1: 100.0' in summary
+        assert 'impl2: 100.5' in summary
+        assert 'impl3: 100.0' in summary
