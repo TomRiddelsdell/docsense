@@ -177,6 +177,11 @@ class PostgresEventStore(EventStore):
             events = []
             for row in rows:
                 payload = json.loads(row["payload"]) if isinstance(row["payload"], str) else row["payload"]
+                # Ensure event_type and version are in payload for upcaster
+                if 'event_type' not in payload:
+                    payload['event_type'] = row["event_type"]
+                if 'version' not in payload:
+                    payload['version'] = row["event_version"]
                 # Apply upcasting before deserialization
                 payload = self._upcaster_registry.upcast(payload)
                 event = self._serializer.deserialize(row["event_type"], payload)
@@ -225,6 +230,9 @@ class PostgresEventStore(EventStore):
             events = []
             for row in rows:
                 payload = json.loads(row["payload"]) if isinstance(row["payload"], str) else row["payload"]
+                # Ensure event_type is in payload for upcaster
+                if 'event_type' not in payload:
+                    payload['event_type'] = row["event_type"]
                 # Apply upcasting before deserialization
                 payload = self._upcaster_registry.upcast(payload)
                 event = self._serializer.deserialize(row["event_type"], payload)

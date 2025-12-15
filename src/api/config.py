@@ -192,6 +192,34 @@ class Settings(BaseSettings):
     )
 
     # ========================================================================
+    # Local Development Authentication Bypass (ADR-023)
+    # ========================================================================
+    DEV_AUTH_BYPASS: bool = Field(
+        default=False,
+        description="Enable auth bypass for local development (NEVER use in production)"
+    )
+
+    DEV_TEST_USER_KERBEROS: str = Field(
+        default="devusr",
+        description="Test user Kerberos ID for development mode (must be 6 characters)"
+    )
+
+    DEV_TEST_USER_NAME: str = Field(
+        default="Test User",
+        description="Test user display name"
+    )
+
+    DEV_TEST_USER_EMAIL: str = Field(
+        default="testuser@local.dev",
+        description="Test user email"
+    )
+
+    DEV_TEST_USER_GROUPS: str = Field(
+        default="testing",
+        description="Comma-separated test user groups"
+    )
+
+    # ========================================================================
     # Validators
     # ========================================================================
 
@@ -331,13 +359,31 @@ class Settings(BaseSettings):
 
     @model_validator(mode='after')
     def validate_at_least_one_ai_provider(self):
-        """Validate that at least one AI provider API key is configured."""
+        """Validate that at least one AI provider API key is configured.
+        
+        In development mode with DEV_AUTH_BYPASS, AI keys are optional to allow
+        testing document upload/viewing without AI analysis functionality.
+        """
         # Check both naming conventions
         gemini_key = self.GEMINI_API_KEY or self.AI_INTEGRATIONS_GEMINI_API_KEY
         openai_key = self.OPENAI_API_KEY or self.AI_INTEGRATIONS_OPENAI_API_KEY
         anthropic_key = self.ANTHROPIC_API_KEY
 
-        if not any([gemini_key, anthropic_key, openai_key]):
+        has_ai_key = any([gemini_key, anthropic_key, openai_key])
+        
+        # In dev mode with auth bypass, AI keys are optional
+        if self.ENVIRONMENT == "development" and self.DEV_AUTH_BYPASS:
+            if not has_ai_key:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.warning(
+                    "⚠️  No AI provider API keys configured. "
+                    "AI analysis features will not be available."
+                )
+            return self
+        
+        # In other modes, require at least one AI key
+        if not has_ai_key:
             raise ValueError(
                 "At least one AI provider API key must be configured. "
                 "Set one of: GEMINI_API_KEY, ANTHROPIC_API_KEY, or OPENAI_API_KEY"
@@ -367,6 +413,29 @@ class Settings(BaseSettings):
                 f"DB_POOL_MIN_SIZE ({self.DB_POOL_MIN_SIZE}) is very high. "
                 f"This will keep many idle connections open. "
                 f"Typical production values are 5-20."
+            )
+
+        return self
+
+    @model_validator(mode='after')
+    def validate_dev_auth_bypass(self):
+        """Ensure DEV_AUTH_BYPASS is NEVER enabled in production and validate test user."""
+        if self.DEV_AUTH_BYPASS and self.ENVIRONMENT == "production":
+            raise ValueError(
+                "🚨 CRITICAL SECURITY ERROR: DEV_AUTH_BYPASS cannot be enabled "
+                "in production environment! This would bypass all authentication."
+            )
+
+        if self.DEV_AUTH_BYPASS:
+            # Validate test user Kerberos ID is exactly 6 characters
+            if len(self.DEV_TEST_USER_KERBEROS) != 6:
+                raise ValueError(
+                    f"DEV_TEST_USER_KERBEROS must be exactly 6 characters (Kerberos ID format), "
+                    f"got {len(self.DEV_TEST_USER_KERBEROS)}: '{self.DEV_TEST_USER_KERBEROS}'"
+                )
+            
+            logger.warning(
+                "⚠️  DEV_AUTH_BYPASS is enabled. Authentication is bypassed for local development."
             )
 
         return self

@@ -18,12 +18,19 @@ fi
 
 echo ""
 echo "🌐 Starting Backend API on port 8000..."
-echo "   (Running in background with DATABASE_URL)"
+if command -v doppler &> /dev/null && [ -n "$DOPPLER_TOKEN" ]; then
+    echo "   (Using Doppler for secrets)"
+else
+    echo "   (Using .env file)"
+fi
 echo ""
 
 # Start backend in the background
-DATABASE_URL="postgresql://docsense:docsense_local_dev@localhost:5432/docsense" \
+if command -v doppler &> /dev/null && [ -n "$DOPPLER_TOKEN" ]; then
+    doppler run -- poetry run uvicorn src.api.main:app --host 0.0.0.0 --port 8000 --reload &
+else
     poetry run uvicorn src.api.main:app --host 0.0.0.0 --port 8000 --reload &
+fi
 BACKEND_PID=$!
 
 # Wait for backend to start
@@ -31,19 +38,29 @@ sleep 3
 
 echo ""
 echo "⚛️  Starting Frontend on port 5000..."
-echo "   (Navigate to client directory and run npm run dev)"
 echo ""
 
-echo "✅ Services Started!"
+# Start frontend in the background
+cd client
+npm run dev &
+FRONTEND_PID=$!
+cd ..
+
+# Wait for frontend to start
+sleep 3
+
 echo ""
+echo "✅ All Services Started!"
+echo ""
+echo "   Frontend:     http://localhost:5000"
 echo "   Backend API:  http://localhost:8000"
 echo "   API Docs:     http://localhost:8000/docs"
-echo "   Frontend:     http://localhost:5000 (after running 'npm run dev' in /client)"
 echo ""
-echo "   Backend PID: $BACKEND_PID"
+echo "   Backend PID:  $BACKEND_PID"
+echo "   Frontend PID: $FRONTEND_PID"
 echo ""
-echo "To view backend logs: tail -f /tmp/backend.log"
-echo "To stop backend: kill $BACKEND_PID"
+echo "To stop services:"
+echo "   kill $BACKEND_PID $FRONTEND_PID"
+echo "   docker-compose down"
 echo ""
-echo "For frontend, run in separate terminal:"
-echo "   cd client && npm run dev"
+echo "Logs are available in the terminal output above."

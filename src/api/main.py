@@ -48,6 +48,29 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         raise
 
     container = await Container.get_instance()
+    
+    # Development mode: Show warning and load test data
+    if settings.ENVIRONMENT == "development" and settings.DEV_AUTH_BYPASS:
+        logger = logging.getLogger(__name__)
+        logger.warning("=" * 60)
+        logger.warning("🚨 DEVELOPMENT MODE: Auth bypass enabled")
+        logger.warning(f"   Test User: {settings.DEV_TEST_USER_KERBEROS}")
+        logger.warning(f"   Groups: {settings.DEV_TEST_USER_GROUPS}")
+        logger.warning("   All requests without auth headers use test user")
+        logger.warning("=" * 60)
+        
+        # Load test documents
+        try:
+            from src.infrastructure.dev import TestDataLoader
+            test_loader = TestDataLoader()
+            await test_loader.ensure_test_data_loaded(
+                user_kerberos_id=settings.DEV_TEST_USER_KERBEROS,
+                max_documents=10
+            )
+        except Exception as e:
+            logger.warning(f"Failed to load test data: {e}")
+            logger.warning("Continuing without test data...")
+    
     yield
     await container.close()
 

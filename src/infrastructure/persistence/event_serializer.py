@@ -23,6 +23,15 @@ from src.domain.events import (
     PolicyAdded,
     DocumentAssignedToPolicy,
 )
+from src.domain.events.user_events import (
+    UserRegistered,
+    UserGroupAdded,
+    UserGroupRemoved,
+    UserRoleGranted,
+    UserRoleRevoked,
+    UserDeactivated,
+    UserReactivated,
+)
 
 
 class EventSerializer:
@@ -42,6 +51,13 @@ class EventSerializer:
         "PolicyRepositoryCreated": PolicyRepositoryCreated,
         "PolicyAdded": PolicyAdded,
         "DocumentAssignedToPolicy": DocumentAssignedToPolicy,
+        "UserRegistered": UserRegistered,
+        "UserGroupAdded": UserGroupAdded,
+        "UserGroupRemoved": UserGroupRemoved,
+        "UserRoleGranted": UserRoleGranted,
+        "UserRoleRevoked": UserRoleRevoked,
+        "UserDeactivated": UserDeactivated,
+        "UserReactivated": UserReactivated,
     }
 
     @classmethod

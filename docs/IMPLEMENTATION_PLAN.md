@@ -8234,5 +8234,788 @@ Validation:
 
 ---
 
+## Phase 17: Document Groups for Multi-Document Analysis
+
+**Duration**: 3-4 weeks  
+**Priority**: 🟡 **HIGH** - Essential for complete self-containment validation  
+**Reference**: [ADR-010: Document Group for Multi-Document Analysis](decisions/010-document-group-multi-document-analysis.md)  
+**Status**: 📋 **PLANNED**
+
+**Goal**: Enable users to group related documents (main methodology + appendices + supplements) and analyze them together for comprehensive self-containment validation.
+
+**Business Value**:
+- **Complete Validation**: Verify that document sets contain all referenced information
+- **Cross-Reference Resolution**: Validate that "See Appendix A" references actually exist
+- **Reduced False Positives**: Stop flagging references to included documents as missing
+- **Package Completeness**: Ensure documentation packages are truly self-contained
+
+---
+
+### 17.1 Domain Layer: DocumentGroup Aggregate
+
+**Duration**: 5-6 days
+
+**Files to Create**:
+```
+src/domain/aggregates/document_group.py
+src/domain/events/document_group_events.py
+src/domain/commands/document_group_commands.py
+src/domain/value_objects/group_status.py
+```
+
+**DocumentGroup Aggregate**:
+```python
+@dataclass
+class DocumentGroup(Aggregate):
+    """
+    Aggregate for managing collections of related documents.
+    
+    Enables multi-document analysis where documents reference each other
+    (e.g., main methodology + appendices).
+    """
+    
+    def __init__(self, group_id: UUID):
+        super().__init__(group_id)
+        self._name: str = ""
+        self._description: str = ""
+        self._owner_kerberos_id: str = ""
+        self._primary_document_id: Optional[UUID] = None
+        self._member_document_ids: List[UUID] = []
+        self._status: GroupStatus = GroupStatus.PENDING
+        self._created_at: Optional[datetime] = None
+        self._updated_at: Optional[datetime] = None
+    
+    @classmethod
+    def create(
+        cls,
+        group_id: UUID,
+        name: str,
+        description: str,
+        owner_kerberos_id: str
+    ) -> "DocumentGroup":
+        """Create a new document group."""
+        group = cls(group_id)
+        group._apply_event(
+            DocumentGroupCreated(
+                aggregate_id=group_id,
+                name=name,
+                description=description,
+                owner_kerberos_id=owner_kerberos_id
+            )
+        )
+        return group
+    
+    def add_document(self, document_id: UUID) -> None:
+        """Add a document to the group."""
+        if document_id in self._member_document_ids:
+            raise DomainError(f"Document {document_id} already in group")
+        
+        self._apply_event(
+            DocumentAddedToGroup(
+                aggregate_id=self.id,
+                document_id=document_id
+            )
+        )
+    
+    def set_primary_document(self, document_id: UUID) -> None:
+        """Designate the main document in the group."""
+        if document_id not in self._member_document_ids:
+            raise DomainError(f"Document {document_id} not in group")
+        
+        self._apply_event(
+            PrimaryDocumentSet(
+                aggregate_id=self.id,
+                document_id=document_id
+            )
+        )
+```
+
+**Domain Events**:
+```python
+@dataclass(frozen=True)
+class DocumentGroupCreated(DomainEvent):
+    aggregate_type: str = field(default="DocumentGroup")
+    name: str = ""
+    description: str = ""
+    owner_kerberos_id: str = ""
+
+@dataclass(frozen=True)
+class DocumentAddedToGroup(DomainEvent):
+    aggregate_type: str = field(default="DocumentGroup")
+    document_id: UUID = field(default_factory=uuid4)
+
+@dataclass(frozen=True)
+class DocumentRemovedFromGroup(DomainEvent):
+    aggregate_type: str = field(default="DocumentGroup")
+    document_id: UUID = field(default_factory=uuid4)
+
+@dataclass(frozen=True)
+class PrimaryDocumentSet(DomainEvent):
+    aggregate_type: str = field(default="DocumentGroup")
+    document_id: UUID = field(default_factory=uuid4)
+
+@dataclass(frozen=True)
+class GroupAnalysisStarted(DomainEvent):
+    aggregate_type: str = field(default="DocumentGroup")
+    analysis_id: UUID = field(default_factory=uuid4)
+    initiated_by: str = ""
+
+@dataclass(frozen=True)
+class GroupAnalysisCompleted(DomainEvent):
+    aggregate_type: str = field(default="DocumentGroup")
+    analysis_id: UUID = field(default_factory=uuid4)
+    is_complete: bool = False
+    missing_references: List[str] = field(default_factory=list)
+```
+
+**AI Agent Prompt**:
+```
+You are implementing the DocumentGroup aggregate for Phase 17.
+
+Context:
+- DocumentGroup is an aggregate root in the domain layer
+- Follows event sourcing pattern like Document and User aggregates
+- Groups contain 1+ related documents (main + appendices)
+- One document can be designated as "primary" (main methodology)
+- Groups track completeness status (pending/complete/incomplete)
+
+Your task:
+1. Create src/domain/aggregates/document_group.py following the pattern in document.py
+2. Implement aggregate with these methods:
+   - create() - Class method factory
+   - add_document() - Add document to group
+   - remove_document() - Remove document from group
+   - set_primary_document() - Designate main document
+   - start_analysis() - Trigger group analysis
+   - complete_analysis() - Record analysis results
+   - update_completeness() - Update status based on validation
+
+3. Create src/domain/events/document_group_events.py with all events
+4. Create src/domain/value_objects/group_status.py:
+   ```python
+   from enum import Enum
+   
+   class GroupStatus(str, Enum):
+       PENDING = "pending"      # New group, not analyzed
+       COMPLETE = "complete"    # All references resolved
+       INCOMPLETE = "incomplete" # Missing external references
+   ```
+
+5. Add event handlers to aggregate for each event type
+6. Write 15+ unit tests in tests/unit/domain/aggregates/test_document_group.py
+
+Best Practices:
+- Immutable events with @dataclass(frozen=True)
+- Validate business rules before applying events
+- Raise DomainError for rule violations
+- Follow existing aggregate patterns (Document, User)
+- Test happy path + error cases
+
+Validation:
+- Run: PYTHONPATH=/workspaces python -m pytest tests/unit/domain/aggregates/test_document_group.py -v
+- All tests pass
+- 95%+ code coverage
+- No linting errors
+```
+
+---
+
+### 17.2 Infrastructure Layer: Repositories and Projections
+
+**Duration**: 4-5 days
+
+**Files to Create**:
+```
+src/infrastructure/repositories/document_group_repository.py
+src/infrastructure/projections/document_group_projector.py
+src/infrastructure/queries/document_group_queries.py
+```
+
+**DocumentGroupRepository**:
+```python
+class DocumentGroupRepository(Repository[DocumentGroup]):
+    """Repository for DocumentGroup aggregates."""
+    
+    def _aggregate_type(self) -> Type[DocumentGroup]:
+        return DocumentGroup
+    
+    def _aggregate_type_name(self) -> str:
+        return "DocumentGroup"
+    
+    async def get_by_owner(self, owner_kerberos_id: str) -> List[DocumentGroup]:
+        """Get all groups owned by a user."""
+        # Query event store for DocumentGroupCreated events
+        # Reconstruct aggregates
+        pass
+    
+    async def get_groups_containing_document(
+        self,
+        document_id: UUID
+    ) -> List[DocumentGroup]:
+        """Find all groups containing a specific document."""
+        # Query for DocumentAddedToGroup events
+        pass
+```
+
+**DocumentGroupProjector**:
+```python
+class DocumentGroupProjector:
+    """Project DocumentGroup events to read model."""
+    
+    async def handle_document_group_created(
+        self,
+        event: DocumentGroupCreated
+    ) -> None:
+        """Create group record in read model."""
+        await self._db.execute(
+            """
+            INSERT INTO document_groups (
+                id, name, description, owner_kerberos_id,
+                status, created_at, updated_at
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+            """,
+            event.aggregate_id,
+            event.name,
+            event.description,
+            event.owner_kerberos_id,
+            "pending",
+            event.occurred_at,
+            event.occurred_at
+        )
+    
+    async def handle_document_added_to_group(
+        self,
+        event: DocumentAddedToGroup
+    ) -> None:
+        """Add document to group in read model."""
+        await self._db.execute(
+            """
+            INSERT INTO document_group_members (
+                group_id, document_id, added_at
+            ) VALUES ($1, $2, $3)
+            """,
+            event.aggregate_id,
+            event.document_id,
+            event.occurred_at
+        )
+```
+
+**Database Schema**:
+```sql
+-- Document groups table
+CREATE TABLE document_groups (
+    id UUID PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    owner_kerberos_id VARCHAR(6) NOT NULL,
+    primary_document_id UUID,
+    status VARCHAR(20) NOT NULL DEFAULT 'pending',
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    
+    CONSTRAINT fk_primary_document 
+        FOREIGN KEY (primary_document_id) 
+        REFERENCES documents(id) 
+        ON DELETE SET NULL
+);
+
+CREATE INDEX idx_document_groups_owner ON document_groups(owner_kerberos_id);
+CREATE INDEX idx_document_groups_status ON document_groups(status);
+
+-- Group membership table
+CREATE TABLE document_group_members (
+    group_id UUID NOT NULL,
+    document_id UUID NOT NULL,
+    added_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    
+    PRIMARY KEY (group_id, document_id),
+    
+    CONSTRAINT fk_group 
+        FOREIGN KEY (group_id) 
+        REFERENCES document_groups(id) 
+        ON DELETE CASCADE,
+    
+    CONSTRAINT fk_document 
+        FOREIGN KEY (document_id) 
+        REFERENCES documents(id) 
+        ON DELETE CASCADE
+);
+
+CREATE INDEX idx_document_group_members_document ON document_group_members(document_id);
+```
+
+**AI Agent Prompt**:
+```
+You are implementing the infrastructure layer for DocumentGroup in Phase 17.
+
+Context:
+- Repository pattern for event sourcing (like DocumentRepository)
+- Projector pattern for read models (like DocumentProjector)
+- PostgreSQL for event store and read models
+- Need queries for listing groups and finding groups by document
+
+Your task:
+1. Create src/infrastructure/repositories/document_group_repository.py
+   - Inherit from Repository[DocumentGroup]
+   - Implement required abstract methods
+   - Add get_by_owner() for user's groups
+   - Add get_groups_containing_document() for finding groups
+
+2. Create src/infrastructure/projections/document_group_projector.py
+   - Handle all DocumentGroup events
+   - Update document_groups table
+   - Update document_group_members table
+   - Register with EventBus
+
+3. Create src/infrastructure/queries/document_group_queries.py
+   - DocumentGroupView dataclass for list view
+   - DocumentGroupDetailView with members
+   - Query handlers for listing and details
+
+4. Create database migration: migrations/017_document_groups.sql
+   - Create tables (see schema above)
+   - Add indexes
+   - Add foreign keys
+
+5. Write integration tests: tests/integration/test_document_group_repository.py
+   - Test creating and loading groups
+   - Test adding/removing documents
+   - Test projection updates
+   - Test queries
+
+Best Practices:
+- Follow existing repository patterns
+- Use async/await consistently
+- Handle concurrent updates (optimistic locking)
+- Index foreign keys
+- Cascade deletes appropriately
+
+Validation:
+- Run: PYTHONPATH=/workspaces python -m pytest tests/integration/test_document_group_repository.py -v
+- All tests pass
+- Database schema created successfully
+```
+
+---
+
+### 17.3 Application Layer: Command and Query Handlers
+
+**Duration**: 3-4 days
+
+**Files to Create**:
+```
+src/application/commands/document_group_handlers.py
+src/application/queries/document_group_query_handlers.py
+```
+
+**Command Handlers**:
+```python
+class CreateDocumentGroupHandler(CommandHandler[CreateDocumentGroup, UUID]):
+    """Handle document group creation."""
+    
+    async def handle(self, command: CreateDocumentGroup) -> UUID:
+        group_id = uuid4()
+        
+        group = DocumentGroup.create(
+            group_id=group_id,
+            name=command.name,
+            description=command.description,
+            owner_kerberos_id=command.owner_kerberos_id
+        )
+        
+        await self._repository.save(group)
+        return group_id
+
+class AddDocumentToGroupHandler(CommandHandler[AddDocumentToGroup, None]):
+    """Handle adding document to group."""
+    
+    async def handle(self, command: AddDocumentToGroup) -> None:
+        # Load group
+        group = await self._group_repository.get(command.group_id)
+        if not group:
+            raise NotFoundError(f"Group {command.group_id} not found")
+        
+        # Verify document exists
+        document = await self._document_repository.get(command.document_id)
+        if not document:
+            raise NotFoundError(f"Document {command.document_id} not found")
+        
+        # Add to group
+        group.add_document(command.document_id)
+        await self._group_repository.save(group)
+
+class AnalyzeDocumentGroupHandler(CommandHandler[AnalyzeDocumentGroup, UUID]):
+    """Handle group analysis request."""
+    
+    async def handle(self, command: AnalyzeDocumentGroup) -> UUID:
+        # Load group and all member documents
+        group = await self._group_repository.get(command.group_id)
+        documents = await self._load_group_documents(group)
+        
+        # Prepare combined content
+        combined_content = self._prepare_group_content(group, documents)
+        
+        # Start analysis
+        analysis_id = uuid4()
+        group.start_analysis(analysis_id, command.initiated_by)
+        await self._group_repository.save(group)
+        
+        # Queue async analysis
+        await self._analysis_service.analyze_group(
+            group_id=command.group_id,
+            analysis_id=analysis_id,
+            content=combined_content,
+            primary_document_id=group.primary_document_id
+        )
+        
+        return analysis_id
+    
+    def _prepare_group_content(
+        self,
+        group: DocumentGroup,
+        documents: List[Document]
+    ) -> str:
+        """Concatenate documents with clear separators."""
+        parts = []
+        for doc in documents:
+            is_primary = doc.id == group.primary_document_id
+            marker = " (PRIMARY)" if is_primary else ""
+            
+            parts.append(
+                f"=== DOCUMENT: {doc.filename}{marker} ===\n\n"
+                f"{doc.markdown_content}"
+            )
+        
+        return "\n\n".join(parts)
+```
+
+**AI Agent Prompt**:
+```
+You are implementing application layer handlers for DocumentGroup in Phase 17.
+
+Context:
+- Command handlers execute business operations
+- Query handlers retrieve data from read models
+- Handlers coordinate between domain, infrastructure, and AI services
+- Follow CQRS pattern (separate commands and queries)
+
+Your task:
+1. Create src/application/commands/document_group_handlers.py:
+   - CreateDocumentGroupHandler
+   - AddDocumentToGroupHandler
+   - RemoveDocumentFromGroupHandler
+   - SetPrimaryDocumentHandler
+   - AnalyzeDocumentGroupHandler
+   - DeleteDocumentGroupHandler
+
+2. Create src/application/queries/document_group_query_handlers.py:
+   - ListDocumentGroupsHandler - List user's groups
+   - GetDocumentGroupHandler - Get group details with members
+   - GetGroupAnalysisHandler - Get analysis results
+
+3. Implement _prepare_group_content() method:
+   - Concatenate all documents in group
+   - Add clear document separators
+   - Mark primary document
+   - Preserve document order (primary first)
+
+4. Write unit tests: tests/unit/application/commands/test_document_group_handlers.py
+   - Mock repositories and services
+   - Test each handler's happy path
+   - Test error cases (not found, already exists, etc.)
+
+Best Practices:
+- Validate commands before executing
+- Load aggregates from repository
+- Call domain methods (don't bypass domain logic)
+- Save aggregates after changes
+- Return minimal data (IDs, not full objects)
+
+Validation:
+- Run: PYTHONPATH=/workspaces python -m pytest tests/unit/application/commands/test_document_group_handlers.py -v
+- All tests pass
+- Mock dependencies properly
+```
+
+---
+
+### 17.4 API Layer: REST Endpoints
+
+**Duration**: 3-4 days
+
+**Files to Create**:
+```
+src/api/routes/document_groups.py
+src/api/schemas/document_groups.py
+```
+
+**API Endpoints**:
+```python
+router = APIRouter(prefix="/document-groups", tags=["document-groups"])
+
+@router.post("", response_model=DocumentGroupResponse, status_code=201)
+async def create_document_group(
+    request: CreateDocumentGroupRequest,
+    current_user: User = Depends(get_current_user),
+    handler = Depends(get_create_group_handler)
+):
+    """Create a new document group."""
+    command = CreateDocumentGroup(
+        name=request.name,
+        description=request.description,
+        owner_kerberos_id=current_user.kerberos_id
+    )
+    group_id = await handler.handle(command)
+    return DocumentGroupResponse(id=group_id, **request.dict())
+
+@router.get("", response_model=DocumentGroupListResponse)
+async def list_document_groups(
+    page: int = Query(1, ge=1),
+    per_page: int = Query(20, ge=1, le=100),
+    current_user: User = Depends(get_current_user),
+    handler = Depends(get_list_groups_handler)
+):
+    """List user's document groups."""
+    query = ListDocumentGroups(
+        owner_kerberos_id=current_user.kerberos_id,
+        pagination=PaginationParams(
+            limit=per_page,
+            offset=(page - 1) * per_page
+        )
+    )
+    groups = await handler.handle(query)
+    return DocumentGroupListResponse(
+        items=groups,
+        total=len(groups),
+        page=page,
+        per_page=per_page
+    )
+
+@router.post("/{group_id}/documents", status_code=204)
+async def add_document_to_group(
+    group_id: UUID,
+    request: AddDocumentRequest,
+    current_user: User = Depends(get_current_user),
+    handler = Depends(get_add_document_handler),
+    auth_service = Depends(get_authorization_service)
+):
+    """Add a document to the group."""
+    # Verify user owns the group
+    group = await verify_group_owner(group_id, current_user.kerberos_id)
+    
+    command = AddDocumentToGroup(
+        group_id=group_id,
+        document_id=request.document_id
+    )
+    await handler.handle(command)
+
+@router.post("/{group_id}/analyze", response_model=AnalysisResponse)
+async def analyze_document_group(
+    group_id: UUID,
+    current_user: User = Depends(get_current_user),
+    handler = Depends(get_analyze_group_handler)
+):
+    """Trigger analysis of all documents in the group."""
+    command = AnalyzeDocumentGroup(
+        group_id=group_id,
+        initiated_by=current_user.kerberos_id
+    )
+    analysis_id = await handler.handle(command)
+    return AnalysisResponse(analysis_id=analysis_id)
+```
+
+**Request/Response Schemas**:
+```python
+class CreateDocumentGroupRequest(BaseModel):
+    name: str = Field(..., min_length=1, max_length=255)
+    description: Optional[str] = Field(None, max_length=2000)
+
+class DocumentGroupResponse(BaseModel):
+    id: UUID
+    name: str
+    description: Optional[str]
+    owner_kerberos_id: str
+    primary_document_id: Optional[UUID]
+    member_count: int
+    status: str
+    created_at: datetime
+    updated_at: datetime
+
+class DocumentGroupDetailResponse(DocumentGroupResponse):
+    members: List[DocumentSummary]  # Basic document info
+    
+class AddDocumentRequest(BaseModel):
+    document_id: UUID
+```
+
+---
+
+### 17.5 Frontend Implementation
+
+**Duration**: 5-7 days
+
+**Pages to Create**:
+```
+client/src/pages/DocumentGroupsPage.tsx          # List all groups
+client/src/pages/DocumentGroupDetailPage.tsx     # Manage group
+client/src/pages/DocumentGroupAnalysisPage.tsx   # View results
+```
+
+**Components to Create**:
+```
+client/src/components/groups/DocumentGroupCard.tsx      # Group summary
+client/src/components/groups/GroupDocumentList.tsx      # Draggable list
+client/src/components/groups/AddDocumentDialog.tsx      # Search & add
+client/src/components/groups/GroupAnalysisResults.tsx   # Cross-ref validation
+client/src/components/groups/GroupCompleteness.tsx      # Status indicator
+```
+
+**Key Features**:
+- Drag-and-drop to reorder documents
+- Visual indicator of primary document
+- Group completeness badge (complete/incomplete)
+- Analysis trigger button
+- Cross-reference validation results
+- Missing references list
+
+---
+
+### 17.6 AI Prompt Enhancement
+
+**Update**: `src/infrastructure/ai/prompts/document_analysis.py`
+
+Add group-aware analysis:
+```python
+def build_group_analysis_prompt(
+    combined_content: str,
+    primary_document_filename: str,
+    member_count: int
+) -> str:
+    return f"""
+You are analyzing a GROUP of {member_count} related documents as a single unit.
+
+PRIMARY DOCUMENT: {primary_document_filename}
+
+COMBINED CONTENT:
+{combined_content}
+
+KEY DIFFERENCES FROM SINGLE-DOCUMENT ANALYSIS:
+1. Cross-document references are VALID if they point to documents in this group
+2. "See Appendix A" is OK if Appendix A is included in the group
+3. Focus on EXTERNAL references (pointing outside the group)
+4. Validate that internal cross-references resolve correctly
+
+ANALYSIS TASKS:
+1. Identify all cross-references (between documents in the group)
+2. Validate that each cross-reference resolves to an included document
+3. List any EXTERNAL references (not in the group)
+4. Assess group-level self-containment
+
+OUTPUT:
+{{
+  "is_self_contained": boolean,
+  "internal_references": [
+    {{"from": "Main.pdf", "to": "Appendix A", "resolves": true}}
+  ],
+  "external_references": [
+    "Corporate Actions Manual (NOT INCLUDED)",
+    "Market Data Agreement (NOT INCLUDED)"
+  ],
+  "completeness_score": 0.0-1.0,
+  "recommendations": [...]
+}}
+"""
+```
+
+---
+
+### 17.7 Testing Strategy
+
+**Unit Tests** (25+ tests):
+```
+tests/unit/domain/aggregates/test_document_group.py
+tests/unit/application/commands/test_document_group_handlers.py
+tests/unit/infrastructure/projections/test_document_group_projector.py
+```
+
+**Integration Tests** (10+ tests):
+```
+tests/integration/test_document_group_repository.py
+tests/integration/test_document_group_api.py
+```
+
+**E2E Tests** (5+ scenarios):
+```
+tests/e2e/test_document_group_workflow.py
+
+Scenarios:
+1. Create group → Add 3 documents → Set primary → Analyze
+2. Add document to multiple groups
+3. Remove document from group → Verify projection updated
+4. Delete group → Verify documents unchanged
+5. Analyze incomplete group → Verify missing refs flagged
+```
+
+---
+
+### 17.8 Phase 17 Completion Criteria
+
+**Domain Layer**:
+- [ ] DocumentGroup aggregate implemented with event sourcing
+- [ ] 7 domain events created and tested
+- [ ] GroupStatus value object implemented
+- [ ] 15+ unit tests passing
+
+**Infrastructure Layer**:
+- [ ] DocumentGroupRepository with event store integration
+- [ ] DocumentGroupProjector updating read models
+- [ ] Database schema created (2 tables, indexes)
+- [ ] Query handlers for listing and details
+
+**Application Layer**:
+- [ ] 6 command handlers implemented
+- [ ] 3 query handlers implemented
+- [ ] Group content concatenation working
+- [ ] 20+ unit tests passing
+
+**API Layer**:
+- [ ] 8 REST endpoints implemented
+- [ ] Request/response schemas validated
+- [ ] Authorization checks enforced
+- [ ] API documentation updated
+
+**Frontend**:
+- [ ] 3 new pages created
+- [ ] 5 new components created
+- [ ] Drag-and-drop document management
+- [ ] Group analysis trigger and results display
+- [ ] 15+ component tests passing
+
+**AI Integration**:
+- [ ] Group analysis prompt updated
+- [ ] Cross-reference validation working
+- [ ] External reference detection working
+- [ ] Completeness scoring implemented
+
+**Testing**:
+- [ ] 40+ unit tests passing
+- [ ] 10+ integration tests passing
+- [ ] 5+ E2E scenarios passing
+- [ ] Load tested with 100+ groups
+
+**Documentation**:
+- [ ] API documentation updated
+- [ ] User guide for document groups
+- [ ] ADR-010 status updated to "Accepted"
+
+**Benefits Delivered**:
+✅ Multi-document analysis enabled  
+✅ Cross-reference validation working  
+✅ False positives reduced  
+✅ Package completeness tracking  
+✅ Better self-containment validation  
+
+---
+
 *This plan should be reviewed and updated as implementation progresses. Each phase completion should trigger an update to this document reflecting lessons learned and any scope adjustments.*
 

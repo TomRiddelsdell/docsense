@@ -24,6 +24,13 @@ from .policy_exceptions import (
     PolicyAlreadyExists,
     PolicyIdAlreadyExists,
 )
+from .document_group_exceptions import (
+    DocumentGroupException,
+    DocumentGroupNotFound,
+    InvalidGroupOperation,
+    DocumentAlreadyInGroup,
+    DocumentNotInGroup,
+)
 
 __all__ = [
     "DocumentException",
@@ -44,4 +51,9 @@ __all__ = [
     "InvalidPolicy",
     "PolicyAlreadyExists",
     "PolicyIdAlreadyExists",
+    "DocumentGroupException",
+    "DocumentGroupNotFound",
+    "InvalidGroupOperation",
+    "DocumentAlreadyInGroup",
+    "DocumentNotInGroup",
 ]

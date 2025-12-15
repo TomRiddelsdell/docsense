@@ -11,7 +11,8 @@
 
 ## 📋 Quick Links
 
-- **[Setup Guide](docs/processes/003-development-environment-setup.md)** - Get started in 5 minutes
+- **[🚀 Complete Setup Guide](SETUP_FROM_SCRATCH.md)** - **NEW!** Comprehensive setup for new machines & forks
+- **[⚡ Quick Setup](docs/processes/003-development-environment-setup.md)** - Fast setup for experienced devs
 - **[API Documentation](http://localhost:8000/docs)** - Interactive OpenAPI docs (when running)
 - **[Architecture Decisions](docs/decisions/)** - ADRs explaining technical choices
 - **[Implementation Plan](docs/IMPLEMENTATION_PLAN.md)** - Development roadmap
@@ -19,6 +20,8 @@
 ---
 
 ## 🚀 Quick Start
+
+> **🏢 Setting up for your organization?** See **[SETUP_FROM_SCRATCH.md](SETUP_FROM_SCRATCH.md)** for comprehensive step-by-step instructions including all dependencies, database migrations, and verification steps.
 
 ### Option 1: Dev Container (Recommended)
 

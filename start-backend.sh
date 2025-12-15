@@ -19,17 +19,17 @@ else
     echo "✓ PostgreSQL already running"
 fi
 
-# Set DATABASE_URL for local development
-export DATABASE_URL="postgresql://docsense:docsense_local_dev@localhost:5432/docsense"
-
-# Check if database connection is working
-echo "🔌 Testing database connection..."
-if poetry run python -c "import asyncpg; import asyncio; asyncio.run(asyncpg.connect('$DATABASE_URL'))" 2>/dev/null; then
-    echo "✓ Database connection successful"
+# Check if Doppler is available
+if command -v doppler &> /dev/null && [ -n "$DOPPLER_TOKEN" ]; then
+    echo "🔐 Using Doppler for secrets management"
+    echo "🌐 Starting backend API server on port 8000..."
+    doppler run -- poetry run uvicorn src.api.main:app --host 0.0.0.0 --port 8000
 else
-    echo "⚠️  Database connection failed, but continuing anyway..."
+    echo "⚠️  Doppler not available, using .env file"
+    if [ ! -f .env ]; then
+        echo "❌ No .env file found. Either configure Doppler or create .env from .env.example"
+        exit 1
+    fi
+    echo "🌐 Starting backend API server on port 8000..."
+    poetry run uvicorn src.api.main:app --host 0.0.0.0 --port 8000
 fi
-
-# Start the backend server
-echo "🌐 Starting backend API server on port 8000..."
-poetry run uvicorn src.api.main:app --host 0.0.0.0 --port 8000

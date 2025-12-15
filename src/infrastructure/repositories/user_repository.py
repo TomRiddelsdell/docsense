@@ -94,12 +94,20 @@ class UserRepository(Repository[User]):
         if user is None:
             # New user - auto-register
             logger.info(f"Auto-registering new user: {kerberos_id}")
+            # Generate UUID for the new user BEFORE creating aggregate
+            aggregate_uuid = kerberos_id_to_uuid(kerberos_id)
             user = User.register(
                 kerberos_id=kerberos_id,
                 groups=list(groups),  # Convert set to list for event
                 display_name=display_name,
-                email=email
+                email=email,
+                aggregate_id=aggregate_uuid  # Pass UUID so events have correct aggregate_id
             )
+            # Grant default VIEWER role to new users
+            from src.domain.value_objects.user_role import UserRole
+            user.grant_role(UserRole.VIEWER)
+            logger.info(f"Granted VIEWER role to new user: {kerberos_id}")
+            
             await self.save_user(user)
             return user
 

@@ -32,13 +32,15 @@ class User(Aggregate):
         _is_active: Whether the account is active
     """
     
-    def __init__(self, kerberos_id: str):
+    def __init__(self, kerberos_id: str, aggregate_id=None):
         """Initialize User aggregate.
         
         Args:
             kerberos_id: 6-character Kerberos identifier
+            aggregate_id: Optional UUID for the aggregate (generated from kerberos_id if not provided)
         """
-        super().__init__(kerberos_id)
+        # If aggregate_id not provided, use kerberos_id (will be converted to UUID by repository)
+        super().__init__(aggregate_id if aggregate_id is not None else kerberos_id)
         self._kerberos_id = kerberos_id
         self._groups: Set[str] = set()
         self._roles: Set[UserRole] = {UserRole.VIEWER}
@@ -82,7 +84,8 @@ class User(Aggregate):
         kerberos_id: str,
         groups: List[str],
         display_name: str = "",
-        email: str = ""
+        email: str = "",
+        aggregate_id=None
     ) -> "User":
         """Register a new user from Kerberos authentication.
         
@@ -103,9 +106,9 @@ class User(Aggregate):
                 f"Kerberos ID must be 6 characters, got {len(kerberos_id)}: '{kerberos_id}'"
             )
         
-        user = cls(kerberos_id)
+        user = cls(kerberos_id, aggregate_id=aggregate_id)
         user._apply_event(UserRegistered(
-            aggregate_id=kerberos_id,
+            aggregate_id=user.id,  # Use the aggregate's ID (will be UUID if provided, kerberos_id otherwise)
             kerberos_id=kerberos_id,
             groups=groups,
             display_name=display_name,
@@ -122,7 +125,7 @@ class User(Aggregate):
         """
         if group not in self._groups:
             self._apply_event(UserGroupAdded(
-                aggregate_id=self._kerberos_id,
+                aggregate_id=self.id,
                 group=group
             ))
     
@@ -134,7 +137,7 @@ class User(Aggregate):
         """
         if group in self._groups:
             self._apply_event(UserGroupRemoved(
-                aggregate_id=self._kerberos_id,
+                aggregate_id=self.id,
                 group=group
             ))
     
@@ -166,7 +169,7 @@ class User(Aggregate):
         """
         if role not in self._roles:
             self._apply_event(UserRoleGranted(
-                aggregate_id=self._kerberos_id,
+                aggregate_id=self.id,
                 role=role.value
             ))
     
@@ -178,7 +181,7 @@ class User(Aggregate):
         """
         if role in self._roles:
             self._apply_event(UserRoleRevoked(
-                aggregate_id=self._kerberos_id,
+                aggregate_id=self.id,
                 role=role.value
             ))
     
@@ -215,7 +218,7 @@ class User(Aggregate):
         """
         if self._is_active:
             self._apply_event(UserDeactivated(
-                aggregate_id=self._kerberos_id,
+                aggregate_id=self.id,
                 reason=reason
             ))
     
@@ -223,7 +226,7 @@ class User(Aggregate):
         """Reactivate a deactivated user account."""
         if not self._is_active:
             self._apply_event(UserReactivated(
-                aggregate_id=self._kerberos_id
+                aggregate_id=self.id
             ))
     
     def _when(self, event: DomainEvent) -> None:

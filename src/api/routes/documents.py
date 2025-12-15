@@ -225,7 +225,7 @@ async def get_document(
         )
     
     # Load document aggregate for authorization check
-    doc_aggregate = await doc_repo.get_by_id(document_id)
+    doc_aggregate = await doc_repo.get(document_id)
     if doc_aggregate is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -290,7 +290,7 @@ async def update_document(
         )
     
     # Load document aggregate for authorization check
-    doc_aggregate = await doc_repo.get_by_id(document_id)
+    doc_aggregate = await doc_repo.get(document_id)
     if doc_aggregate is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -329,7 +329,7 @@ async def delete_document(
     doc_repo=Depends(get_document_repository),
 ):
     # Load document aggregate for authorization check
-    doc_aggregate = await doc_repo.get_by_id(document_id)
+    doc_aggregate = await doc_repo.get(document_id)
     if doc_aggregate is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -379,7 +379,7 @@ async def share_document(
         HTTPException 400: Invalid group names
     """
     # Load document aggregate
-    doc_aggregate = await doc_repo.get_by_id(document_id)
+    doc_aggregate = await doc_repo.get(document_id)
     if doc_aggregate is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -457,7 +457,7 @@ async def make_document_private(
         HTTPException 403: User cannot modify sharing for this document
     """
     # Load document aggregate
-    doc_aggregate = await doc_repo.get_by_id(document_id)
+    doc_aggregate = await doc_repo.get(document_id)
     if doc_aggregate is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -501,7 +501,7 @@ async def get_document_content(
     doc_repo=Depends(get_document_repository),
 ):
     # Check authorization first
-    doc_aggregate = await doc_repo.get_by_id(document_id)
+    doc_aggregate = await doc_repo.get(document_id)
     if doc_aggregate is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -557,7 +557,7 @@ async def export_document(
     doc_repo=Depends(get_document_repository),
 ):
     # Check authorization first
-    doc_aggregate = await doc_repo.get_by_id(document_id)
+    doc_aggregate = await doc_repo.get(document_id)
     if doc_aggregate is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -594,7 +594,7 @@ async def download_original_document(
 ):
     """Download the original uploaded document file."""
     # Check authorization first
-    doc_aggregate = await doc_repo.get_by_id(document_id)
+    doc_aggregate = await doc_repo.get(document_id)
     if doc_aggregate is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { FileText, Upload, FolderOpen, History } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { CurrentUser } from '@/components/auth/CurrentUser';
+import { DevModeBanner } from '@/components/DevModeBanner';
 
 const navItems = [
   { href: '/documents', label: 'Documents', shortLabel: 'Docs', icon: FolderOpen },
@@ -15,6 +16,7 @@ export default function Layout() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
+      <DevModeBanner />
       <header className="border-b sticky top-0 bg-background z-50">
         <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-4 flex items-center justify-between gap-2">
           <Link to="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity shrink-0">
