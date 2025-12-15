@@ -21,7 +21,7 @@ from .middleware.request_id import RequestIdMiddleware
 from .middleware.authentication import KerberosAuthMiddleware
 from .routes import (
     documents, analysis, feedback, policies, audit, health, 
-    chat, parameters, analysis_logs, projection_health, projection_admin, auth
+    chat, parameters, analysis_logs, projection_health, projection_admin, auth, testing
 )
 from .dependencies import Container
 
@@ -141,6 +141,7 @@ def create_app() -> FastAPI:
     app.include_router(analysis_logs.router, prefix="/api/v1", tags=["analysis-logs"])
     app.include_router(projection_health.router, prefix="/api/v1", tags=["projection-health"])
     app.include_router(projection_admin.router, prefix="/api/v1", tags=["projection-admin"])
+    app.include_router(testing.router, prefix="/api/v1", tags=["testing"])
 
     if STATIC_DIR.exists():
         app.mount("/assets", StaticFiles(directory=STATIC_DIR / "assets"), name="assets")

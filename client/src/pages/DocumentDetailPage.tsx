@@ -48,6 +48,7 @@ import {
 } from 'lucide-react';
 import { useDocument, useDocumentFeedback, useAnalyzeDocument, useAcceptFeedback, useRejectFeedback } from '@/hooks/useDocuments';
 import ChatPanel from '@/components/ChatPanel';
+import { ValidationDashboard } from '@/components/testing';
 import ParameterGraph from '@/components/ParameterGraph';
 import AnalysisLogPanel from '@/components/AnalysisLogPanel';
 import SemanticIRPanel from '@/components/SemanticIRPanel';
@@ -647,6 +648,10 @@ export default function DocumentDetailPage() {
             <FileSearch className="h-4 w-4" />
             Semantic IR
           </TabsTrigger>
+          <TabsTrigger value="testing" className="gap-2">
+            <CheckCircle className="h-4 w-4" />
+            Testing
+          </TabsTrigger>
           <TabsTrigger value="logs" className="gap-2">
             <Clock className="h-4 w-4" />
             AI Logs
@@ -784,6 +789,10 @@ export default function DocumentDetailPage() {
               </div>
             )}
           </div>
+        </TabsContent>
+
+        <TabsContent value="testing" className="mt-6">
+          <ValidationDashboard documentId={id!} />
         </TabsContent>
 
         <TabsContent value="logs" className="mt-6">

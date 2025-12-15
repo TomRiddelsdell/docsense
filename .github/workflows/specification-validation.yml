@@ -1,0 +1,106 @@
+name: Specification Validation
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  validate-specifications:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+          pip install pytest pytest-cov
+      
+      - name: Generate test cases from specifications
+        run: |
+          python scripts/run_validation.py generate-tests \
+            --output tests/generated/ \
+            --verbose
+      
+      - name: Generate reference implementations
+        run: |
+          python scripts/run_validation.py generate-references \
+            --output tests/reference/ \
+            --verbose
+      
+      - name: Run cross-validation
+        id: validation
+        continue-on-error: true
+        run: |
+          python scripts/run_validation.py validate \
+            --test-dir tests/generated/ \
+            --reference-dir tests/reference/ \
+            --implementations src/strategies/ \
+            --report validation-report.json \
+            --threshold 100
+      
+      - name: Check validation results
+        run: |
+          python scripts/check_validation.py \
+            --report validation-report.json \
+            --threshold 100 \
+            --fail-on-error
+      
+      - name: Upload validation report
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: validation-report
+          path: validation-report.json
+      
+      - name: Upload test cases
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: generated-tests
+          path: tests/generated/
+      
+      - name: Comment PR with validation results
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            const report = JSON.parse(fs.readFileSync('validation-report.json', 'utf8'));
+            
+            const comment = `## Specification Validation Results
+            
+            **Status**: ${report.success ? '✅ PASSED' : '❌ FAILED'}
+            **Pass Rate**: ${report.pass_rate.toFixed(1)}% (${report.passed}/${report.total_tests})
+            
+            ${report.failed > 0 ? `
+            ### Failed Tests (${report.failed})
+            ${report.failed_tests.slice(0, 5).map(t => 
+              `- \`${t.test_name}\`: Expected ${t.expected}, got ${t.actual} (discrepancy: ${t.discrepancy})`
+            ).join('\n')}
+            ${report.failed > 5 ? `\n... and ${report.failed - 5} more` : ''}
+            ` : ''}
+            
+            ### Discrepancy Summary
+            - Max Discrepancy: ${report.discrepancy_summary.max_discrepancy}
+            - Mean Discrepancy: ${report.discrepancy_summary.mean_discrepancy}
+            - Tests with Discrepancy: ${report.discrepancy_summary.tests_with_discrepancy}
+            
+            [Full Report](../actions/runs/${{ github.run_id }})
+            `;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
